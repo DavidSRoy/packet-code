@@ -82,14 +82,33 @@ INGEST_TOKEN=dev-ingest-token
 READ_TOKEN=dev-read-token
 ```
 
-Deploy:
+### Deploy (Cloudflare Workers Builds, from GitHub)
 
-```bash
-npx wrangler login
-npx wrangler secret put INGEST_TOKEN   # a long random string; the laptop uses it
-npx wrangler secret put READ_TOKEN     # a different long random string; give it to the app team
-npm run deploy
-```
+Each push to `main` deploys the Worker. Set it up one time in the Cloudflare dashboard:
+
+1. **Workers & Pages** → **Create application** → **GitHub**. Authorize the Cloudflare GitHub app for `sanjanas18/packethw`. The repo owner, or a repo admin, must approve this.
+2. Select the `packethw` repository and set these build settings:
+
+   | Field | Value |
+   |---|---|
+   | Project / Worker name | `packet-telemetry`. It must be the same as `name` in `wrangler.jsonc`, or the build fails. |
+   | Git branch | `main` |
+   | Root directory | `cloud/telemetry-api` |
+   | Build command | empty |
+   | Deploy command | `npx wrangler deploy` (default) |
+   | Build watch paths, if shown | include `cloud/telemetry-api/*`, so changes to other folders do not redeploy |
+
+3. Select **Save and Deploy**.
+4. Go to the Worker → **Settings** → **Variables & Secrets**. Add two values of type **Secret**:
+   - `INGEST_TOKEN`: a long random string. The laptop uses it.
+   - `READ_TOKEN`: a different long random string. Give it to the app team.
+
+   Do not put these in **Build variables and secrets**. Those values exist only during the build, not when the Worker runs. Until you set both secrets, every request gets `401`.
+5. Check the deploy: `curl https://packet-telemetry.<account>.workers.dev/v1/health`
+
+To make a random token: `openssl rand -hex 32`
+
+Manual deploy, if you need it: `npx wrangler login`, then `npm run deploy`.
 
 Then start the laptop server with the push on:
 

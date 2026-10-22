@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Packet Ground Control</title>
 <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+<script type="importmap">{ "imports": {
+  "three": "/static/vendor/three/build/three.module.js",
+  "three/addons/": "/static/vendor/three/examples/jsm/" } }</script>
 <style>
   :root {
     --bg: #07080a;
@@ -54,7 +57,29 @@
   #clock { font-family: var(--mono); color: var(--muted); font-size: 11px; white-space: nowrap; }
 
   /* left: asset card */
-  #asset { top: 64px; left: 12px; width: 268px; }
+  #left { position: fixed; z-index: 500; top: 64px; left: 12px; width: 300px; display: flex; flex-direction: column; gap: 8px; }
+  #left > .panel { position: relative; }
+  #pos { padding: 9px 14px; color: var(--muted); font-size: 11px; }
+
+  /* vehicle attitude view (SpaceX style) */
+  #att3d { height: 300px; display: flex; flex-direction: column; overflow: hidden;
+    background: radial-gradient(120% 90% at 50% 35%, rgba(26,34,44,.92), rgba(6,8,11,.95)); }
+  #att3d.big { position: fixed !important; inset: 64px 320px 112px 324px; height: auto; }
+  .att-h { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px 0; }
+  .att-h .lbl { color: #cfd6de; }
+  .att-h button { background: none; border: 1px solid var(--line-2); color: var(--muted); font: 600 9px var(--sans);
+    letter-spacing: .14em; padding: 3px 7px; border-radius: 2px; cursor: pointer; margin-left: 4px; }
+  .att-h button:hover { color: var(--text); }
+  #att-canvas { flex: 1; width: 100%; min-height: 0; display: block; }
+  .att-f { display: grid; grid-template-columns: 64px 1fr 64px; align-items: center; padding: 0 8px 8px; gap: 6px; }
+  #att3d.big .att-f { grid-template-columns: 120px 1fr 120px; padding: 0 24px 20px; }
+  .gauge svg { width: 100%; display: block; }
+  .gauge .num { fill: #fff; font: 300 17px var(--sans); }
+  .gauge .unit { fill: var(--muted); font: 500 6.5px var(--sans); letter-spacing: .14em; text-transform: uppercase; }
+  .rpy { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; }
+  .rpy b { display: block; font: 300 15px var(--sans); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+  #att3d.big .rpy b { font-size: 34px; }
+  .rpy span { font-size: 8.5px; letter-spacing: .18em; color: var(--muted); }
   .card-h { padding: 12px 14px 10px; border-bottom: 1px solid var(--line); }
   .asset-name { display: flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: .12em; font-size: 12px; }
   .asset-name svg { flex: none; }
@@ -149,6 +174,7 @@
   <div id="clock">—</div>
 </div>
 
+<div id="left">
 <div id="asset" class="panel">
   <div class="card-h">
     <div class="asset-name">
@@ -168,25 +194,22 @@
     <div><span class="lbl">Current</span><b id="v-amp">—<small>A</small></b></div>
     <div><span class="lbl">Sats</span><b id="v-sats">—</b></div>
   </div>
-  <div id="att">
-    <svg width="64" height="64" viewBox="-32 -32 64 64" aria-label="Attitude">
-      <defs><clipPath id="ac"><circle r="30"/></clipPath></defs>
-      <g clip-path="url(#ac)">
-        <g id="horizon">
-          <rect x="-80" y="-80" width="160" height="80" fill="#1b2a36"/>
-          <rect x="-80" y="0" width="160" height="80" fill="#2a2119"/>
-          <line x1="-80" y1="0" x2="80" y2="0" stroke="#e9ebee" stroke-width="1"/>
-        </g>
-      </g>
-      <circle r="30" fill="none" stroke="rgba(255,255,255,.2)"/>
-      <path d="M-14 0 H-5 L0 4 L5 0 H14" fill="none" stroke="var(--friendly)" stroke-width="2"/>
-    </svg>
-    <div>
-      <div class="lbl">Roll / Pitch</div>
-      <div class="num" style="font-size:15px;margin-top:3px"><span id="v-roll">—</span>° / <span id="v-pitch">—</span>°</div>
-      <div class="num" style="color:var(--muted);font-size:11px;margin-top:4px" id="v-pos">—</div>
+  <div id="pos" class="num">—</div>
+</div>
+<div id="att3d" class="panel">
+  <div class="att-h"><span class="lbl">Vehicle attitude · EKF estimate</span>
+    <span><button id="att-cam">CHASE</button><button id="att-big">EXPAND</button></span></div>
+  <canvas id="att-canvas"></canvas>
+  <div class="att-f">
+    <div class="gauge" id="g-spd"></div>
+    <div class="rpy">
+      <div><b id="a-roll">—</b><span>ROLL</span></div>
+      <div><b id="a-pitch">—</b><span>PITCH</span></div>
+      <div><b id="a-yaw">—</b><span>YAW</span></div>
     </div>
+    <div class="gauge" id="g-alt"></div>
   </div>
+</div>
 </div>
 
 <div id="mapctl" class="panel">
@@ -404,9 +427,8 @@ function render(down) {
   setNum("v-cell", fx(cell, 2));
   setNum("v-amp", fx(s.batt_a));
   setNum("v-sats", s.sats != null ? String(s.sats) : "—");
-  $("v-roll").textContent = fx(s.roll); $("v-pitch").textContent = fx(s.pitch);
-  $("v-pos").textContent = s.lat != null ? `${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}` : "NO POSITION";
-  $("horizon").setAttribute("transform", `rotate(${-(s.roll || 0)}) translate(0 ${(s.pitch || 0) * 0.8})`);
+  $("pos").textContent = s.lat != null ? `${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}` : "NO POSITION";
+  window.attitudeUpdate && window.attitudeUpdate(s);
 
   const big = $("keys-big"), p = $("keys-p");
   if (down || !s.link) { big.textContent = "NO LINK"; big.className = "big"; p.textContent = "Waiting for the drone."; }
@@ -421,6 +443,25 @@ function render(down) {
 
 setInterval(() => { $("clock").textContent = new Date().toISOString().slice(11, 19) + " UTC"; }, 1000);
 connect();
+</script>
+<script type="module">
+import { AttitudeView, ringGauge } from "/static/attitude.js";
+const view = new AttitudeView(document.getElementById("att-canvas"));
+const spd = ringGauge(document.getElementById("g-spd"), { label: "SPEED", unit: "m/s", max: 10 });
+const alt = ringGauge(document.getElementById("g-alt"), { label: "HEIGHT", unit: "m", max: 120 });
+const deg = v => v == null ? "—" : (v > 0 ? "+" : "") + v.toFixed(1) + "°";
+window.attitudeUpdate = s => {
+  view.update(s);
+  spd(s.vn == null ? null : Math.hypot(s.vn, s.ve));
+  alt(s.alt == null ? null : Math.max(0, s.alt));
+  document.getElementById("a-roll").textContent = deg(s.roll);
+  document.getElementById("a-pitch").textContent = deg(s.pitch);
+  const y = s.yaw ?? s.hdg;
+  document.getElementById("a-yaw").textContent = y == null ? "—" : String(Math.round(y)).padStart(3, "0") + "°";
+};
+const cam = document.getElementById("att-cam"), big = document.getElementById("att-big");
+cam.onclick = () => { view.chase = !view.chase; cam.textContent = view.chase ? "CHASE" : "NORTH UP"; };
+big.onclick = () => { const on = document.getElementById("att3d").classList.toggle("big"); big.textContent = on ? "CLOSE" : "EXPAND"; };
 </script>
 </body>
 </html>

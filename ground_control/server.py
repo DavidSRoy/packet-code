@@ -50,7 +50,7 @@ class Link:
         self.state = {
             "link": False, "last_hb": 0.0, "mode": "?", "armed": False,
             "alt": None, "vn": 0.0, "ve": 0.0, "vz": 0.0, "hdg": None,
-            "roll": 0.0, "pitch": 0.0,
+            "roll": 0.0, "pitch": 0.0, "yaw": None,
             "batt_v": None, "batt_a": None, "gps_fix": 0, "sats": 0,
             "rc_ok": False, "rssi": 0, "sd_stop": False,
             "lat": None, "lon": None, "log_file": None,
@@ -131,6 +131,7 @@ class Link:
                                      s["batt_v"], s["sats"]])
         elif t == "ATTITUDE":
             s["roll"], s["pitch"] = math.degrees(msg.roll), math.degrees(msg.pitch)
+            s["yaw"] = math.degrees(msg.yaw) % 360
         elif t == "SYS_STATUS":
             s["batt_v"] = msg.voltage_battery / 1000 if msg.voltage_battery != 65535 else None
             s["batt_a"] = msg.current_battery / 100 if msg.current_battery != -1 else None
@@ -364,7 +365,7 @@ def build_app(link, pilot):
                 s["speeds"] = pilot.speeds
                 s["messages"] = [{"t": t, "sev": sev, "text": txt} for t, sev, txt in link.messages[-15:]]
                 await ws.send_str(json.dumps(s))
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(0.1)  # 10 Hz, same as the ATTITUDE stream
 
         pusher = asyncio.create_task(push())
         loop = asyncio.get_running_loop()

@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Packet Ground Control</title>
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+<style>
+  :root {
+    --bg: #07080a;
+    --glass: rgba(12, 14, 17, 0.84);
+    --glass-2: rgba(20, 23, 28, 0.9);
+    --line: rgba(255, 255, 255, 0.08);
+    --line-2: rgba(255, 255, 255, 0.16);
+    --text: #e9ebee;
+    --muted: #7d848e;
+    --dim: #4b515a;
+    --friendly: #5ad1ff;
+    --ok: #4fd68a;
+    --warn: #ffb020;
+    --bad: #ff4d4d;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    --sans: -apple-system, "Inter", "Helvetica Neue", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.35 var(--sans); overflow: hidden; user-select: none; }
+
+  #map { position: fixed; inset: 0; background: #0b0d10; }
+  .leaflet-tile-pane { filter: grayscale(0.55) brightness(0.62) contrast(1.12) saturate(0.8); }
+  .leaflet-container { font: inherit; background: #0b0d10; }
+  .leaflet-control-attribution { background: rgba(0,0,0,.5) !important; color: var(--dim) !important; font-size: 9px; }
+  .leaflet-control-attribution a { color: var(--muted) !important; }
+  .leaflet-control-zoom { display: none; }
+  /* faint grid over the map */
+  #grid { position: fixed; inset: 0; pointer-events: none; z-index: 400;
+    background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size: 64px 64px; }
+
+  .panel { position: fixed; z-index: 500; background: var(--glass); border: 1px solid var(--line); border-radius: 4px;
+    backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2); }
+  .lbl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* top bar */
+  #top { top: 12px; left: 12px; right: 12px; height: 40px; display: flex; align-items: center; gap: 18px; padding: 0 14px; }
+  #brand { font-weight: 700; letter-spacing: .22em; font-size: 11px; white-space: nowrap; }
+  #brand i { font-style: normal; color: var(--dim); font-weight: 500; }
+  .stat-row { display: flex; gap: 18px; flex: 1; min-width: 0; overflow: hidden; }
+  .st { display: flex; align-items: center; gap: 7px; white-space: nowrap; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .st b { color: var(--text); font-weight: 600; font-family: var(--mono); letter-spacing: 0; text-transform: none; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 8px var(--ok); } .dot.warn { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+  .dot.bad { background: var(--bad); box-shadow: 0 0 8px var(--bad); }
+  #clock { font-family: var(--mono); color: var(--muted); font-size: 11px; white-space: nowrap; }
+
+  /* left: asset card */
+  #asset { top: 64px; left: 12px; width: 268px; }
+  .card-h { padding: 12px 14px 10px; border-bottom: 1px solid var(--line); }
+  .asset-name { display: flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: .12em; font-size: 12px; }
+  .asset-name svg { flex: none; }
+  .asset-sub { color: var(--muted); font-size: 11px; margin-top: 3px; }
+  .mode-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; }
+  #mode { font-family: var(--mono); font-size: 20px; font-weight: 600; letter-spacing: .04em; }
+  #armed { font-size: 10px; letter-spacing: .16em; padding: 3px 7px; border: 1px solid var(--line-2); border-radius: 2px; color: var(--muted); }
+  #armed.on { color: var(--bad); border-color: var(--bad); background: rgba(255,77,77,.1); }
+  .tele { display: grid; grid-template-columns: 1fr 1fr; }
+  .tele div { padding: 9px 14px; border-bottom: 1px solid var(--line); }
+  .tele div:nth-child(odd) { border-right: 1px solid var(--line); }
+  .tele b { display: block; font-family: var(--mono); font-size: 17px; font-weight: 500; margin-top: 2px; }
+  .tele b small { font-size: 11px; color: var(--muted); margin-left: 3px; }
+  #att { display: flex; align-items: center; gap: 12px; padding: 10px 14px; }
+  #att svg { flex: none; }
+
+  /* right: actions + log */
+  #actions { top: 64px; right: 12px; width: 252px; padding: 12px; }
+  .alt-row { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 10px; }
+  .stepper { display: flex; align-items: center; border: 1px solid var(--line-2); border-radius: 3px; }
+  .stepper button { width: 28px; height: 28px; background: none; border: 0; color: var(--text); font-size: 15px; cursor: pointer; }
+  .stepper span { width: 54px; text-align: center; font-family: var(--mono); }
+  .btn { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 38px; padding: 0 12px; margin-bottom: 6px;
+    background: var(--glass-2); border: 1px solid var(--line-2); border-radius: 3px; color: var(--text);
+    font: 600 11px var(--sans); letter-spacing: .14em; text-transform: uppercase; cursor: pointer; position: relative; overflow: hidden; }
+  .btn:hover { border-color: rgba(255,255,255,.35); }
+  .btn kbd { font: 10px var(--mono); color: var(--muted); letter-spacing: 0; }
+  .btn.go { border-color: rgba(79,214,138,.55); color: var(--ok); }
+  .btn.land { border-color: rgba(255,176,32,.55); color: var(--warn); }
+  .btn.kill { border-color: rgba(255,77,77,.6); color: var(--bad); margin-top: 10px; }
+  .btn.kill .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: rgba(255,77,77,.35); }
+  .btn > span { position: relative; }
+  #log { max-height: 190px; overflow-y: auto; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 8px; font: 11px/1.55 var(--mono); }
+  #log div { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #log div b { color: var(--dim); font-weight: 400; margin-right: 6px; }
+  #log .s0, #log .s1, #log .s2, #log .s3 { color: var(--bad); } #log .s4 { color: var(--warn); } #log .s5, #log .s6 { color: var(--text); }
+
+  /* bottom: flight controls */
+  #fly { left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 18px; padding: 12px 16px; }
+  .pad { display: grid; grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(2, 46px); gap: 5px; }
+  .vpad { display: grid; grid-template-rows: repeat(2, 46px); gap: 5px; }
+  .k { width: 46px; height: 46px; border: 1px solid var(--line-2); border-radius: 3px; background: var(--glass-2);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; touch-action: none; }
+  .k b { font: 600 14px var(--mono); } .k span { font-size: 8px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; margin-top: 1px; }
+  .k.on { background: var(--friendly); border-color: var(--friendly); color: #001018; } .k.on span { color: #003040; }
+  #keys-state { width: 150px; }
+  #keys-state .big { font-weight: 700; letter-spacing: .16em; font-size: 11px; margin-top: 4px; }
+  #keys-state .big.live { color: var(--friendly); }
+  #keys-state p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
+  .sliders { display: grid; gap: 6px; width: 190px; }
+  .sl { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 8px; }
+  .sl input { grid-column: 1 / -1; width: 100%; accent-color: var(--friendly); height: 14px; margin: 0; }
+  .sl .num { font-size: 11px; }
+  .sep { width: 1px; align-self: stretch; background: var(--line); }
+
+  /* map buttons */
+  #mapctl { right: 276px; top: 64px; display: flex; flex-direction: column; }
+  #mapctl button { width: 34px; height: 34px; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--text); cursor: pointer; font: 600 13px var(--mono); }
+  #mapctl button:last-child { border-bottom: 0; }
+  #mapctl button.on { color: var(--friendly); }
+
+  /* map icons */
+  .drone-ico { width: 44px; height: 44px; }
+  .home-ico { width: 18px; height: 18px; border: 1.5px solid var(--text); background: rgba(0,0,0,.5); color: var(--text);
+    font: 700 10px var(--mono); display: flex; align-items: center; justify-content: center; }
+  .leaflet-div-icon { background: none; border: 0; }
+  #offline { position: fixed; z-index: 450; left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--dim); font-size: 11px; letter-spacing: .16em; display: none; }
+
+  @media (max-width: 1100px) {
+    #fly { left: 12px; right: 12px; transform: none; flex-wrap: wrap; justify-content: center; }
+    #actions { width: 220px; } #mapctl { right: 244px; }
+    .stat-row .opt { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="grid"></div>
+<div id="offline">MAP TILES OFFLINE</div>
+
+<div id="top" class="panel">
+  <div id="brand">PACKET <i>// GROUND CONTROL</i></div>
+  <div class="stat-row">
+    <div class="st"><span class="dot" id="d-link"></span>Link <b id="t-link">—</b></div>
+    <div class="st"><span class="dot" id="d-rc"></span>Boxer <b id="t-rc">—</b></div>
+    <div class="st"><span class="dot" id="d-gps"></span>GPS <b id="t-gps">—</b></div>
+    <div class="st"><span class="dot" id="d-batt"></span>Batt <b id="t-batt">—</b></div>
+    <div class="st opt"><span class="dot" id="d-fence"></span>Fence <b id="t-fence">—</b></div>
+    <div class="st opt"><span class="dot" id="d-log"></span>Rec <b id="t-log">—</b></div>
+    <div class="st opt"><span class="dot" id="d-cloud"></span>Cloud <b id="t-cloud">—</b></div>
+  </div>
+  <div id="clock">—</div>
+</div>
+
+<div id="asset" class="panel">
+  <div class="card-h">
+    <div class="asset-name">
+      <svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 1 L12 12 L7 9.5 L2 12 Z" fill="var(--friendly)"/></svg>
+      PACKET V0
+    </div>
+    <div class="asset-sub">X650 · Pixhawk 6X · ArduCopter 4.7.2</div>
+    <div class="mode-row"><span id="mode">—</span><span id="armed">SAFE</span></div>
+  </div>
+  <div class="tele">
+    <div><span class="lbl">Height</span><b id="v-alt">—<small>m</small></b></div>
+    <div><span class="lbl">Climb</span><b id="v-vz">—<small>m/s</small></b></div>
+    <div><span class="lbl">Gnd speed</span><b id="v-gs">—<small>m/s</small></b></div>
+    <div><span class="lbl">Heading</span><b id="v-hdg">—<small>°</small></b></div>
+    <div><span class="lbl">From home</span><b id="v-home">—<small>m</small></b></div>
+    <div><span class="lbl">Cell</span><b id="v-cell">—<small>V</small></b></div>
+    <div><span class="lbl">Current</span><b id="v-amp">—<small>A</small></b></div>
+    <div><span class="lbl">Sats</span><b id="v-sats">—</b></div>
+  </div>
+  <div id="att">
+    <svg width="64" height="64" viewBox="-32 -32 64 64" aria-label="Attitude">
+      <defs><clipPath id="ac"><circle r="30"/></clipPath></defs>
+      <g clip-path="url(#ac)">
+        <g id="horizon">
+          <rect x="-80" y="-80" width="160" height="80" fill="#1b2a36"/>
+          <rect x="-80" y="0" width="160" height="80" fill="#2a2119"/>
+          <line x1="-80" y1="0" x2="80" y2="0" stroke="#e9ebee" stroke-width="1"/>
+        </g>
+      </g>
+      <circle r="30" fill="none" stroke="rgba(255,255,255,.2)"/>
+      <path d="M-14 0 H-5 L0 4 L5 0 H14" fill="none" stroke="var(--friendly)" stroke-width="2"/>
+    </svg>
+    <div>
+      <div class="lbl">Roll / Pitch</div>
+      <div class="num" style="font-size:15px;margin-top:3px"><span id="v-roll">—</span>° / <span id="v-pitch">—</span>°</div>
+      <div class="num" style="color:var(--muted);font-size:11px;margin-top:4px" id="v-pos">—</div>
+    </div>
+  </div>
+</div>
+
+<div id="mapctl" class="panel">
+  <button id="m-follow" class="on" title="Follow the drone">◎</button>
+  <button id="m-in" title="Zoom in">+</button>
+  <button id="m-out" title="Zoom out">−</button>
+  <button id="m-clear" title="Clear the track">⌫</button>
+</div>
+
+<div id="actions" class="panel">
+  <div class="lbl">Command</div>
+  <div class="alt-row">
+    <span class="lbl" style="color:var(--text)">Takeoff height</span>
+    <div class="stepper"><button id="alt-dn">−</button><span id="alt">1.0 m</span><button id="alt-up">+</button></div>
+  </div>
+  <button class="btn go" id="b-takeoff"><span>Auto takeoff</span><kbd>GUIDED</kbd></button>
+  <button class="btn land" id="b-land"><span>Auto land</span><kbd>LAND</kbd></button>
+  <button class="btn" id="b-rtl"><span>Return home</span><kbd>RTL</kbd></button>
+  <button class="btn" id="b-hold"><span>Hold</span><kbd>SPACE</kbd></button>
+  <button class="btn kill" id="b-kill"><span class="fill" id="kill-fill"></span><span>Kill motors</span><kbd>HOLD 1 S</kbd></button>
+  <div id="log"></div>
+</div>
+
+<div id="fly" class="panel">
+  <div id="keys-state">
+    <div class="lbl">Manual · Earth frame</div>
+    <div class="big" id="keys-big">OFFLINE</div>
+    <p id="keys-p">—</p>
+  </div>
+  <div class="sep"></div>
+  <div class="pad">
+    <div class="k" data-k="q"><b>Q</b><span>Yaw L</span></div>
+    <div class="k" data-k="w"><b>W</b><span>North</span></div>
+    <div class="k" data-k="e"><b>E</b><span>Yaw R</span></div>
+    <div class="k" data-k="a"><b>A</b><span>West</span></div>
+    <div class="k" data-k="s"><b>S</b><span>South</span></div>
+    <div class="k" data-k="d"><b>D</b><span>East</span></div>
+  </div>
+  <div class="vpad">
+    <div class="k" data-k="z"><b>Z</b><span>Up</span></div>
+    <div class="k" data-k="x"><b>X</b><span>Down</span></div>
+  </div>
+  <div class="sep"></div>
+  <div class="sliders">
+    <div class="sl"><span class="lbl">Horizontal</span><span class="num" id="o-h">1.0 m/s</span><input id="sp-h" type="range" min="0.2" max="3" step="0.1" value="1.0"></div>
+    <div class="sl"><span class="lbl">Vertical</span><span class="num" id="o-v">0.5 m/s</span><input id="sp-v" type="range" min="0.1" max="1" step="0.1" value="0.5"></div>
+    <div class="sl"><span class="lbl">Yaw</span><span class="num" id="o-y">30 °/s</span><input id="sp-y" type="range" min="5" max="45" step="5" value="30"></div>
+  </div>
+</div>
+
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const KEYS = ["w", "a", "s", "d", "q", "e", "z", "x"];
+const held = new Set();
+let ws, state = {};
+
+/* ---------- map ---------- */
+const map = L.map("map", { zoomControl: false, attributionControl: true, zoomSnap: 0.5 }).setView([47.6062, -122.3321], 4);
+const tiles = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  { maxZoom: 20, maxNativeZoom: 19, attribution: "Imagery © Esri" }).addTo(map);
+let tileErrors = 0;
+tiles.on("tileerror", () => { if (++tileErrors > 6) $("offline").style.display = "block"; });
+tiles.on("tileload", () => { tileErrors = 0; $("offline").style.display = "none"; });
+
+const droneIcon = L.divIcon({ className: "", iconSize: [44, 44], iconAnchor: [22, 22],
+  html: `<svg class="drone-ico" viewBox="-22 -22 44 44"><g id="drone-rot">
+    <circle r="19" fill="none" stroke="rgba(90,209,255,.35)" stroke-width="1"/>
+    <path d="M0 -15 L9 11 L0 6 L-9 11 Z" fill="#5ad1ff" stroke="#001018" stroke-width="1.2"/></g></svg>` });
+const drone = L.marker([0, 0], { icon: droneIcon, interactive: false, zIndexOffset: 1000 });
+const home = L.marker([0, 0], { icon: L.divIcon({ className: "", iconSize: [18, 18], html: '<div class="home-ico">H</div>' }), interactive: false });
+const fence = L.circle([0, 0], { radius: 50, color: "#ffb020", weight: 1, dashArray: "6 6", fill: false, interactive: false });
+const trail = L.polyline([], { color: "#5ad1ff", weight: 2, opacity: 0.7, interactive: false }).addTo(map);
+const lead = L.polyline([], { color: "#4fd68a", weight: 2, dashArray: "3 5", interactive: false }).addTo(map);
+let follow = true, firstFix = true, lastTrail = null;
+
+$("m-follow").onclick = () => { follow = !follow; $("m-follow").classList.toggle("on", follow); };
+$("m-in").onclick = () => map.zoomIn();
+$("m-out").onclick = () => map.zoomOut();
+$("m-clear").onclick = () => trail.setLatLngs([]);
+map.on("dragstart", () => { follow = false; $("m-follow").classList.remove("on"); });
+
+// offset in metres -> lat/lon
+function offset(lat, lon, dn, de) {
+  return [lat + dn / 111320, lon + de / (111320 * Math.cos(lat * Math.PI / 180))];
+}
+function distM(a, b, c, d) {
+  const R = 6371000, r = Math.PI / 180, x = (d - b) * r * Math.cos((a + c) / 2 * r), y = (c - a) * r;
+  return Math.hypot(x, y) * R;
+}
+
+function updateMap(s) {
+  if (s.lat == null || (s.lat === 0 && s.lon === 0)) return;
+  const p = [s.lat, s.lon];
+  if (!map.hasLayer(drone)) drone.addTo(map);
+  drone.setLatLng(p);
+  const rot = document.getElementById("drone-rot");
+  if (rot) rot.setAttribute("transform", `rotate(${s.hdg || 0})`);
+  if (firstFix) { map.setView(p, 19); firstFix = false; }
+  else if (follow) map.panTo(p, { animate: true, duration: 0.25 });
+  if (!lastTrail || distM(lastTrail[0], lastTrail[1], p[0], p[1]) > 0.3) {
+    trail.addLatLng(p); lastTrail = p;
+    const pts = trail.getLatLngs(); if (pts.length > 3000) trail.setLatLngs(pts.slice(-3000));
+  }
+  lead.setLatLngs([p, offset(s.lat, s.lon, (s.vn || 0) * 5, (s.ve || 0) * 5)]);  // 5 s ahead
+  if (s.home_lat != null) {
+    const h = [s.home_lat, s.home_lon];
+    if (!map.hasLayer(home)) home.addTo(map);
+    home.setLatLng(h);
+    if (s.fence_on && s.fence_r) { if (!map.hasLayer(fence)) fence.addTo(map); fence.setLatLng(h).setRadius(s.fence_r); }
+    else if (map.hasLayer(fence)) map.removeLayer(fence);
+  }
+}
+
+/* ---------- link to the server ---------- */
+function connect() {
+  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onmessage = ev => { state = JSON.parse(ev.data); render(); };
+  ws.onclose = () => { state = {}; render(true); setTimeout(connect, 1000); };
+  ws.onopen = sendSpeeds;
+}
+const send = obj => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); };
+
+/* ---------- keys ---------- */
+function inputVector() {
+  const k = c => held.has(c) ? 1 : 0;
+  return { type: "input", n: k("w") - k("s"), e: k("d") - k("a"), u: k("z") - k("x"), yaw: k("e") - k("q") };
+}
+setInterval(() => send(inputVector()), 100);  // 10 Hz; silence counts as "no keys"
+
+function setKey(c, on) {
+  if (!KEYS.includes(c)) return;
+  on ? held.add(c) : held.delete(c);
+  document.querySelectorAll(`.k[data-k="${c}"]`).forEach(el => el.classList.toggle("on", on));
+  send(inputVector());
+}
+function clearKeys() { [...held].forEach(c => setKey(c, false)); }
+addEventListener("keydown", e => {
+  const c = e.key.toLowerCase();
+  if (c === " ") { e.preventDefault(); clearKeys(); send({ type: "hold" }); return; }
+  if (KEYS.includes(c)) { e.preventDefault(); if (!e.repeat) setKey(c, true); }
+});
+addEventListener("keyup", e => setKey(e.key.toLowerCase(), false));
+addEventListener("blur", clearKeys);
+document.addEventListener("visibilitychange", clearKeys);
+document.querySelectorAll(".k").forEach(el => {
+  const c = el.dataset.k;
+  el.addEventListener("pointerdown", e => { el.setPointerCapture(e.pointerId); setKey(c, true); });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => el.addEventListener(t, () => setKey(c, false)));
+});
+
+/* ---------- speeds + actions ---------- */
+function sendSpeeds() {
+  const h = +$("sp-h").value, v = +$("sp-v").value, y = +$("sp-y").value;
+  $("o-h").textContent = h.toFixed(1) + " m/s"; $("o-v").textContent = v.toFixed(1) + " m/s"; $("o-y").textContent = y + " °/s";
+  send({ type: "speeds", h, v, yaw: y });
+}
+["sp-h", "sp-v", "sp-y"].forEach(id => $(id).addEventListener("input", sendSpeeds));
+
+let takeoffAlt = 1.0;
+function setAlt(v) { takeoffAlt = Math.max(0.5, Math.min(10, Math.round(v * 2) / 2)); $("alt").textContent = takeoffAlt.toFixed(1) + " m"; }
+$("alt-up").onclick = () => setAlt(takeoffAlt + 0.5);
+$("alt-dn").onclick = () => setAlt(takeoffAlt - 0.5);
+$("b-takeoff").onclick = () => {
+  if (confirm(`Arm and take off to ${takeoffAlt.toFixed(1)} m in GUIDED?\n\nProps on, area clear, Boxer in hand.`)) send({ type: "takeoff", alt: takeoffAlt });
+};
+$("b-land").onclick = () => send({ type: "land" });
+$("b-rtl").onclick = () => send({ type: "rtl" });
+$("b-hold").onclick = () => { clearKeys(); send({ type: "hold" }); };
+
+let killTimer = null, killStart = 0;   // a 1 s press, so a stray click cannot drop the drone
+function killUp() { clearInterval(killTimer); killTimer = null; $("kill-fill").style.width = "0"; }
+$("b-kill").addEventListener("pointerdown", () => {
+  killStart = performance.now();
+  killTimer = setInterval(() => {
+    const f = Math.min(1, (performance.now() - killStart) / 1000);
+    $("kill-fill").style.width = f * 100 + "%";
+    if (f >= 1) { send({ type: "kill" }); killUp(); }
+  }, 30);
+});
+["pointerup", "pointerleave", "pointercancel"].forEach(t => $("b-kill").addEventListener(t, killUp));
+
+/* ---------- render ---------- */
+function dot(id, cls) { $(id).className = "dot " + (cls || ""); }
+const fx = (v, d = 1) => v == null ? "—" : v.toFixed(d);
+function setNum(id, txt) { const el = $(id); el.firstChild.nodeValue = txt; }
+
+function render(down) {
+  const s = state;
+  dot("d-link", down ? "bad" : s.link ? "ok" : "bad");
+  $("t-link").textContent = down ? "SERVER DOWN" : s.link ? "UP" : "LOST";
+  dot("d-rc", s.rc_ok ? (s.sd_stop ? "bad" : "ok") : "bad");
+  $("t-rc").textContent = s.rc_ok ? (s.sd_stop ? "SD STOP" : `${s.rssi}`) : "NONE";
+  const fix = ["none", "none", "2D", "3D", "DGPS", "RTK F", "RTK"][s.gps_fix] || "—";
+  dot("d-gps", s.gps_fix >= 3 && s.sats >= 8 ? "ok" : s.gps_fix >= 2 ? "warn" : "bad");
+  $("t-gps").textContent = s.sats != null ? `${fix} · ${s.sats}` : "—";
+  const cell = s.batt_v ? s.batt_v / 6 : null;
+  dot("d-batt", cell == null ? "" : cell < 3.6 ? "bad" : cell < 3.8 ? "warn" : "ok");
+  $("t-batt").textContent = s.batt_v ? `${s.batt_v.toFixed(1)} V` : "—";
+  dot("d-fence", s.fence_on ? "ok" : "warn");
+  $("t-fence").textContent = s.fence_on == null ? "—" : s.fence_on ? `${Math.round(s.fence_r)} m` : "OFF";
+  dot("d-log", s.log_file ? "ok" : "");
+  $("t-log").textContent = s.log_file ? "TLOG" : "OFF";
+  dot("d-cloud", s.cloud === "ok" ? "ok" : s.cloud === "error" ? "bad" : "");
+  $("t-cloud").textContent = (s.cloud || "—").toUpperCase();
+
+  $("mode").textContent = s.mode || "—";
+  $("armed").textContent = s.armed ? "ARMED" : "SAFE";
+  $("armed").classList.toggle("on", !!s.armed);
+  setNum("v-alt", fx(s.alt));
+  setNum("v-vz", s.vz == null ? "—" : (-s.vz).toFixed(1));
+  setNum("v-gs", fx(Math.hypot(s.vn || 0, s.ve || 0)));
+  setNum("v-hdg", s.hdg == null ? "—" : String(Math.round(s.hdg)).padStart(3, "0"));
+  setNum("v-home", s.home_lat != null && s.lat != null ? fx(distM(s.home_lat, s.home_lon, s.lat, s.lon)) : "—");
+  setNum("v-cell", fx(cell, 2));
+  setNum("v-amp", fx(s.batt_a));
+  setNum("v-sats", s.sats != null ? String(s.sats) : "—");
+  $("v-roll").textContent = fx(s.roll); $("v-pitch").textContent = fx(s.pitch);
+  $("v-pos").textContent = s.lat != null ? `${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}` : "NO POSITION";
+  $("horizon").setAttribute("transform", `rotate(${-(s.roll || 0)}) translate(0 ${(s.pitch || 0) * 0.8})`);
+
+  const big = $("keys-big"), p = $("keys-p");
+  if (down || !s.link) { big.textContent = "NO LINK"; big.className = "big"; p.textContent = "Waiting for the drone."; }
+  else if (s.taking_off) { big.textContent = "TAKEOFF"; big.className = "big"; p.textContent = "Keys start at the takeoff height."; }
+  else if (s.armed && s.mode === "GUIDED") { big.textContent = "KEYS LIVE"; big.className = "big live"; p.textContent = "Release all keys to hover. SC takes over."; }
+  else { big.textContent = "STANDBY"; big.className = "big"; p.textContent = "Keys work when armed in GUIDED."; }
+
+  $("log").innerHTML = (s.messages || []).slice().reverse().map(m =>
+    `<div class="s${m.sev}"><b>${new Date(m.t * 1000).toLocaleTimeString([], { hour12: false })}</b>${m.text.replace(/</g, "&lt;")}</div>`).join("");
+  updateMap(s);
+}
+
+setInterval(() => { $("clock").textContent = new Date().toISOString().slice(11, 19) + " UTC"; }, 1000);
+connect();
+</script>
+</body>
+</html>

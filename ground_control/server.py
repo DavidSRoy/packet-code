@@ -23,6 +23,8 @@ from pathlib import Path
 from aiohttp import web, WSMsgType
 from pymavlink import mavutil
 
+import autonomy
+
 HERE = Path(__file__).parent
 LOGS = HERE.parent / "logs"
 
@@ -34,8 +36,12 @@ TAKEOFF_MIN, TAKEOFF_MAX = 0.5, 10.0  # m
 INPUT_STALE_S = 0.4   # page input older than this counts as "no keys"
 BRAKE_S = 1.5         # keep sending zero velocity this long after release
 
-COPTER_MODES = {"STABILIZE": 0, "ALT_HOLD": 2, "GUIDED": 4, "LOITER": 5, "RTL": 6, "LAND": 9, "BRAKE": 17}
+COPTER_MODES = {"STABILIZE": 0, "ALT_HOLD": 2, "AUTO": 3, "GUIDED": 4, "LOITER": 5, "RTL": 6, "LAND": 9, "BRAKE": 17}
 VEL_YAWRATE_MASK = 0b0000_0101_1100_0111  # use vx,vy,vz + yaw_rate; ignore pos, accel, yaw
+
+
+HOVER_AMPS = 25.0        # X650 hover current from the 2026-10-22 flight log, one 6S 6500 mAh pack
+BATT_RESERVE_PCT = 20    # time left counts down to this charge, the landing reserve
 
 
 class Link:
@@ -52,11 +58,15 @@ class Link:
             "alt": None, "vn": 0.0, "ve": 0.0, "vz": 0.0, "hdg": None,
             "roll": 0.0, "pitch": 0.0, "yaw": None,
             "batt_v": None, "batt_a": None, "gps_fix": 0, "sats": 0,
+            "batt_pct": None, "batt_mah": None, "batt_cap": None, "batt_min": None, "batt_min_basis": None,
             "rc_ok": False, "rssi": 0, "sd_stop": False,
             "lat": None, "lon": None, "log_file": None,
             "home_lat": None, "home_lon": None, "fence_on": None, "fence_r": None,
-            "alt_msl": None, "cloud": "off",
+            "alt_msl": None, "cloud": "off", "sa_on": False, "sa_raw": None,
         }
+        self.sa_ch = 0              # RC channel of the SA switch (0 = not set: backend control off)
+        self.hooks = []             # called with every MAVLink message
+        self.pos_hooks = []         # called with the state at every GLOBAL_POSITION_INT
         self.messages = []          # (time, severity, text)
         stamp = time.strftime("%Y-%m-%d_%H%M%S")
         (LOGS / "tlog").mkdir(parents=True, exist_ok=True)
@@ -70,7 +80,10 @@ class Link:
         self.state["log_file"] = str(self.tlog_path)
         self.last_flush = time.time()
         self.next_stream_req = 0.0
+        self.next_hb = 0.0
         self.running = True
+        self.amp_avg = None          # filtered flight current, A
+        self.amp_t = 0.0
 
     # ---- sending -------------------------------------------------------
     def send(self, fn, *args):
@@ -101,13 +114,18 @@ class Link:
 
     # ---- receiving -----------------------------------------------------
     def request_streams(self):
-        rates = {30: 10, 33: 5, 74: 5, 1: 2, 24: 2, 65: 2, 242: 0.2}  # ..., RC_CHANNELS, HOME_POSITION
+        rates = {30: 10, 33: 5, 74: 5, 1: 2, 24: 2, 65: 2, 147: 1, 42: 2, 242: 0.2}  # ..., MISSION_CURRENT, HOME_POSITION
         for msg_id, hz in rates.items():
             self.command(mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL, msg_id, int(1e6 / hz))
-        for name in (b"FENCE_ENABLE", b"FENCE_RADIUS"):
+        for name in (b"FENCE_ENABLE", b"FENCE_RADIUS", b"BATT_CAPACITY"):
             self.send(self.m.mav.param_request_read_send, self.sysid, self.compid, name, -1)
 
     def handle(self, msg):
+        self._handle(msg)
+        for hook in self.hooks:
+            hook(msg)
+
+    def _handle(self, msg):
         t = msg.get_type()
         s = self.state
         if t == "HEARTBEAT":
@@ -129,18 +147,29 @@ class Link:
             self.track_csv.writerow([f"{time.time():.2f}", s["lat"], s["lon"], msg.alt / 1000, s["alt"],
                                      s["vn"], s["ve"], s["vz"], s["hdg"], s["mode"], int(s["armed"]),
                                      s["batt_v"], s["sats"]])
+            for hook in self.pos_hooks:
+                hook(s)
         elif t == "ATTITUDE":
             s["roll"], s["pitch"] = math.degrees(msg.roll), math.degrees(msg.pitch)
             s["yaw"] = math.degrees(msg.yaw) % 360
         elif t == "SYS_STATUS":
             s["batt_v"] = msg.voltage_battery / 1000 if msg.voltage_battery != 65535 else None
             s["batt_a"] = msg.current_battery / 100 if msg.current_battery != -1 else None
+            self.filter_current()
+        elif t == "BATTERY_STATUS" and msg.id == 0:
+            s["batt_pct"] = msg.battery_remaining if msg.battery_remaining >= 0 else None
+            s["batt_mah"] = msg.current_consumed if msg.current_consumed >= 0 else None
+            self.estimate_time()
         elif t == "GPS_RAW_INT":
             s["gps_fix"], s["sats"] = msg.fix_type, msg.satellites_visible
         elif t == "RC_CHANNELS":
             s["rc_ok"] = msg.chancount > 0
             s["rssi"] = msg.rssi
             s["sd_stop"] = msg.chan8_raw > 1700  # SD on CH8 = motor emergency stop
+            if 1 <= self.sa_ch <= 18:
+                raw = getattr(msg, f"chan{self.sa_ch}_raw", 0)
+                s["sa_raw"] = raw
+                s["sa_on"] = 1700 < raw < 2200  # SA down/on = backend may fly
         elif t == "STATUSTEXT":
             self.note(msg.text, msg.severity)
         elif t == "HOME_POSITION":
@@ -150,6 +179,37 @@ class Link:
                 s["fence_on"] = msg.param_value > 0
             elif msg.param_id == "FENCE_RADIUS":
                 s["fence_r"] = msg.param_value
+            elif msg.param_id == "BATT_CAPACITY":
+                s["batt_cap"] = msg.param_value
+                self.estimate_time()
+
+    def filter_current(self):
+        """Average the current while flying (about 20 s), for the time-left estimate."""
+        s, now = self.state, time.time()
+        a = s["batt_a"]
+        if s["armed"] and a is not None and a > 2.0:
+            k = 1.0 if self.amp_avg is None else 1 - math.exp(-(now - self.amp_t) / 20.0)
+            self.amp_avg = a if self.amp_avg is None else self.amp_avg + k * (a - self.amp_avg)
+        self.amp_t = now
+
+    def estimate_time(self):
+        """Minutes of flight left until the battery reaches BATT_RESERVE_PCT.
+
+        In flight it uses the averaged current. On the ground it uses the last
+        flight average, or HOVER_AMPS before the first flight."""
+        s = self.state
+        if s["batt_pct"] is None or not s["batt_cap"]:
+            s["batt_min"] = s["batt_min_basis"] = None
+            return
+        if s["armed"] and self.amp_avg:
+            amps, basis = self.amp_avg, "flight"
+        elif self.amp_avg:
+            amps, basis = self.amp_avg, "last flight"
+        else:
+            amps, basis = HOVER_AMPS, "hover estimate"
+        usable_mah = max(0.0, s["batt_pct"] - BATT_RESERVE_PCT) / 100 * s["batt_cap"]
+        s["batt_min"] = round(usable_mah / (amps * 1000) * 60, 1)
+        s["batt_min_basis"] = basis
 
     def run(self):
         """IO loop: drone -> state + QGC, QGC -> drone."""
@@ -178,6 +238,10 @@ class Link:
                 self.track.flush()
                 self.last_flush = now
             self.state["link"] = now - self.state["last_hb"] < 3
+            if now > self.next_hb:  # GCS heartbeat, so the drone can detect a lost laptop link
+                self.send(self.m.mav.heartbeat_send, mavutil.mavlink.MAV_TYPE_GCS,
+                          mavutil.mavlink.MAV_AUTOPILOT_INVALID, 0, 0, 0)
+                self.next_hb = now + 1.0
             if self.sysid is not None and now > self.next_stream_req:
                 self.request_streams()
                 self.next_stream_req = now + 10
@@ -318,10 +382,11 @@ class CloudPush:
     never delays flight control. Token: env PACKET_INGEST_TOKEN."""
 
     FIELDS = ("lat", "lon", "vn", "ve", "vz", "hdg", "roll", "pitch", "mode", "armed",
-              "batt_v", "batt_a", "gps_fix", "sats", "home_lat", "home_lon")
+              "batt_v", "batt_a", "batt_pct", "batt_mah", "batt_min", "gps_fix", "sats", "home_lat", "home_lon")
 
-    def __init__(self, link, url, drone_id, token, hz):
-        self.link, self.token, self.period = link, token, 1.0 / hz
+    def __init__(self, link, url, drone_id, token, hz, auto=None):
+        self.link, self.token, self.period, self.auto = link, token, 1.0 / hz, auto
+        self.acks = []
         self.url = f"{url.rstrip('/')}/v1/drones/{drone_id}/telemetry"
         self.last_error_note = 0.0
         link.state["cloud"] = "starting"
@@ -331,7 +396,19 @@ class CloudPush:
         d = {k: s.get(k) for k in self.FIELDS}
         d["vd"] = d.pop("vz")
         d.update(ts=int(time.time() * 1000), link=bool(s["link"]), height=s.get("alt"), alt_msl=s.get("alt_msl"))
+        if self.auto:
+            d["autonomy"] = self.auto.cloud_summary()
+            d["acks"], self.acks = self.acks, []
         return json.dumps(d).encode()
+
+    def take_command(self, body):
+        """The ingest reply can carry one backend command for the drone."""
+        try:
+            cmd = json.loads(body or b"{}").get("command")
+        except ValueError:
+            return
+        if cmd and self.auto:
+            self.acks.append(self.auto.handle_command(cmd, "Backend"))
 
     def loop(self):
         while self.link.running:
@@ -340,7 +417,7 @@ class CloudPush:
                 req = urllib.request.Request(self.url, data=self.payload(), method="POST", headers={
                     "Authorization": f"Bearer {self.token}", "Content-Type": "application/json"})
                 with urllib.request.urlopen(req, timeout=2) as r:
-                    r.read()
+                    self.take_command(r.read())
                 self.link.state["cloud"] = "ok"
             except Exception as exc:
                 self.link.state["cloud"] = "error"
@@ -350,7 +427,7 @@ class CloudPush:
             time.sleep(max(0.0, self.period - (time.time() - t0)))
 
 
-def build_app(link, pilot):
+def build_app(link, pilot, auto):
     async def index(_):
         return web.FileResponse(HERE / "static" / "index.html")
 
@@ -364,6 +441,7 @@ def build_app(link, pilot):
                 s["taking_off"] = pilot.takeoff_target is not None
                 s["speeds"] = pilot.speeds
                 s["messages"] = [{"t": t, "sev": sev, "text": txt} for t, sev, txt in link.messages[-15:]]
+                s["auto"] = auto.summary()
                 await ws.send_str(json.dumps(s))
                 await asyncio.sleep(0.1)  # 10 Hz, same as the ATTITUDE stream
 
@@ -389,6 +467,18 @@ def build_app(link, pilot):
                     pilot.hold()
                 elif kind == "kill":
                     pilot.kill()
+                elif kind == "rec_start":
+                    why = auto.recorder.start(d.get("from"), d.get("to"))
+                    if why:
+                        link.note(f"Laptop: recording not started: {why}", 4)
+                elif kind == "rec_cancel":
+                    auto.recorder.cancel()
+                elif kind == "approve":
+                    if auto.store.set_approved(d.get("from"), d.get("to"), bool(d.get("ok"))):
+                        link.note(f"Laptop: route {d.get('from')} -> {d.get('to')} "
+                                  + ("APPROVED" if d.get("ok") else "approval removed"))
+                elif kind == "trip":  # same commands as the backend, from this page
+                    auto.handle_command({"id": None, "action": d.get("action"), "pad": d.get("pad")}, "Laptop")
         finally:
             pilot.set_input({})  # page gone: treat as all keys released
             pusher.cancel()
@@ -411,21 +501,27 @@ def main():
                     help="Packet telemetry API base URL (or env PACKET_API_URL); token in env PACKET_INGEST_TOKEN")
     ap.add_argument("--drone-id", default="packet-v0")
     ap.add_argument("--cloud-hz", type=float, default=1.0)
+    ap.add_argument("--sa-ch", type=int, default=int(os.environ.get("PACKET_SA_CH", 0)),
+                    help="RC channel of the SA switch (backend control allowed when high). 0 = backend control off")
+    ap.add_argument("--routes", default=str(autonomy.ROUTES), help="folder for pads.json and routes")
     args = ap.parse_args()
 
     link = Link(args.port, args.baud, None if args.qgc == "none" else args.qgc)
     pilot = Pilot(link)
+    auto = autonomy.Autonomy(link, args.sa_ch, args.routes)
     threading.Thread(target=link.run, daemon=True).start()
     threading.Thread(target=pilot.loop, daemon=True).start()
     if args.cloud_url:
         token = os.environ.get("PACKET_INGEST_TOKEN")
         if not token:
             raise SystemExit("--cloud-url needs the env PACKET_INGEST_TOKEN")
-        push = CloudPush(link, args.cloud_url, args.drone_id, token, max(0.2, min(5.0, args.cloud_hz)))
+        push = CloudPush(link, args.cloud_url, args.drone_id, token, max(0.2, min(5.0, args.cloud_hz)), auto)
         threading.Thread(target=push.loop, daemon=True).start()
         print(f"Pushing telemetry to {push.url} at {args.cloud_hz:g} Hz")
     print(f"Packet ground control on http://localhost:{args.http}  (radio {args.port} @ {args.baud})")
-    web.run_app(build_app(link, pilot), host="127.0.0.1", port=args.http, print=None)
+    if not args.sa_ch:
+        print("SA channel not set (--sa-ch): backend trips are refused")
+    web.run_app(build_app(link, pilot, auto), host="127.0.0.1", port=args.http, print=None)
 
 
 if __name__ == "__main__":

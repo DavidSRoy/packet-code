@@ -10,7 +10,7 @@ const get = (p, h = RD) => fetch(BASE + p, { headers: h });
 const post = (p, body, h = ING) => fetch(BASE + p, { method: "POST", headers: h, body: JSON.stringify(body) });
 const sample = (i) => ({ ts: Date.now(), link: true, lat: 37.7749 + i * 1e-5, lon: -122.4194, alt_msl: 30, height: 1.0 + i,
   vn: 0.5, ve: 0, vd: -0.1, hdg: 317, roll: 0.5, pitch: -0.2, mode: "GUIDED", armed: true, batt_v: 24.6, batt_a: 18.2,
-  gps_fix: 3, sats: 18, home_lat: 37.7749, home_lon: -122.4194 });
+  batt_pct: 72, batt_mah: 1820, batt_min: 8.4, gps_fix: 3, sats: 18, home_lat: 37.7749, home_lon: -122.4194 });
 
 let r = await get("/v1/health", {});
 check("health", r.ok);
@@ -51,6 +51,7 @@ check("velocity", j.velocity.ground_speed_ms === 0.5 && j.heading_deg === 317);
 r = await get(`/v1/drones/${ID}/state`);
 j = await r.json();
 check("state fields", j.mode === "GUIDED" && j.armed === true && j.battery.cell_v === 4.1 && j.gps.satellites === 18);
+check("battery percent, used, time left", j.battery.percent === 72 && j.battery.used_mah === 1820 && j.battery.time_left_min === 8.4);
 
 r = await get(`/v1/drones/${ID}/track?limit=2`);
 j = await r.json();

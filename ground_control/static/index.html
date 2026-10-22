@@ -89,6 +89,11 @@
   #armed { font-size: 10px; letter-spacing: .16em; padding: 3px 7px; border: 1px solid var(--line-2); border-radius: 2px; color: var(--muted); }
   #armed.on { color: var(--bad); border-color: var(--bad); background: rgba(255,77,77,.1); }
   .tele { display: grid; grid-template-columns: 1fr 1fr; }
+  .battbar { margin: 2px 12px 8px; }
+  .battbar .track { height: 6px; background: rgba(255,255,255,.08); border-radius: 3px; overflow: hidden; }
+  .battbar .fill { height: 100%; width: 0; background: var(--friendly); transition: width .4s; }
+  .battbar .fill.warn { background: #f5b83d; } .battbar .fill.bad { background: #ff5a4f; }
+  .battbar .sub { display: flex; justify-content: space-between; color: var(--muted); font-size: 10px; margin-top: 3px; letter-spacing: .04em; }
   .tele div { padding: 9px 14px; border-bottom: 1px solid var(--line); }
   .tele div:nth-child(odd) { border-right: 1px solid var(--line); }
   .tele b { display: block; font-family: var(--mono); font-size: 17px; font-weight: 500; margin-top: 2px; }
@@ -97,7 +102,26 @@
   #att svg { flex: none; }
 
   /* right: actions + log */
-  #actions { top: 64px; right: 12px; width: 252px; padding: 12px; }
+  #actions { top: 64px; right: 12px; width: 252px; padding: 12px; max-height: calc(100vh - 190px); overflow-y: auto; }
+  /* trips (backend pad-to-pad) */
+  #trips { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .trip-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .badge { font: 600 10px var(--mono); padding: 2px 6px; border-radius: 2px; border: 1px solid var(--line-2); color: var(--muted); }
+  .badge.on { color: #001018; background: var(--ok); border-color: var(--ok); }
+  #trip-state { font: 11px/1.5 var(--mono); color: var(--text); margin-bottom: 6px; }
+  #trip-state small { color: var(--muted); display: block; white-space: normal; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 6px; }
+  .mini { height: 28px; background: var(--glass-2); border: 1px solid var(--line-2); border-radius: 3px; color: var(--text);
+    font: 600 10px var(--sans); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+  .mini:disabled { opacity: .35; cursor: default; }
+  .mini.go { color: var(--ok); border-color: rgba(79,214,138,.55); }
+  .route { font: 11px var(--mono); padding: 5px 0; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .route small { color: var(--muted); display: block; }
+  .route .warn { color: var(--warn); }
+  .rec { display: grid; grid-template-columns: 1fr auto 1fr; gap: 4px; align-items: center; margin-top: 8px; }
+  .rec input { width: 100%; height: 26px; background: rgba(0,0,0,.35); border: 1px solid var(--line-2); border-radius: 3px; color: var(--text);
+    font: 11px var(--mono); padding: 0 6px; text-transform: lowercase; }
+  .pad-lbl { font: 700 10px var(--mono); color: #001018; background: var(--friendly); padding: 1px 4px; border-radius: 2px; white-space: nowrap; }
   .alt-row { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 10px; }
   .stepper { display: flex; align-items: center; border: 1px solid var(--line-2); border-radius: 3px; }
   .stepper button { width: 28px; height: 28px; background: none; border: 0; color: var(--text); font-size: 15px; cursor: pointer; }
@@ -193,7 +217,11 @@
     <div><span class="lbl">Cell</span><b id="v-cell">—<small>V</small></b></div>
     <div><span class="lbl">Current</span><b id="v-amp">—<small>A</small></b></div>
     <div><span class="lbl">Sats</span><b id="v-sats">—</b></div>
+    <div><span class="lbl">Battery</span><b id="v-pct">—<small>%</small></b></div>
+    <div><span class="lbl">Time left</span><b id="v-tleft">—<small>min</small></b></div>
   </div>
+  <div class="battbar"><div class="track"><div class="fill" id="b-fill"></div></div>
+    <div class="sub"><span id="b-used">— mAh used</span><span id="b-basis">to 20% reserve</span></div></div>
   <div id="pos" class="num">—</div>
 </div>
 <div id="att3d" class="panel">
@@ -230,6 +258,17 @@
   <button class="btn" id="b-rtl"><span>Return home</span><kbd>RTL</kbd></button>
   <button class="btn" id="b-hold"><span>Hold</span><kbd>SPACE</kbd></button>
   <button class="btn kill" id="b-kill"><span class="fill" id="kill-fill"></span><span>Kill motors</span><kbd>HOLD 1 S</kbd></button>
+  <div id="trips">
+    <div class="trip-h"><span class="lbl">Trips · pad to pad</span><span class="badge" id="sa-badge">SA —</span></div>
+    <div id="trip-state">—</div>
+    <div id="trip-go" class="row2"></div>
+    <div class="row2">
+      <button class="mini" id="t-hold">Hold</button><button class="mini" id="t-resume">Resume</button><button class="mini" id="t-return">Return</button>
+    </div>
+    <div id="routes"></div>
+    <div class="rec"><input id="rec-from" value="qfc" maxlength="32"><span class="lbl">→</span><input id="rec-to" value="uplace" maxlength="32"></div>
+    <button class="btn" id="b-rec" style="margin-top:6px"><span>Record route</span><kbd>TEACH</kbd></button>
+  </div>
   <div id="log"></div>
 </div>
 
@@ -333,6 +372,71 @@ function connect() {
 }
 const send = obj => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); };
 
+/* ---------- trips: pads, routes, record, approve, go ---------- */
+const padLayer = L.layerGroup().addTo(map), routeLayer = L.layerGroup().addTo(map);
+let tripKey = "";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function renderTrips(a) {
+  if (!a) return;
+  const sab = $("sa-badge");
+  sab.textContent = !a.sa_ch ? "SA NOT SET" : a.sa_on ? "SA ON" : "SA OFF";
+  sab.className = "badge" + (a.sa_on ? " on" : "");
+  const m = a.mission || {};
+  const where = a.pad ? `on pad ${a.pad.toUpperCase()}` : "not on a pad";
+  const rec = a.recording;
+  $("trip-state").innerHTML = rec
+    ? `REC ${esc(rec.from)} → ${esc(rec.to)} · ${esc(rec.phase)}<small>${rec.samples} points. Arm on pad ${esc(rec.from).toUpperCase()}, fly, land on ${esc(rec.to).toUpperCase()}.</small>`
+    : m.state && m.state !== "idle"
+      ? `${esc(m.state).toUpperCase()} ${esc(m.from)} → ${esc(m.to)}${m.items ? ` · ${m.item}/${m.items}` : ""}<small>${esc(m.reason || where)}</small>`
+      : `IDLE<small>${where}</small>`;
+  // go buttons: one per pad with an approved route from here
+  const ready = new Set(a.routes.filter(r => r.approved && r.from === a.pad).map(r => r.to));
+  const goKey = Object.keys(a.pads).join() + "|" + [...ready].join() + "|" + a.sa_on;
+  if (goKey !== $("trip-go").dataset.k) {
+    $("trip-go").dataset.k = goKey;
+    $("trip-go").innerHTML = Object.keys(a.pads).map(p =>
+      `<button class="mini go" data-pad="${esc(p)}" ${ready.has(p) && a.sa_on ? "" : "disabled"}>Go ${esc(p)}</button>`).join("");
+  }
+  const active = ["starting", "uploading", "enroute", "landing"].includes(m.state);
+  $("t-hold").disabled = !active; $("t-resume").disabled = m.state !== "holding" || !a.sa_on; $("t-return").disabled = !state.armed || !a.sa_on;
+  $("b-rec").firstElementChild.textContent = rec ? "Cancel recording" : "Record route";
+  // routes list + map (redraw only on change)
+  const key = JSON.stringify([a.pads, a.routes.map(r => [r.from, r.to, r.approved, r.path])]);
+  if (key === tripKey) return;
+  tripKey = key;
+  $("routes").innerHTML = a.routes.map(r => `<div class="route"><span>${esc(r.from)} → ${esc(r.to)}
+      <small>${r.length_m} m · ${Math.round(r.est_time_s / 60 * 10) / 10} min · max ${r.max_alt} m</small>
+      ${r.problems.length ? `<small class="warn">${esc(r.problems.join("; "))}</small>` : ""}</span>
+      <button class="mini ${r.approved ? "go" : ""}" data-approve="${esc(r.from)}|${esc(r.to)}|${r.approved ? 0 : 1}">${r.approved ? "Approved" : "Approve"}</button></div>`).join("")
+    || `<div class="route"><small>No routes yet. Record one: fly it by hand from pad to pad.</small></div>`;
+  padLayer.clearLayers(); routeLayer.clearLayers();
+  for (const [id, p] of Object.entries(a.pads)) {
+    L.circle([p.lat, p.lon], { radius: 3, color: "#5ad1ff", weight: 1.5, fillOpacity: 0.15, interactive: false }).addTo(padLayer);
+    L.marker([p.lat, p.lon], { interactive: false, icon: L.divIcon({ className: "", iconAnchor: [-6, 18], html: `<span class="pad-lbl">${esc(p.name)}</span>` }) }).addTo(padLayer);
+  }
+  for (const r of a.routes) {
+    const pts = r.path.filter(q => q[0] != null);
+    L.polyline(pts, { color: r.approved ? "#4fd68a" : "#ffb020", weight: 2, opacity: 0.85, dashArray: r.approved ? null : "6 6", interactive: false }).addTo(routeLayer);
+  }
+}
+$("trips").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b || b.disabled) return;
+  if (b.dataset.pad) {
+    if (confirm(`Fly the drone to pad ${b.dataset.pad.toUpperCase()} on the approved route?`)) send({ type: "trip", action: "goto", pad: b.dataset.pad });
+  } else if (b.dataset.approve) {
+    const [f, t, ok] = b.dataset.approve.split("|");
+    if (ok === "1" && !confirm(`Approve route ${f} → ${t}? Check it on the map first. The backend can then fly it.`)) return;
+    send({ type: "approve", from: f, to: t, ok: ok === "1" });
+  } else if (b.id === "t-hold") send({ type: "trip", action: "hold" });
+  else if (b.id === "t-resume") send({ type: "trip", action: "resume" });
+  else if (b.id === "t-return") { if (confirm("Stop the trip and return to the start pad (RTL)?")) send({ type: "trip", action: "return" }); }
+  else if (b.id === "b-rec") {
+    if (state.auto && state.auto.recording) send({ type: "rec_cancel" });
+    else send({ type: "rec_start", from: $("rec-from").value.trim().toLowerCase(), to: $("rec-to").value.trim().toLowerCase() });
+  }
+});
+
 /* ---------- keys ---------- */
 function inputVector() {
   const k = c => held.has(c) ? 1 : 0;
@@ -407,8 +511,11 @@ function render(down) {
   dot("d-gps", s.gps_fix >= 3 && s.sats >= 8 ? "ok" : s.gps_fix >= 2 ? "warn" : "bad");
   $("t-gps").textContent = s.sats != null ? `${fix} · ${s.sats}` : "—";
   const cell = s.batt_v ? s.batt_v / 6 : null;
-  dot("d-batt", cell == null ? "" : cell < 3.6 ? "bad" : cell < 3.8 ? "warn" : "ok");
-  $("t-batt").textContent = s.batt_v ? `${s.batt_v.toFixed(1)} V` : "—";
+  const pct = s.batt_pct;
+  const bcls = pct != null ? (pct <= 20 ? "bad" : pct <= 35 ? "warn" : "ok")
+                           : cell == null ? "" : cell < 3.6 ? "bad" : cell < 3.8 ? "warn" : "ok";
+  dot("d-batt", bcls);
+  $("t-batt").textContent = s.batt_v ? (pct != null ? `${pct}% · ` : "") + `${s.batt_v.toFixed(1)} V` : "—";
   dot("d-fence", s.fence_on ? "ok" : "warn");
   $("t-fence").textContent = s.fence_on == null ? "—" : s.fence_on ? `${Math.round(s.fence_r)} m` : "OFF";
   dot("d-log", s.log_file ? "ok" : "");
@@ -427,8 +534,15 @@ function render(down) {
   setNum("v-cell", fx(cell, 2));
   setNum("v-amp", fx(s.batt_a));
   setNum("v-sats", s.sats != null ? String(s.sats) : "—");
+  setNum("v-pct", pct != null ? String(pct) : "—");
+  setNum("v-tleft", s.batt_min != null ? (s.armed ? "" : "~") + s.batt_min.toFixed(1) : "—");
+  $("b-fill").style.width = `${pct != null ? Math.max(0, Math.min(100, pct)) : 0}%`;
+  $("b-fill").className = "fill " + (bcls === "ok" ? "" : bcls);
+  $("b-used").textContent = s.batt_mah != null ? `${Math.round(s.batt_mah)} mAh used` + (s.batt_cap ? ` of ${Math.round(s.batt_cap)}` : "") : "— mAh used";
+  $("b-basis").textContent = s.batt_min_basis ? `to 20% · ${s.batt_min_basis}` : "to 20% reserve";
   $("pos").textContent = s.lat != null ? `${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}` : "NO POSITION";
   window.attitudeUpdate && window.attitudeUpdate(s);
+  renderTrips(s.auto);
 
   const big = $("keys-big"), p = $("keys-p");
   if (down || !s.link) { big.textContent = "NO LINK"; big.className = "big"; p.textContent = "Waiting for the drone."; }

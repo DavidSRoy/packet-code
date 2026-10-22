@@ -11,4 +11,5 @@
   // Secrets (set with `wrangler secret put NAME`, or in .dev.vars for local dev):
   //   INGEST_TOKEN  - the laptop ground control server uses it to POST telemetry
   //   READ_TOKEN    - the app team uses it to read
+  //   COMMAND_TOKEN - the backend uses it to send trip commands (goto/hold/resume/return)
 }

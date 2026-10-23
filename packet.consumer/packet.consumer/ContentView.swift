@@ -1,24 +1,30 @@
-//
-//  ContentView.swift
-//  packet.consumer
-//
-//  Created by David Roy on 10/22/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var state = AppState()
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView {
+            NavigationStack {
+                MenuView(state: state)
+            }
+            .tabItem { Label("Menu", systemImage: "list.bullet") }
+
+            NavigationStack {
+                CheckoutView(state: state)
+            }
+            .tabItem { Label("Checkout", systemImage: "cart") }
+
+            NavigationStack {
+                TrackingView(state: state)
+            }
+            .tabItem { Label("Tracking", systemImage: "map") }
         }
-        .padding()
     }
 }
 
-#Preview {
-    ContentView()
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
 }

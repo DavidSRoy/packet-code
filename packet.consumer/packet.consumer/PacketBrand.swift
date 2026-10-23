@@ -6,6 +6,20 @@ import SwiftUI
 extension Color {
     static let packetRed = Color(red: 180 / 255, green: 67 / 255, blue: 47 / 255)
     static let packetBlack = Color(red: 17 / 255, green: 17 / 255, blue: 17 / 255)
+    static let packetMustard = Color(red: 211 / 255, green: 161 / 255, blue: 63 / 255)
+
+    private static func adaptive(light: Color, dark: Color) -> Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark ? UIColor(dark) : UIColor(light)
+        })
+    }
+
+    // Semantic tokens. Light mode is the white tile, dark mode the black tile.
+    static let appBackground = adaptive(light: .white, dark: .packetBlack)
+    static let headlineText = adaptive(light: .packetBlack, dark: .white)
+    static let bodyText = adaptive(light: .packetBlack, dark: .white)
+    static let buttonFill = adaptive(light: .packetBlack, dark: .white)
+    static let buttonText = adaptive(light: .white, dark: .packetBlack)
 }
 
 // Four corner brackets with a red block in the middle.
@@ -61,9 +75,8 @@ struct PacketWordmarkView: View {
     var size: CGFloat = 44
 
     var body: some View {
-        // TODO: bundle Libre Franklin SemiBold and use it here.
         Text("Packet")
-            .font(.system(size: size, weight: .semibold))
+            .font(PacketFonts.headline(size: size))
             .foregroundStyle(color)
     }
 }

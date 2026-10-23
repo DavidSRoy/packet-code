@@ -6,25 +6,52 @@ struct MenuView: View {
     @State private var menu: [MenuItem] = []
 
     var body: some View {
-        List(menu) { item in
-            VStack(alignment: .leading) {
-                Text(item.name)
-                Text(item.description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                HStack {
-                    Text(item.priceDisplay)
-                    Spacer()
-                    Button("Add") { state.add(item) }
-                        .buttonStyle(.bordered)
-                }
+        VStack(spacing: 0) {
+            PacketBand()
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Vendor")
+                    .font(PacketFonts.headline())
+                    .foregroundStyle(Color.headlineText)
+                PacketLeadingLines()
             }
-            .padding(.vertical, 4)
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            List(menu) { item in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.name)
+                        .font(PacketFonts.body())
+                        .foregroundStyle(Color.bodyText)
+                    Text(item.description)
+                        .font(PacketFonts.body(size: 13))
+                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text(item.priceDisplay)
+                            .font(PacketFonts.body())
+                            .monospacedDigit()
+                            .foregroundStyle(Color.bodyText)
+                        Spacer()
+                        Button("Add") { state.add(item) }
+                            .font(PacketFonts.label())
+                            .foregroundStyle(Color.buttonText)
+                            .padding(.horizontal, 16)
+                            .frame(height: 32)
+                            .background(Color.buttonFill)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .buttonStyle(.plain)
+                    }
+                    .padding(.top, 4)
+                }
+                .padding(.vertical, 8)
+                .listRowBackground(Color.appBackground)
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
         }
-        .navigationTitle("Vendor")
+        .background(Color.appBackground)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             NavigationLink(destination: CheckoutView(state: state)) {
-                Text("Cart (\(state.cart.reduce(0) { $0 + $1.quantity }))")
+                PacketTag(text: "Cart · \(state.cart.reduce(0) { $0 + $1.quantity })")
             }
         }
         .task {

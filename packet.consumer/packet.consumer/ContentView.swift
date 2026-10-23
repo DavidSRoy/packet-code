@@ -22,6 +22,7 @@ struct ContentView: View {
             }
             .tabItem { Label("Tracking", systemImage: "map") }
             }
+            .tint(.packetRed)
             if showSplash {
                 SplashView { showSplash = false }
                     .transition(.opacity)

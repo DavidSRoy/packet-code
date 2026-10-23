@@ -9,6 +9,10 @@ import SwiftUI
 
 @main
 struct packet_consumerApp: App {
+    init() {
+        PacketFonts.register()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

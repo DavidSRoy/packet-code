@@ -2,9 +2,11 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var state = AppState()
+    @State private var showSplash = true
 
     var body: some View {
-        TabView {
+        ZStack {
+            TabView {
             NavigationStack {
                 MenuView(state: state)
             }
@@ -19,6 +21,12 @@ struct ContentView: View {
                 TrackingView(state: state)
             }
             .tabItem { Label("Tracking", systemImage: "map") }
+            }
+            if showSplash {
+                SplashView { showSplash = false }
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
         }
     }
 }

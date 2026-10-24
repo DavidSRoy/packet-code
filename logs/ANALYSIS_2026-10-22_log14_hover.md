@@ -11,7 +11,7 @@ speed less than 0.7 m/s, and roll and pitch less than 6 deg. Log 14 has
 
 - Hover time on one 6S 6500 mAh battery is about **18 min** to a 20 % reserve
   at the current weight (about 2.9 kg, no shell).
-- The largest problem is **twisted motors**. The CW motors make about 1.7 times
+- The largest problem is a **motor imbalance** (damaged props or twisted arms). The CW motors make about 1.7 times
   the thrust of the CCW motors. This decreases the usable takeoff weight by
   about 20 % and makes the yaw less steady.
 - Vibration, position hold and battery health are good.
@@ -42,7 +42,7 @@ Hover power changes approximately as weight^1.5.
 
 ## Problems, largest first
 
-### 1. Twisted motors
+### 1. Motor imbalance (damaged props or twisted arms)
 
 Median motor output in hover (µs):
 
@@ -62,11 +62,22 @@ Median motor output in hover (µs):
   power first. The usable max takeoff weight is about 20 % lower than with
   balanced motors.
 
-Probable cause: the arm tubes turned in the folding clamps, or a motor mount
-is not level. A tilt of a few degrees is sufficient to cause this.
+Possible causes:
 
-Fix: put a level on each motor bell. Turn each arm until its motor is level,
-then tighten the clamp. After the fix, CW minus CCW must be less than 30 µs.
+1. **Damaged CW props.** The props were damaged in the first tests. A damaged
+   prop makes less thrust, so its motor must run faster. New props arrive on
+   Monday (2026-10-26).
+2. **Twisted arms or motor mounts.** The arm tubes can turn in the folding
+   clamps. A tilt of a few degrees is sufficient to cause this.
+
+Procedure:
+
+1. Put a level on each motor bell. Turn each arm until its motor is level,
+   then tighten the clamp.
+2. Install the new props.
+3. Fly a 1 min LOITER hover and run `tools/hover_analysis.py` on the new log.
+4. Make sure that CW minus CCW is less than 30 µs.
+5. If the difference stays large, examine the motors and the prop direction.
 
 ### 2. CG slightly to the front
 

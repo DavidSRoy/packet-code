@@ -82,7 +82,7 @@ def ws_state():
 
 
 class Pilot:
-    """Second MAVLink link: plays the human pilot and the RC radio (SA on ch9)."""
+    """Second MAVLink link: plays the human pilot and the RC radio (Boxer channels: SA ch5, SD ch8)."""
 
     def __init__(self):
         self.m = mavutil.mavlink_connection("tcp:127.0.0.1:5762", source_system=255, source_component=190)
@@ -123,8 +123,9 @@ class Pilot:
     def _rc(self):
         while self.running:
             with self.lock:
-                # ch8 = SD kill switch at "run" (1000), ch9 = SA
-                self.m.mav.rc_channels_override_send(1, 1, 65535, 65535, self.thr, *([65535] * 4), 1000, self.sa, *([0] * 9))
+                # ch3 throttle, ch5 = SA, ch8 = SD kill switch at "run" (1000)
+                self.m.mav.rc_channels_override_send(1, 1, 65535, 65535, self.thr, 65535, self.sa, 65535, 65535, 1000,
+                                                     *([0] * 10))
             time.sleep(0.1)
 
     def param(self, name, value):
@@ -202,12 +203,12 @@ def main():
         time.sleep(2)
         env = dict(os.environ, PACKET_INGEST_TOKEN=ING)
         server = subprocess.Popen([args.python, "-u", str(REPO / "ground_control/server.py"), "--port", "tcp:127.0.0.1:5760",
-                                   "--qgc", "none", "--http", str(HTTP), "--sa-ch", "9", "--routes", str(routes),
+                                   "--qgc", "none", "--http", str(HTTP), "--sa-ch", "5", "--routes", str(routes),
                                    "--cloud-url", API], env=env, stdout=logs["server"], stderr=subprocess.STDOUT,
                                   start_new_session=True)
         procs.append(server)
         pilot = Pilot()
-        pilot.param("SAG_CH", 9)
+        pilot.param("SAG_CH", 5)
         print("waiting for GPS and EKF ...", flush=True)
         ok = pilot.wait(lambda: ws_state().get("gps_fix", 0) >= 3 and ws_state().get("batt_pct") is not None, 120, "GPS")
         time.sleep(15)  # EKF settles

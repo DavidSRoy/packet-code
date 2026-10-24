@@ -501,8 +501,8 @@ def main():
                     help="Packet telemetry API base URL (or env PACKET_API_URL); token in env PACKET_INGEST_TOKEN")
     ap.add_argument("--drone-id", default="packet-v0")
     ap.add_argument("--cloud-hz", type=float, default=1.0)
-    ap.add_argument("--sa-ch", type=int, default=int(os.environ.get("PACKET_SA_CH", 0)),
-                    help="RC channel of the SA switch (backend control allowed when high). 0 = backend control off")
+    ap.add_argument("--sa-ch", type=int, default=int(os.environ.get("PACKET_SA_CH", 5)),
+                    help="RC channel of the SA switch, CH5 on the Boxer (backend control allowed when high). 0 = backend control off")
     ap.add_argument("--routes", default=str(autonomy.ROUTES), help="folder for pads.json and routes")
     args = ap.parse_args()
 

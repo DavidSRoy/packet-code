@@ -20,7 +20,7 @@ assert(param:add_table(TABLE_KEY, "SDG_", 5), "SDG_ param table failed")
 assert(param:add_param(TABLE_KEY, 1, "ENABLE", 1), "SDG_ENABLE")
 assert(param:add_param(TABLE_KEY, 2, "ALT", 2.0), "SDG_ALT")    -- m
 assert(param:add_param(TABLE_KEY, 3, "TILT", 60), "SDG_TILT")   -- deg
-assert(param:add_param(TABLE_KEY, 4, "SE_CH", 0), "SDG_SE_CH")  -- 0 = no SE combo
+assert(param:add_param(TABLE_KEY, 4, "SE_CH", 9), "SDG_SE_CH")  -- SE is CH9 on the Boxer; 0 = no SE combo
 assert(param:add_param(TABLE_KEY, 5, "SD_CH", 8), "SDG_SD_CH")
 
 local P_ENABLE = Parameter("SDG_ENABLE")

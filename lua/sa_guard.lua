@@ -18,7 +18,7 @@
 local TABLE_KEY = 75
 assert(param:add_table(TABLE_KEY, "SAG_", 2), "SAG_ param table failed")
 assert(param:add_param(TABLE_KEY, 1, "ENABLE", 1), "SAG_ENABLE")
-assert(param:add_param(TABLE_KEY, 2, "CH", 0), "SAG_CH")  -- RC channel of SA; 0 = not set
+assert(param:add_param(TABLE_KEY, 2, "CH", 5), "SAG_CH")  -- SA is CH5 on the Boxer; 0 = off
 
 local P_ENABLE = Parameter("SAG_ENABLE")
 local P_CH = Parameter("SAG_CH")

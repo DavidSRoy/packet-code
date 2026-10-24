@@ -80,3 +80,19 @@ Printing:
 - Use matte white vinyl. Gloss gives glare and the tags then fail.
 - Keep the white margins clean. Do not put logos or text near the tags.
 - Put the sticker on the lid with the "BOX nn" text on the left when you look down at the lid.
+
+## Wi-Fi and status screen
+
+cloud-init applies `network-config` on the first boot only. To add or change
+a network later, edit `packet/wifi.txt` on the SD card (on a Mac):
+
+```
+# SSID|PASSWORD|PRIORITY   (higher priority is tried first)
+UW MPSK|<device passphrase>|20
+```
+
+At every boot, `wifi_join.sh` adds these networks to NetworkManager (with the
+fixed MAC that UW MPSK needs) and connects. `status_screen.sh` shows Wi-Fi, IP,
+internet, setup progress and the last network warning on the HDMI screen in
+place of the login prompt. `setup.sh` runs again at each boot until it finishes.
+Never commit `wifi.txt`; `.gitignore` blocks it.

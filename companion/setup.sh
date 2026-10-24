@@ -14,10 +14,18 @@ for i in $(seq 1 60); do
   echo "waiting for network ($i)"; sleep 5
 done
 
+# cloud-init installs these on the first boot only; install them here too,
+# so a first boot without network can still finish later.
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y avahi-daemon python3-opencv python3-numpy python3-serial \
+  python3-venv python3-pip v4l-utils git tmux
+
 install -d -o packet -g packet "$DST"
 install -o packet -g packet -m 0755 "$SRC"/*.py "$SRC"/setup.sh "$DST"/
 install -o packet -g packet -m 0644 "$SRC"/*.json "$DST"/ 2>/dev/null || true
 cp "$SRC"/README.md "$DST"/ 2>/dev/null || true
+rm -f "$DST"/wifi.txt
 chown packet:packet "$DST"/*
 
 # Debian OpenCV is used from the venv (no slow pip build on the Zero 2 W).

@@ -64,11 +64,19 @@ Median motor output in hover (µs):
 
 Possible causes:
 
-1. **Damaged CW props.** The props were damaged in the first tests. A damaged
-   prop makes less thrust, so its motor must run faster. New props arrive on
-   Monday (2026-10-26).
-2. **Twisted arms or motor mounts.** The arm tubes can turn in the folding
-   clamps. A tilt of a few degrees is sufficient to cause this.
+1. **Twisted arms or motor mounts (most probable).** The arm tubes can turn in
+   the folding clamps. A tilt of a few degrees is sufficient to cause this.
+2. **Damaged props.** The props were damaged in the first tests. New props
+   arrive on Monday (2026-10-26). The most damaged prop is the **front-right
+   (M1, CCW)**. A weak prop makes less thrust and less drag torque. To
+   correct a weak M1, the controller must make M1 run faster: the CCW motors,
+   the front and the right go up. The log shows the opposite for yaw: the
+   CW motors are 146 µs higher. Thus, the M1 prop does not cause the yaw
+   imbalance. It can cause some of the front bias (item 2) and the small
+   right bias.
+
+With four motors, the four PWM values give only four items: the mean, roll,
+pitch and yaw. The log cannot show one weak motor apart from these.
 
 Procedure:
 

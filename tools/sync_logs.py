@@ -4,7 +4,7 @@ Usage: python tools/sync_logs.py PORT [BAUD] [--latest N]
   USB (fast, about 1 MB/s):    python tools/sync_logs.py /dev/cu.usbmodem2101
   Radio (slow, about 4 KB/s):  python tools/sync_logs.py /dev/cu.usbserial-DU0E540E 57600 --latest 1
 
-Logs go to packethw/logs/bin/ (not in git). Files already there with the same
+Logs go to packethw/logs/bin/ (committed, so the team can analyse them). Files already there with the same
 size are skipped, so you can run it after every flight day.
 Close QGroundControl and the ground control server first.
 """

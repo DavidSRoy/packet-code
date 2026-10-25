@@ -48,3 +48,7 @@ fastlane/test_output
 *.gcda
 *.lcov
 coverage/
+
+# Web build outputs (generated, never commit)
+traffic-simulator/node_modules/
+traffic-simulator/dist/

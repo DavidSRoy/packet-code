@@ -53,6 +53,8 @@ export interface Drone {
   // Sim time until which the drone sits grounded (turnaround at stops).
   pauseUntil: number;
   lastTrailAt: number;
+  task: DeliveryTask | null;
+  conflict: boolean;
 }
 
 export interface SimConfig {
@@ -69,8 +71,17 @@ export interface Order {
   id: string;
   status: OrderStatus;
   droneId: string | null;
+  pickupId: string;
+  dropoffId: string;
   placedAt: number;
   deliveredAt: number | null;
+}
+
+export type TaskPhase = 'toPickup' | 'toDropoff' | 'returning';
+
+export interface DeliveryTask {
+  orderId: string;
+  phase: TaskPhase;
 }
 
 export interface Score {

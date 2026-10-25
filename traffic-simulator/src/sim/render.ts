@@ -9,7 +9,7 @@ function fitCanvas(ctx: CanvasRenderingContext2D): number {
   return s;
 }
 
-export function drawRadar(ctx: CanvasRenderingContext2D, world: World): void {
+export function drawRadar(ctx: CanvasRenderingContext2D, world: World, selectedId: string | null = null): void {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = '#0c0c0c';
   ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -33,7 +33,7 @@ export function drawRadar(ctx: CanvasRenderingContext2D, world: World): void {
   ctx.strokeRect(0, 0, WORLD_W, WORLD_H);
 
   drawNetwork(ctx, world);
-  drawDrones(ctx, world);
+  drawDrones(ctx, world, selectedId);
 }
 
 function drawNetwork(ctx: CanvasRenderingContext2D, world: World): void {
@@ -92,9 +92,18 @@ function drawNetwork(ctx: CanvasRenderingContext2D, world: World): void {
   }
 }
 
-function drawDrones(ctx: CanvasRenderingContext2D, world: World): void {
+function drawDrones(ctx: CanvasRenderingContext2D, world: World, selectedId: string | null): void {
   const s = ctx.canvas.width / WORLD_W;
   for (const d of world.drones) {
+    const tagColor = d.conflict ? '#b4432f' : '#ffffff';
+    if (d.task) {
+      ctx.strokeStyle = 'rgba(211,161,63,0.5)';
+      ctx.lineWidth = 1.5 / s;
+      ctx.beginPath();
+      ctx.moveTo(d.x, d.y);
+      for (let i = d.leg; i < d.route.length; i++) ctx.lineTo(d.route[i]!.x, d.route[i]!.y);
+      ctx.stroke();
+    }
     if (d.trail.length > 1) {
       ctx.strokeStyle = 'rgba(255,255,255,0.35)';
       ctx.lineWidth = 1.5 / s;
@@ -104,11 +113,18 @@ function drawDrones(ctx: CanvasRenderingContext2D, world: World): void {
       ctx.lineTo(d.x, d.y);
       ctx.stroke();
     }
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = tagColor;
     ctx.beginPath();
     ctx.arc(d.x, d.y, 5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#ffffff';
+    if (d.id === selectedId) {
+      ctx.strokeStyle = '#d3a13f';
+      ctx.lineWidth = 2 / s;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, 10, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.fillStyle = tagColor;
     ctx.font = `${12 / s}px sans-serif`;
     ctx.fillText(`${d.id} ${Math.round(d.altitudeM)}m`, d.x + 9, d.y + 4);
   }

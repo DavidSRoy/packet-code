@@ -1,4 +1,4 @@
-import { BASE_SPEED_MPS, CLIMB_MPS, Drone, Order, Score, TICK_S, Waypoint } from './types.js';
+import { AlertEntry, BASE_SPEED_MPS, CLIMB_MPS, CONFLICT_WINDOW_S, Drone, Order, Score, SEP_ALT_M, SEP_DIST_M, TICK_S, Waypoint } from './types.js';
 
 export type Speed = 1 | 5 | 20;
 
@@ -14,6 +14,57 @@ export class World {
   orderSpawnEvery = 40;
   private spawnTimer = 0;
   private orderSeq = 0;
+  alerts: AlertEntry[] = [];
+  private conflictUntil = new Map<string, number>();
+
+  log(text: string, critical = false): void {
+    this.alerts.push({ time: this.simTime, text, critical });
+    if (this.alerts.length > 50) this.alerts.shift();
+  }
+
+  // Operator commands. Any route-changing command clears an auto-hold.
+  commandReroute(drone: Drone, waypointId: string): void {
+    drone.autoHold = false;
+    this.assignRoute(drone, [this.droneStopId(drone), this.nearestCorridorId(this.waypointById(waypointId)!), waypointId].filter((v, i, a) => i === 0 || v !== a[i - 1]!));
+    if (drone.state === 'idle') drone.state = 'in_flight';
+    this.log(`${drone.id} rerouted → ${waypointId}`);
+  }
+
+  commandHold(drone: Drone): void {
+    drone.autoHold = false;
+    drone.route = [];
+    drone.speedMps = 0;
+    this.log(`${drone.id} holding`);
+  }
+
+  commandLayer(drone: Drone, layerM: number): void {
+    drone.cruiseM = layerM;
+    this.log(`${drone.id} layer → ${layerM}m`);
+  }
+
+  commandSpeed(drone: Drone, faster: boolean): void {
+    drone.speedFactor = faster
+      ? Math.min(2, drone.speedFactor + 0.5)
+      : Math.max(0.5, drone.speedFactor - 0.5);
+    this.log(`${drone.id} speed x${drone.speedFactor}`);
+  }
+
+  commandRTB(drone: Drone): void {
+    drone.autoHold = false;
+    drone.task = null;
+    drone.state = 'returning';
+    this.assignRoute(drone, this.routeThrough([this.droneStopId(drone), this.nearestCorridorId(this.waypointById('hub')!), 'hub']));
+    this.log(`${drone.id} returning to hub`);
+  }
+
+  commandCancelOrder(drone: Drone): void {
+    if (!drone.task) return;
+    const order = this.orders.find((o) => o.id === drone.task!.orderId);
+    if (order && order.status !== 'delivered') order.status = 'cancelled';
+    drone.task = null;
+    this.log(`${drone.id} order cancelled`, true);
+    this.commandRTB(drone);
+  }
 
   tick(dt: number = TICK_S): void {
     this.simTime += dt;
@@ -27,6 +78,55 @@ export class World {
     }
     this.assignOrders();
     this.advanceDeliveries();
+    this.detectConflicts();
+  }
+
+  private detectConflicts(): void {
+    const live = new Set<string>();
+    for (let i = 0; i < this.drones.length; i++) {
+      for (let j = i + 1; j < this.drones.length; j++) {
+        const a = this.drones[i]!;
+        const b = this.drones[j]!;
+        // Ground traffic at the hub does not conflict; both must be airborne.
+        if (a.altitudeM < 2 || b.altitudeM < 2) continue;
+        const d2d = Math.hypot(a.x - b.x, a.y - b.y);
+        const dAlt = Math.abs(a.altitudeM - b.altitudeM);
+        if (d2d >= SEP_DIST_M || dAlt >= SEP_ALT_M) continue;
+        const key = [a.id, b.id].sort().join('|');
+        live.add(key);
+        if (!this.conflictUntil.has(key)) {
+          this.conflictUntil.set(key, this.simTime + CONFLICT_WINDOW_S);
+          this.score.conflicts += 1;
+          this.log(`CONFLICT ${a.id} × ${b.id} — resolve in ${CONFLICT_WINDOW_S}s`, true);
+        }
+        a.conflict = true;
+        b.conflict = true;
+      }
+    }
+    for (const [key, deadline] of [...this.conflictUntil]) {
+      if (!live.has(key)) {
+        this.conflictUntil.delete(key);
+        this.log(`${key} resolved`, false);
+        continue;
+      }
+      if (this.simTime >= deadline) {
+        this.conflictUntil.delete(key);
+        this.score.incidents += 1;
+        const [aId, bId] = key.split('|');
+        const a = this.drones.find((d) => d.id === aId)!;
+        const b = this.drones.find((d) => d.id === bId)!;
+        // The second drone auto-holds until separated or re-commanded.
+        b.autoHold = true;
+        this.log(`INCIDENT ${a.id} × ${b.id} — ${b.id} auto-holding`, true);
+      }
+    }
+    const active = new Set<string>();
+    for (const key of this.conflictUntil.keys()) {
+      for (const id of key.split('|')) active.add(id);
+    }
+    for (const d of this.drones) {
+      d.conflict = active.has(d.id);
+    }
   }
 
   spawnOrder(): void {
@@ -183,12 +283,18 @@ export class World {
       lastTrailAt: -1,
       task: null,
       conflict: false,
+      autoHold: false,
     };
     this.drones.push(drone);
     return drone;
   }
 
   protected updateDrone(drone: Drone, dt: number): void {
+    if (drone.autoHold) {
+      drone.speedMps = 0;
+      this.settleAltitude(drone, drone.cruiseM, dt);
+      return;
+    }
     if (drone.route.length === 0) return;
     if (this.simTime < drone.pauseUntil) {
       drone.speedMps = 0;
@@ -272,6 +378,8 @@ export class World {
     this.simTime = 0;
     this.drones = [];
     this.orders = [];
+    this.alerts = [];
+    this.conflictUntil.clear();
     this.score = { deliveries: 0, conflicts: 0, incidents: 0, deliveryTimes: [] };
   }
 

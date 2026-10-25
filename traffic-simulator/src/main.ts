@@ -72,6 +72,35 @@ btnReset.addEventListener('click', () => {
   refreshControls();
 });
 
+const cmdTarget = document.getElementById('cmd-target') as HTMLSelectElement;
+for (const wp of world.waypoints) {
+  const opt = document.createElement('option');
+  opt.value = wp.id;
+  opt.textContent = wp.name;
+  cmdTarget.appendChild(opt);
+}
+
+function selectedDrone() {
+  return world.drones.find((d) => d.id === selectedId) ?? null;
+}
+
+const wire = (id: string, fn: (d: NonNullable<ReturnType<typeof selectedDrone>>) => void) => {
+  document.getElementById(id)!.addEventListener('click', () => {
+    const d = selectedDrone();
+    if (d) fn(d);
+  });
+};
+
+wire('cmd-hold', (d) => world.commandHold(d));
+wire('cmd-rtb', (d) => world.commandRTB(d));
+wire('cmd-cancel', (d) => world.commandCancelOrder(d));
+wire('cmd-60', (d) => world.commandLayer(d, 60));
+wire('cmd-80', (d) => world.commandLayer(d, 80));
+wire('cmd-100', (d) => world.commandLayer(d, 100));
+wire('cmd-slow', (d) => world.commandSpeed(d, false));
+wire('cmd-fast', (d) => world.commandSpeed(d, true));
+wire('cmd-route', (d) => world.commandReroute(d, cmdTarget.value));
+
 let accumulator = 0;
 let last = performance.now();
 
@@ -92,7 +121,14 @@ function frame(now: number): void {
 
   drawRadar(ctx, world, selectedId);
   clockEl.textContent = `T+${world.simTime.toFixed(1)}s`;
+    const commandsEl = document.getElementById('commands')!;
+  const alertsEl = document.getElementById('alerts')!;
+  const latestAlerts = world.alerts.slice(-6).reverse();
+  alertsEl.innerHTML = latestAlerts
+    .map((a) => `<li class="${a.critical ? 'critical' : ''}">T+${a.time.toFixed(0)}s ${a.text}</li>`)
+    .join('');
   const selected = world.drones.find((d) => d.id === selectedId) ?? null;
+  commandsEl.classList.toggle('hidden', selected === null);
   if (!selected) {
     if (selectedId !== null) selectedId = null;
     selectedEl.textContent = 'None';
@@ -101,7 +137,8 @@ function frame(now: number): void {
     const legs = selected.route.slice(selected.leg).map((w) => w.id).join(' → ');
     selectedEl.textContent =
       `${selected.id} · ${selected.state} · alt ${Math.round(selected.altitudeM)}m · ` +
-      `batt ${Math.round(selected.batteryPct)}% · order ${order ? `${order.id} (${order.status})` : '—'}` +
+      `layer ${selected.cruiseM}m · x${selected.speedFactor} · batt ${Math.round(selected.batteryPct)}% · ` +
+      `order ${order ? `${order.id} (${order.status})` : '—'}` +
       (legs ? ` · via ${legs}` : '');
   }
   scoreEls.deliveries.textContent = String(world.score.deliveries);

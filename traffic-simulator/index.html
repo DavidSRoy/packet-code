@@ -37,6 +37,24 @@
         <section class="card">
           <h2>Selected</h2>
           <div id="selected">None</div>
+          <div id="commands" class="commands hidden">
+            <div class="row">
+              <button id="cmd-hold" type="button">Hold</button>
+              <button id="cmd-rtb" type="button">RTB</button>
+              <button id="cmd-cancel" type="button">Cancel order</button>
+            </div>
+            <div class="row">
+              <button id="cmd-60" type="button">60m</button>
+              <button id="cmd-80" type="button">80m</button>
+              <button id="cmd-100" type="button">100m</button>
+              <button id="cmd-slow" type="button">Slower</button>
+              <button id="cmd-fast" type="button">Faster</button>
+            </div>
+            <div class="row">
+              <select id="cmd-target" aria-label="Route target"></select>
+              <button id="cmd-route" type="button">Route →</button>
+            </div>
+          </div>
         </section>
         <section class="card">
           <h2>Alerts</h2>

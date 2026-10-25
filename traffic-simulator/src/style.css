@@ -157,3 +157,19 @@ button.active {
 .alerts li.critical {
   border-left-color: var(--red);
 }
+
+.commands {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.commands.hidden {
+  display: none;
+}
+
+.commands select {
+  flex: 1;
+  padding: 6px;
+  border-radius: 6px;
+}

@@ -55,6 +55,14 @@ export interface Drone {
   lastTrailAt: number;
   task: DeliveryTask | null;
   conflict: boolean;
+  // Incident penalty: hover in place until separated or re-commanded.
+  autoHold: boolean;
+}
+
+export interface AlertEntry {
+  time: number;
+  text: string;
+  critical: boolean;
 }
 
 export interface SimConfig {
@@ -62,6 +70,10 @@ export interface SimConfig {
   layers: number[];
   waypoints: Waypoint[];
 }
+
+export const SEP_DIST_M = 40;
+export const SEP_ALT_M = 10;
+export const CONFLICT_WINDOW_S = 10;
 
 export const CRUISE_LAYERS = [60, 80, 100];
 export const CLIMB_MPS = 6;

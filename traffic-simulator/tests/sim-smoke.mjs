@@ -58,3 +58,55 @@ function freshWorld() {
   assert.ok(d.altitudeM >= 95, `cruise layer, alt=${d.altitudeM}`);
   console.log('cruise: ok');
 }
+
+// Conflicts: a close trail at one layer breaches; ignoring it records an incident.
+{
+  const w = freshWorld();
+  w.orderSpawnEvery = 1e9;
+  const a = w.spawnDrone('CA', ['hub', 'c-east', 'bryant'], 80, false);
+  const b = w.spawnDrone('CB', ['hub', 'c-east', 'bryant'], 80, false);
+  b.pauseUntil = 1; // 1 s staggered takeoff -> ~12 m trail, ~6 m apart in alt
+  let sawConflict = false;
+  for (let i = 0; i < 2000 && w.score.incidents === 0; i++) {
+    w.tick(0.1);
+    if (w.score.conflicts > 0) sawConflict = true;
+  }
+  assert.ok(sawConflict, 'expected a separation breach');
+  assert.ok(w.score.incidents >= 1, 'expected an incident after the countdown');
+  assert.ok(a.autoHold || b.autoHold, 'one drone auto-holds');
+  console.log('conflict: ok');
+}
+
+// Conflict save: changing layer during the countdown separates the pair.
+{
+  const w = freshWorld();
+  w.orderSpawnEvery = 1e9;
+  w.spawnDrone('SA', ['hub', 'c-east', 'bryant'], 80, false);
+  w.spawnDrone('SB', ['hub', 'c-east', 'bryant'], 80, false).pauseUntil = 1;
+  let intervened = false;
+  for (let i = 0; i < 2000 && !intervened; i++) {
+    w.tick(0.1);
+    if (w.score.conflicts > 0) {
+      intervened = true;
+    }
+  }
+  assert.ok(intervened, 'conflict happened');
+  // Hold the trailer: the leader pulls away and the pair separates.
+  // (A layer change would not help here: both are still climbing in lockstep.)
+  const sb = w.drones.find((d) => d.id === 'SB');
+  w.commandHold(sb);
+  // The pair must separate before the 10 s countdown ends.
+  let separated = false;
+  for (let i = 0; i < 100; i++) {
+    w.tick(0.1);
+    const sa = w.drones.find((d) => d.id === 'SA');
+    const sb = w.drones.find((d) => d.id === 'SB');
+    if (!sa.conflict && !sb.conflict) {
+      separated = true;
+      break;
+    }
+  }
+  assert.ok(separated, 'pair separated after layer change');
+  assert.strictEqual(w.score.incidents, 0, 'save, no incident');
+  console.log('conflict-save: ok');
+}

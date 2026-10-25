@@ -21,7 +21,7 @@ import cv2
 import numpy as np
 
 
-def camera_matrix(w, h, hfov_deg=75.0):
+def camera_matrix(w, h, hfov_deg=70.0):
     fx = (w / 2) / math.tan(math.radians(hfov_deg) / 2)
     return np.array([[fx, 0, w / 2], [0, fx, h / 2], [0, 0, 1]], dtype=np.float64)
 
@@ -84,9 +84,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--layout", default="lid_layout.json")
     ap.add_argument("--dev", default="/dev/video0")
-    ap.add_argument("--width", type=int, default=1600)
-    ap.add_argument("--height", type=int, default=1200)
-    ap.add_argument("--hfov", type=float, default=75.0)
+    ap.add_argument("--width", type=int, default=1280)
+    ap.add_argument("--height", type=int, default=800)
+    ap.add_argument("--hfov", type=float, default=70.0)
     a = ap.parse_args()
 
     finder = LidFinder(a.layout)

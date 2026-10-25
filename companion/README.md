@@ -18,21 +18,28 @@ over MAVLink, so the servo stays under the FC failsafes and is in the logs.
 
 | From | To | Note |
 |---|---|---|
-| 6X TELEM3 TX | Pi GPIO15 RXD (pin 10) | 3.3 V logic on both sides |
-| 6X TELEM3 RX | Pi GPIO14 TXD (pin 8) | |
-| 6X TELEM3 GND | Pi GND (pin 6) | |
+| 6X TELEM3 pin 2 (TX) | Pi GPIO15 RXD (pin 10) | 3.3 V logic on both sides. Cross TX and RX |
+| 6X TELEM3 pin 3 (RX) | Pi GPIO14 TXD (pin 8) | |
+| 6X TELEM3 pin 6 (GND) | Pi GND (pin 6 or 14) | Do not connect TELEM3 pin 1 (5 V) |
 | 5 V BEC, 2.5 A or more | Pi 5V (pin 2) + GND (pin 14) | Do not use the TELEM 5 V pin |
-| Arducam B0322 USB | Pi micro-USB data port (the inner one, "USB") | Needs a micro-USB OTG adapter |
+| Arducam OV9281 USB (B096M5DKY6) | Pi micro-USB data port (the inner one, "USB") | Needs a micro-USB OTG adapter. 1280x800, 70 deg HFOV |
 | 6X AUX5 signal (SERVO13) | Servo signal | |
 | 7.4 V BEC, 5 A or more | Servo + and - | The 6X servo rail has no power. Servo range is 4.8-8.4 V |
 
-## FC parameters (NOT applied; need Jason's OK)
+## FC parameters
+
+Applied on 2026-10-24 (link tested: heartbeat and about 100 msg/s on the Pi):
 
 | Param | Value | Why |
 |---|---|---|
 | `SERIAL5_PROTOCOL` | 2 | MAVLink2 on TELEM3 |
 | `SERIAL5_BAUD` | 921 | 921600 baud |
 | `BRD_SER5_RTSCTS` | 0 | 3-wire link, no flow control |
+
+NOT applied (need Jason's OK):
+
+| Param | Value | Why |
+|---|---|---|
 | `SERVO13_FUNCTION` | 28 | Gripper |
 | `GRIP_ENABLE` | 1 | then set `GRIP_GRAB` / `GRIP_RELEASE` PWM on the bench |
 
@@ -66,7 +73,9 @@ SVG per box, `stickers/lid_stickers.pdf` (one page per box, 1:1 scale) and
 `lid_tags.py` finds every box in view and gives its ID and pose. It puts all
 visible tags of one box into one solvePnP.
 
-Simulated B0322 results (blur, noise, MJPEG, no motion blur, no glare):
+Simulated results with the earlier OV2311 camera (B0322, 1600x1200, 75 deg).
+The OV9281 has about 12 % fewer pixels per degree, so the ID range is about
+12 % shorter. Blur, noise, MJPEG, no motion blur, no glare:
 
 | Camera height | Result |
 |---|---|
@@ -80,6 +89,20 @@ Printing:
 - Use matte white vinyl. Gloss gives glare and the tags then fail.
 - Keep the white margins clean. Do not put logos or text near the tags.
 - Put the sticker on the lid with the "BOX nn" text on the left when you look down at the lid.
+
+## Camera
+
+- Arducam OV9281 mono global shutter, UVC, MJPG 1280x800. The scripts use
+  1280x800 and 70 deg HFOV by default.
+- Focus: set the M12 lens sharp at about 6 m (or infinity), then lock it with
+  glue. With focus at infinity, the blur stays at about 0.27 of a corner-tag
+  cell at all distances, also at 0.1 m, because the tags grow at the same rate.
+- Live view in a browser: `python3 cam_stream.py`, then open
+  `http://<pi-ip>:8080/`. It passes the camera's own JPEG frames through.
+- The earlier OV2311 (B0322) gave only empty UVC headers and no image (USB link
+  good, sensor gave no frames). It went back as defective.
+- The SD card has `dtoverlay=dwc2,dr_mode=host` in `config.txt` from the
+  OV2311 tests. It is not proven necessary.
 
 ## Wi-Fi and status screen
 

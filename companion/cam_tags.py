@@ -2,7 +2,8 @@
 """Find box-lid tags in the USB camera image.
 
 Prints the tag ID, the distance to the tag and the tag size in pixels.
-The camera model is approximate (75 deg HFOV, no lens calibration yet),
+The camera model is approximate (Arducam OV9281: 70 deg HFOV,
+no lens calibration yet),
 so the distances are estimates until the camera is calibrated.
 
 Example:
@@ -26,9 +27,9 @@ FAMILIES = {
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dev", default="/dev/video0")
-    ap.add_argument("--width", type=int, default=1600)
-    ap.add_argument("--height", type=int, default=1200)
-    ap.add_argument("--hfov", type=float, default=75.0, help="horizontal FOV, deg")
+    ap.add_argument("--width", type=int, default=1280)
+    ap.add_argument("--height", type=int, default=800)
+    ap.add_argument("--hfov", type=float, default=70.0, help="horizontal FOV, deg")
     ap.add_argument("--family", default="36h11", choices=sorted(FAMILIES))
     ap.add_argument("--size-m", type=float, default=0.18,
                     help="tag black-border width in metres")

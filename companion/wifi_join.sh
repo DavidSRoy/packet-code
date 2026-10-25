@@ -17,9 +17,11 @@ for i in $(seq 1 60); do nmcli -t general status >/dev/null 2>&1 && break; sleep
     name="packet-$ssid"
     nmcli con delete "$name" >/dev/null 2>&1
     # The MAC must stay fixed: UW MPSK keys are tied to the registered MAC.
+    # Power save off: with it on, the Zero 2 W dropped off Wi-Fi and got a new IP.
     nmcli con add type wifi ifname wlan0 con-name "$name" ssid "$ssid" \
       wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$psk" \
       802-11-wireless.cloned-mac-address permanent \
+      802-11-wireless.powersave 2 \
       connection.autoconnect yes connection.autoconnect-priority "${prio:-0}" \
       && echo "added $ssid (priority ${prio:-0})"
   done

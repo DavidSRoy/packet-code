@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Packet Traffic Simulator</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <span class="wordmark">Packet <span class="dim">Traffic</span></span>
+      <span id="clock" class="clock">T+0.0s</span>
+    </header>
+    <main class="layout">
+      <section class="scope-wrap">
+        <canvas id="radar" width="1200" height="800"></canvas>
+      </section>
+      <aside class="panel">
+        <section class="card">
+          <h2>Controls</h2>
+          <div class="row">
+            <button id="btn-pause" type="button">Pause</button>
+            <button id="btn-speed" type="button">1x</button>
+            <button id="btn-reset" type="button">Reset</button>
+          </div>
+          <p class="hint">Click a drone to select it.</p>
+        </section>
+        <section class="card">
+          <h2>Score</h2>
+          <dl class="score">
+            <div><dt>Deliveries</dt><dd id="score-deliveries">0</dd></div>
+            <div><dt>Conflicts</dt><dd id="score-conflicts">0</dd></div>
+            <div><dt>Incidents</dt><dd id="score-incidents">0</dd></div>
+            <div><dt>Avg delivery</dt><dd id="score-avg">—</dd></div>
+          </dl>
+        </section>
+        <section class="card">
+          <h2>Selected</h2>
+          <div id="selected">None</div>
+          <div id="commands" class="commands hidden">
+            <div class="row">
+              <button id="cmd-hold" type="button">Hold</button>
+              <button id="cmd-rtb" type="button">RTB</button>
+              <button id="cmd-cancel" type="button">Cancel order</button>
+            </div>
+            <div class="row">
+              <button id="cmd-60" type="button">60m</button>
+              <button id="cmd-80" type="button">80m</button>
+              <button id="cmd-100" type="button">100m</button>
+              <button id="cmd-slow" type="button">Slower</button>
+              <button id="cmd-fast" type="button">Faster</button>
+            </div>
+            <div class="row">
+              <select id="cmd-target" aria-label="Route target"></select>
+              <button id="cmd-route" type="button">Route →</button>
+            </div>
+          </div>
+        </section>
+        <section class="card">
+          <h2>Alerts</h2>
+          <ul id="alerts" class="alerts"></ul>
+        </section>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

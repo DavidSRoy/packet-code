@@ -1,0 +1,175 @@
+:root {
+  --bg: #111111;
+  --ink: #ffffff;
+  --dim: #9a9a9a;
+  --red: #b4432f;
+  --mustard: #d3a13f;
+  --card: #1b1b1b;
+  --line: #2c2c2c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  font-size: 15px;
+}
+
+.topbar {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 10px 20px;
+  border-bottom: 4px solid var(--red);
+}
+
+.wordmark {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.wordmark .dim {
+  color: var(--dim);
+  font-weight: 400;
+}
+
+.clock {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--dim);
+}
+
+.layout {
+  display: flex;
+  gap: 16px;
+  padding: 16px 20px;
+  align-items: flex-start;
+}
+
+.scope-wrap {
+  border: 1px solid var(--line);
+}
+
+#radar {
+  display: block;
+  width: min(72vw, 960px);
+  height: auto;
+  background: #0c0c0c;
+  cursor: crosshair;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 240px;
+  flex: 1;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.card h2 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  background: #ffffff;
+  color: #111111;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--mustard);
+}
+
+button.active {
+  background: var(--mustard);
+}
+
+.hint {
+  color: var(--dim);
+  font-size: 13px;
+  margin: 8px 0 0;
+}
+
+.score {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.score > div {
+  display: flex;
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+}
+
+.score dt {
+  color: var(--dim);
+}
+
+.score dd {
+  margin: 0;
+}
+
+#selected {
+  font-size: 14px;
+}
+
+.alerts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.alerts li {
+  border-left: 4px solid var(--mustard);
+  padding: 4px 8px;
+  background: #222;
+}
+
+.alerts li.critical {
+  border-left-color: var(--red);
+}
+
+.commands {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.commands.hidden {
+  display: none;
+}
+
+.commands select {
+  flex: 1;
+  padding: 6px;
+  border-radius: 6px;
+}

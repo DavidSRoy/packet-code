@@ -1,10 +1,18 @@
 import { World, Speed } from './sim/world.js';
 import { drawRadar } from './sim/render.js';
-import { TICK_S } from './sim/types.js';
+import { TICK_S, SimConfig } from './sim/types.js';
+import configData from '../config/waypoints.json';
 
 const SPEEDS: Speed[] = [1, 5, 20];
 
 const world = new World();
+const config = configData as SimConfig;
+world.waypoints = config.waypoints;
+
+// Throwaway demo traffic until orders arrive in PR 3: two drones looping at
+// different cruise layers so their paths cross safely.
+world.spawnDrone('D1', ['hub', 'c-25th', 'bowls', 'c-east', 'bryant', 'c-north', 'hub'], 80, true);
+world.spawnDrone('D2', ['hub', 'c-west', 'ave', 'c-west', 'mercer', 'c-45th', 'hub'], 60, true);
 const canvas = document.getElementById('radar') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
 

@@ -210,6 +210,45 @@
   .cam-url input { flex: 1; min-width: 0; background: rgba(0,0,0,.35); border: 1px solid var(--line-2); color: var(--text);
     font: 11px var(--mono); padding: 4px 6px; border-radius: 2px; user-select: text; }
 
+
+  /* legal ceiling / airspace */
+  #air { right: 12px; bottom: 12px; width: 252px; padding: 10px 12px 10px; }
+  #air .air-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  #air .air-v { display: flex; align-items: baseline; gap: 8px; }
+  #air .air-v b { font: 600 22px var(--mono); letter-spacing: -.01em; }
+  #air .air-v small { color: var(--muted); font: 11px var(--mono); }
+  #air .air-r { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 2px 0 7px; }
+  #air .air-f { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; font: 11px var(--mono); color: var(--text); margin-bottom: 8px; }
+  #air .air-f span { color: var(--muted); }
+  #air .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
+  #air.nofly { border-color: rgba(255,77,77,.7); box-shadow: 0 0 0 1px rgba(255,77,77,.35), 0 0 24px rgba(255,77,77,.18); }
+  #air.nofly .air-v b { color: var(--bad); }
+  #air.over .air-v b { color: var(--warn); }
+  .badge.warn { color: #1a1000; background: var(--warn); border-color: var(--warn); }
+  .badge.bad { color: #fff; background: var(--bad); border-color: var(--bad); }
+  .mini.on { color: var(--friendly); border-color: rgba(90,209,255,.6); }
+  #air-pop { right: 12px; bottom: 178px; width: 300px; max-height: calc(100vh - 260px); overflow-y: auto; padding: 12px; display: none; }
+  #air-pop.open { display: block; }
+  #air-pop h4 { margin: 10px 0 6px; font: 600 10px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  #air-pop h4:first-child { margin-top: 0; }
+  #air-pop label.chk { display: flex; align-items: center; justify-content: flex-start; gap: 8px; font-size: 12px; padding: 3px 0; cursor: pointer; }
+  #air-pop label.chk input { width: 14px; height: 14px; flex: none; margin: 0; padding: 0; accent-color: var(--friendly); }
+  #air-pop label.chk i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+  #air-pop .ages { font: 10.5px/1.6 var(--mono); color: var(--muted); }
+  #air-pop .ages b { color: var(--text); font-weight: 500; }
+  #air-pop .frm { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  #air-pop .frm .full { grid-column: 1 / -1; }
+  #air-pop input, #air-pop select { width: 100%; height: 28px; background: var(--glass-2); border: 1px solid var(--line-2); border-radius: 3px;
+    color: var(--text); font: 11px var(--mono); padding: 0 6px; color-scheme: dark; }
+  #air-pop .lst div { display: flex; justify-content: space-between; gap: 6px; font: 11px/1.7 var(--mono); color: var(--text); }
+  #air-pop .lst button { background: none; border: 0; color: var(--bad); cursor: pointer; font: 600 12px var(--mono); }
+  #air-pop .err { color: var(--bad); font-size: 11px; min-height: 14px; }
+  .air-tip { font: 11px/1.45 var(--sans); }
+  .air-tip b { font-family: var(--mono); }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--glass-2); color: var(--text); border: 1px solid var(--line-2); }
+  .leaflet-popup-content { margin: 10px 12px; font: 12px/1.45 var(--sans); }
+  .leaflet-tooltip { background: var(--glass-2); color: var(--text); border: 1px solid var(--line-2); box-shadow: none; }
+  .leaflet-tooltip-top:before { border-top-color: var(--line-2); }
   @media (max-width: 1100px) {
     #cam { width: max(220px, calc(100vw - 324px - 292px)); }
     #cam.big { inset: 64px 292px 112px 324px; width: auto; }
@@ -234,6 +273,7 @@
     <div class="st"><span class="dot" id="d-gps"></span>GPS <b id="t-gps">—</b></div>
     <div class="st"><span class="dot" id="d-batt"></span>Batt <b id="t-batt">—</b></div>
     <div class="st opt"><span class="dot" id="d-fence"></span>Fence <b id="t-fence">—</b></div>
+    <div class="st"><span class="dot" id="d-ceil"></span>Ceiling <b id="t-ceil">—</b></div>
     <div class="st opt"><span class="dot" id="d-log"></span>Rec <b id="t-log">—</b></div>
     <div class="st opt"><span class="dot" id="d-cloud"></span>Cloud <b id="t-cloud">—</b></div>
   </div>
@@ -367,6 +407,53 @@
     <div class="sl"><span class="lbl">Vertical</span><span class="num" id="o-v">0.5 m/s</span><input id="sp-v" type="range" min="0.1" max="1" step="0.1" value="0.5"></div>
     <div class="sl"><span class="lbl">Yaw</span><span class="num" id="o-y">30 °/s</span><input id="sp-y" type="range" min="5" max="45" step="5" value="30"></div>
   </div>
+</div>
+
+<div id="air" class="panel">
+  <div class="air-h"><span class="lbl">Legal ceiling · here</span><span class="badge" id="air-badge">—</span></div>
+  <div class="air-v"><b id="air-ft">—</b><small id="air-m">ft above ground</small></div>
+  <div class="air-r" id="air-reason">ceiling map loading</div>
+  <div class="air-f">
+    <span>Fence sent</span><b id="air-sent">—</b>
+    <span>Fence on FC</span><b id="air-fc">—</b>
+  </div>
+  <div class="row3">
+    <button class="mini" id="air-layers">Layers</button>
+    <button class="mini" id="air-probe" title="Click the map to see the ceiling at a point">Probe</button>
+    <button class="mini" id="air-edit">Events</button>
+  </div>
+</div>
+<div id="air-pop" class="panel">
+  <div id="air-pop-layers">
+    <h4>Map layers</h4>
+    <label class="chk"><input type="checkbox" data-l="ceil"><i style="background:linear-gradient(90deg,#c81e3a,#e9d04a,#4caf8f,#4096dc)"></i>Ceiling above ground</label>
+    <label class="chk"><input type="checkbox" data-l="cls"><i style="border:1.5px solid #4d8dff"></i>Class B / C / D / E2</label>
+    <label class="chk"><input type="checkbox" data-l="laanc"><i style="background:rgba(243,146,51,.6)"></i>LAANC grid (auto approval)</label>
+    <label class="chk"><input type="checkbox" data-l="tfr"><i style="background:rgba(255,77,77,.6)"></i>TFRs (FAA, live)</label>
+    <label class="chk"><input type="checkbox" data-l="stad"><i style="border:1.5px dashed #ff9d4d"></i>Stadiums (3 NM)</label>
+    <label class="chk"><input type="checkbox" data-l="auth"><i style="background:rgba(79,214,138,.5)"></i>ATC authorizations</label>
+    <h4>Data</h4>
+    <div class="ages" id="air-ages">—</div>
+  </div>
+  <div id="air-pop-edit">
+    <h4>Stadium event (blanket TFR, FDC 4/3621)</h4>
+    <div class="frm">
+      <select id="ev-st" class="full"><option value="husky">Husky Stadium</option><option value="lumen">Lumen Field</option><option value="tmobile">T-Mobile Park</option></select>
+      <input id="ev-start" type="datetime-local" title="game start"><input id="ev-end" type="datetime-local" title="game end">
+      <button class="mini full" id="ev-add">Add event (no-fly 1 h before to 1 h after)</button>
+    </div>
+    <div class="lst" id="ev-list"></div>
+    <h4>ATC authorization (LAANC / DroneZone)</h4>
+    <div class="frm">
+      <input id="au-name" class="full" placeholder="name or LAANC reference" maxlength="60">
+      <input id="au-ft" type="number" min="1" max="400" step="1" placeholder="max ft AGL">
+      <input id="au-r" type="number" min="50" max="20000" step="10" placeholder="radius m">
+      <input id="au-start" type="datetime-local"><input id="au-end" type="datetime-local">
+      <button class="mini full" id="au-add">Add, centred on the map centre</button>
+    </div>
+    <div class="lst" id="au-list"></div>
+  </div>
+  <div class="err" id="air-err"></div>
 </div>
 
 <script src="/static/vendor/leaflet/leaflet.js"></script>
@@ -607,6 +694,170 @@ function dot(id, cls) { $(id).className = "dot " + (cls || ""); }
 const fx = (v, d = 1) => v == null ? "—" : v.toFixed(d);
 function setNum(id, txt) { const el = $(id); el.firstChild.nodeValue = txt; }
 
+
+/* ---------- legal ceiling / airspace ---------- */
+const FT = 0.3048;
+map.createPane("air"); map.getPane("air").style.zIndex = 380;
+const airG = { ceil: null, cls: L.layerGroup(), laanc: L.layerGroup(), tfr: L.layerGroup(), stad: L.layerGroup(), auth: L.layerGroup() };
+const AIR_DEF = { ceil: true, cls: true, laanc: false, tfr: true, stad: true, auth: true };
+let airOn = { ...AIR_DEF };
+try { airOn = { ...AIR_DEF, ...JSON.parse(localStorage.getItem("air-layers") || "{}") }; } catch (e) {}
+let airData = null, airBuiltAt = null, airProbe = false, airPopMode = null;
+const fmtFt = m => m == null ? "—" : `${Math.round(m / FT)} ft`;
+const fmtAge = s => s == null ? "—" : s < 120 ? `${s} s` : s < 7200 ? `${Math.round(s / 60)} min` : s < 172800 ? `${Math.round(s / 3600)} h` : `${Math.round(s / 86400)} d`;
+const esc2 = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const tStr = t => t == null ? "open" : new Date(t * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+function airApply() {
+  for (const k in airG) {
+    const lyr = airG[k]; if (!lyr) continue;
+    if (airOn[k] && !map.hasLayer(lyr)) lyr.addTo(map);
+    if (!airOn[k] && map.hasLayer(lyr)) map.removeLayer(lyr);
+  }
+  document.querySelectorAll("#air-pop input[data-l]").forEach(el => { el.checked = !!airOn[el.dataset.l]; });
+  try { localStorage.setItem("air-layers", JSON.stringify(airOn)); } catch (e) {}
+}
+document.querySelectorAll("#air-pop input[data-l]").forEach(el => el.onchange = () => { airOn[el.dataset.l] = el.checked; airApply(); });
+
+function floorTxt(p) {
+  const lo = p.LOWER_VAL ? `${p.LOWER_VAL} ${p.LOWER_CODE === "MSL" ? "MSL" : "AGL"}` : "SFC";
+  return `${lo} – ${p.UPPER_VAL ?? "?"} ${p.UPPER_CODE || ""}`;
+}
+function drawAir(d) {
+  airData = d;
+  const st = d.status || {};
+  if (d.bounds && st.built_age_s != null) {
+    const built = Date.now() / 1000 - st.built_age_s;
+    if (airBuiltAt == null || Math.abs(built - airBuiltAt) > 30) {
+      airBuiltAt = built;
+      const on = airG.ceil && map.hasLayer(airG.ceil);
+      if (airG.ceil) map.removeLayer(airG.ceil);
+      airG.ceil = L.imageOverlay(`/airspace/overlay.png?b=${Math.round(built)}`, d.bounds, { pane: "air", opacity: 0.8, interactive: false });
+      if (on || airOn.ceil) airG.ceil.addTo(map);
+    }
+  }
+  airG.cls.clearLayers();
+  for (const f of (d.classes?.features || [])) {
+    const p = f.properties, c = p.CLASS;
+    if (!["B", "C", "D"].includes(c) && !/E2|E3|E4/.test(p.LOCAL_TYPE || "")) continue;
+    const col = c === "B" ? "#4d8dff" : c === "D" ? "#4d8dff" : "#d65ad6";
+    L.geoJSON(f, { pane: "air", style: { color: col, weight: c === "B" ? 1.6 : 1.4, dashArray: c === "B" || c === "C" ? null : "7 5", fill: false } })
+      .bindTooltip(`<div class="air-tip"><b>${esc2(p.NAME)}</b><br>Class ${esc2(c)} · ${esc2(floorTxt(p))}</div>`, { sticky: true })
+      .addTo(airG.cls);
+  }
+  airG.laanc.clearLayers();
+  for (const f of (d.uasfm?.features || [])) {
+    const ft = f.properties.CEILING;
+    const col = ft === 0 ? "#c81e3a" : ft <= 100 ? "#ea5a2c" : ft <= 200 ? "#f39233" : ft <= 300 ? "#e9d04a" : "#4caf8f";
+    L.geoJSON(f, { pane: "air", style: { color: "#fff", weight: 0.3, opacity: 0.4, fillColor: col, fillOpacity: 0.28 } })
+      .bindTooltip(`<div class="air-tip">LAANC <b>${ft} ft</b> · ${esc2(f.properties.APT1_NAME)}</div>`, { sticky: true })
+      .addTo(airG.laanc);
+  }
+  airG.tfr.clearLayers();
+  for (const t of (d.tfrs || [])) {
+    const alt = `${Math.round(t.lower_m / FT)} ft ${t.lower_ref} – ${t.upper_m == null ? "?" : Math.round(t.upper_m / FT) + " ft " + t.upper_ref}`;
+    const when = (t.schedule || []).map(([a, b]) => `${tStr(a)} → ${tStr(b)}`).join("<br>");
+    L.polygon(t.ring, { pane: "air", color: t.active ? "#ff4d4d" : "#ffb020", weight: 1.6, dashArray: t.active ? null : "6 5",
+      fillColor: "#ff4d4d", fillOpacity: t.active ? 0.22 : 0.06 })
+      .bindTooltip(`<div class="air-tip"><b>TFR ${esc2(t.id)}</b> ${esc2(t.type || "")}${t.active ? " · ACTIVE" : ""}<br>${esc2(t.desc || t.name)}<br>${alt}<br>${when}</div>`, { sticky: true })
+      .addTo(airG.tfr);
+  }
+  airG.stad.clearLayers();
+  for (const sd of (d.stadiums || [])) {
+    const next = sd.events.map(e => `${tStr(e.start)} → ${tStr(e.end)}`).join("<br>") || "no events entered";
+    L.circle([sd.lat, sd.lon], { pane: "air", radius: 5556, color: sd.active ? "#ff4d4d" : "#ff9d4d", weight: sd.active ? 2 : 1.2,
+      dashArray: sd.active ? null : "4 6", opacity: sd.active ? 0.9 : 0.55, fillColor: "#ff4d4d", fillOpacity: sd.active ? 0.15 : 0 })
+      .bindTooltip(`<div class="air-tip"><b>${esc2(sd.name)}</b> · 3 NM stadium TFR${sd.active ? " · ACTIVE" : ""}<br>${next}</div>`, { sticky: true })
+      .addTo(airG.stad);
+  }
+  airG.auth.clearLayers();
+  for (const a of (d.auths || [])) {
+    L.circle([a.lat, a.lon], { pane: "air", radius: a.radius_m, color: "#4fd68a", weight: 1.5, fillOpacity: 0.12 })
+      .bindTooltip(`<div class="air-tip"><b>${esc2(a.name)}</b> · ${a.max_ft} ft AGL<br>${tStr(a.start)} → ${tStr(a.end)}</div>`, { sticky: true })
+      .addTo(airG.auth);
+  }
+  $("ev-list").innerHTML = (d.events || []).map((e, i) => {
+    const sd = (d.stadiums || []).find(x => x.key === e.stadium);
+    return `<div><span>${esc2(sd ? sd.name : e.stadium)} · ${tStr(e.start)}</span><button data-rm="events" data-i="${i}">×</button></div>`;
+  }).join("");
+  $("au-list").innerHTML = (d.auths || []).map((a, i) =>
+    `<div><span>${esc2(a.name)} · ${a.max_ft} ft · ${tStr(a.end)}</span><button data-rm="auths" data-i="${i}">×</button></div>`).join("");
+  document.querySelectorAll("#air-pop [data-rm]").forEach(b => b.onclick = () => airPost({ kind: "remove", list: b.dataset.rm, index: +b.dataset.i }));
+  airApply();
+}
+async function airLoad() {
+  try { const r = await fetch("/airspace/layers.json"); if (r.ok) drawAir(await r.json()); } catch (e) {}
+}
+async function airPost(body) {
+  $("air-err").textContent = "";
+  try {
+    const r = await fetch("/airspace/edit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!r.ok) { $("air-err").textContent = d.error || "not saved"; return; }
+    drawAir(d);
+  } catch (e) { $("air-err").textContent = "server not reachable"; }
+}
+const epoch = id => { const v = $(id).value; return v ? new Date(v).getTime() / 1000 : NaN; };
+$("ev-add").onclick = () => airPost({ kind: "event", stadium: $("ev-st").value, start: epoch("ev-start"), end: epoch("ev-end") });
+$("au-add").onclick = () => {
+  const c = map.getCenter();
+  airPost({ kind: "auth", name: $("au-name").value || "LAANC", lat: c.lat, lon: c.lng, radius_m: +$("au-r").value,
+            max_ft: +$("au-ft").value, start: epoch("au-start"), end: epoch("au-end") });
+};
+$("air-pop").addEventListener("keydown", e => e.stopPropagation());   // typing here must not fly the drone
+$("air-pop").addEventListener("keyup", e => e.stopPropagation());
+function airPop(mode) {
+  airPopMode = airPopMode === mode ? null : mode;
+  $("air-pop").classList.toggle("open", !!airPopMode);
+  $("air-pop-layers").style.display = airPopMode === "layers" ? "" : "none";
+  $("air-pop-edit").style.display = airPopMode === "edit" ? "" : "none";
+  $("air-layers").classList.toggle("on", airPopMode === "layers");
+  $("air-edit").classList.toggle("on", airPopMode === "edit");
+}
+$("air-layers").onclick = () => airPop("layers");
+$("air-edit").onclick = () => airPop("edit");
+$("air-probe").onclick = () => { airProbe = !airProbe; $("air-probe").classList.toggle("on", airProbe); map.getContainer().style.cursor = airProbe ? "crosshair" : ""; };
+map.on("click", async e => {
+  if (!airProbe) return;
+  try {
+    const q = await (await fetch(`/airspace/query?lat=${e.latlng.lat}&lon=${e.latlng.lng}`)).json();
+    const body = !q.ok ? esc2(q.reason)
+      : `<b style="font:600 16px var(--mono);color:${q.nofly ? "var(--bad)" : "var(--text)"}">${q.nofly ? "NO-FLY" : fmtFt(q.ceiling_agl) + " AGL"}</b><br>`
+        + `${esc2(q.reason)}<br><span style="color:var(--muted)">ground ${q.ground_m} m · ceiling ${q.ceiling_amsl} m MSL</span>`
+        + (q.warnings?.length ? `<br><span style="color:var(--warn)">${q.warnings.map(esc2).join("<br>")}</span>` : "");
+    L.popup().setLatLng(e.latlng).setContent(body).openOn(map);
+  } catch (err) {}
+});
+airLoad();
+setInterval(airLoad, 60000);
+
+function renderAir(c, down) {
+  const box = $("air"), badge = $("air-badge");
+  if (down || !c) { badge.textContent = "—"; badge.className = "badge"; dot("d-ceil", ""); $("t-ceil").textContent = "—"; return; }
+  const h = c.here || {}, fc = c.fc || {}, st = c.status || "";
+  const nofly = !!c.nofly, over = st.startsWith("ABOVE"), fb = fc.fresh && fc.state === 1;
+  box.classList.toggle("nofly", nofly); box.classList.toggle("over", over);
+  let b = "WAIT", cls = "warn";
+  if (nofly) { b = "NO-FLY"; cls = "bad"; }
+  else if (over) { b = "DESCEND"; cls = "bad"; }
+  else if (c.mode === "off") { b = "OFF"; cls = ""; }
+  else if (st === "active") { b = "ACTIVE"; cls = "on"; }
+  else if (fb || st.startsWith("no link")) { b = "FALLBACK"; cls = "warn"; }
+  badge.textContent = b; badge.className = "badge " + cls;
+  $("air-ft").textContent = nofly ? "NO-FLY" : h.ok ? `${Math.round(h.ceiling_agl / FT)}` : "—";
+  $("air-m").textContent = nofly ? "" : h.ok ? `ft AGL · ${Math.round(h.ceiling_agl)} m` : "";
+  $("air-reason").textContent = (nofly || over || !h.ok || st !== "active") && st ? st : (h.reason || st);
+  $("air-reason").title = [h.reason, st, ...(h.warnings || [])].filter(Boolean).join(" · ");
+  $("air-sent").textContent = c.target_m == null ? "—" : `${c.target_m.toFixed(0)} m`;
+  $("air-fc").textContent = fc.fresh && fc.fence != null ? `${fc.fence.toFixed(0)} m` : "no reply";
+  dot("d-ceil", nofly || over ? "bad" : st === "active" ? "ok" : "warn");
+  $("t-ceil").textContent = nofly ? "NO-FLY" : h.ok ? `${Math.round(h.ceiling_agl / FT)} ft` : "—";
+  const m = c.map || {};
+  $("air-ages").innerHTML = `map <b>${esc2(m.state || "—")}</b>${m.error ? ` · <span style="color:var(--warn)">${esc2(m.error)}</span>` : ""}<br>`
+    + `TFR list <b>${fmtAge(m.tfr_age_s)}</b> old · ${m.tfr_count ?? 0} near here<br>`
+    + `FAA airspace <b>${fmtAge(m.class_age_s)}</b> · buildings <b>${fmtAge(m.bld_age_s)}</b> (${m.buildings ?? 0})<br>`
+    + `home ${c.home_amsl == null ? "—" : c.home_amsl + " m"} (${esc2(c.home_src || "—")}) · fallback ${c.fallback_m == null ? "—" : c.fallback_m + " m"}`;
+}
 function render(down) {
   const s = state;
   dot("d-link", down ? "bad" : s.link ? "ok" : "bad");
@@ -652,6 +903,7 @@ function render(down) {
   window.radioLid = s.lid;
   window.radioPiUrl = s.pi_url;
   renderTrips(s.auto);
+  renderAir(s.ceil, down);
 
   const big = $("keys-big"), p = $("keys-p");
   if (down || !s.link) { big.textContent = "NO LINK"; big.className = "big"; p.textContent = "Waiting for the drone."; }

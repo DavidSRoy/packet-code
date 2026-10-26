@@ -17,6 +17,7 @@ import csv
 import math
 import os
 import struct
+import sys
 import threading
 import time
 import urllib.request
@@ -26,9 +27,12 @@ from aiohttp import web, WSMsgType
 from pymavlink import mavutil
 
 import autonomy
+import ceiling
 from gps_guard import GpsGuard
 
 HERE = Path(__file__).parent
+sys.path.insert(0, str(HERE.parent))
+from airspace.service import AirspaceService  # noqa: E402
 LOGS = HERE.parent / "logs"
 
 # Hard limits. The page can lower the speeds, never raise them past these.
@@ -315,6 +319,7 @@ class Pilot:
 
     def __init__(self, link):
         self.link = link
+        self.ceiling = None         # ceiling.CeilingLink, set by main()
         self.input = {"n": 0.0, "e": 0.0, "u": 0.0, "yaw": 0.0}
         self.input_time = 0.0
         self.speeds = {"h": 1.0, "v": 0.5, "yaw": 30.0}
@@ -392,6 +397,9 @@ class Pilot:
             alt = max(TAKEOFF_MIN, min(TAKEOFF_MAX, float(alt)))
             if not s["link"]:
                 return L.note("Laptop: takeoff refused, no link to the drone", 3)
+            why = self.ceiling.takeoff_block() if self.ceiling else None
+            if why:
+                return L.note(f"Laptop: takeoff refused, {why}", 3)
             if s["armed"]:
                 return L.note("Laptop: takeoff refused, already armed", 3)
             if s["gps_fix"] < 3 or s["sats"] < 8:
@@ -558,9 +566,43 @@ class CloudPush:
             time.sleep(max(0.0, self.cam_period - (time.time() - t0)))
 
 
-def build_app(link, pilot, auto):
+def build_app(link, pilot, auto, air, ceil):
     async def index(_):
         return web.FileResponse(HERE / "static" / "index.html")
+
+    async def air_overlay(_):
+        png = await asyncio.get_running_loop().run_in_executor(None, air.overlay)
+        if png is None:
+            return web.Response(status=503, text="ceiling map not loaded yet")
+        return web.Response(body=png, content_type="image/png", headers={"Cache-Control": "no-store"})
+
+    async def air_layers(_):
+        return web.json_response(air.layers())
+
+    async def air_query(request):
+        try:
+            lat, lon = float(request.query["lat"]), float(request.query["lon"])
+        except (KeyError, ValueError):
+            return web.json_response({"error": "lat, lon needed"}, status=400)
+        return web.json_response(air.query(lat, lon))
+
+    async def air_edit(request):
+        d = await request.json()
+        try:
+            kind = d.get("kind")
+            if kind == "event":
+                air.add_event(d["stadium"], float(d["start"]), float(d["end"]))
+            elif kind == "auth":
+                air.add_auth(d.get("name", "LAANC"), d["lat"], d["lon"], float(d["radius_m"]),
+                             float(d["max_ft"]), float(d["start"]), float(d["end"]))
+            elif kind == "remove":
+                air.remove(d["list"], int(d["index"]))
+            else:
+                raise ValueError("kind must be event, auth or remove")
+        except (KeyError, ValueError, TypeError) as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+        link.note(f"Laptop: airspace {kind} saved")
+        return web.json_response(air.layers())
 
     async def ws_handler(request):
         ws = web.WebSocketResponse(heartbeat=2)
@@ -573,6 +615,7 @@ def build_app(link, pilot, auto):
                 s["speeds"] = pilot.speeds
                 s["messages"] = [{"t": t, "sev": sev, "text": txt} for t, sev, txt in link.messages[-15:]]
                 s["auto"] = auto.summary()
+                s["ceil"] = ceil.state
                 if s["lid"]:
                     s["lid"] = dict(s["lid"], age=time.time() - s["lid"]["rx"])
                 await ws.send_str(json.dumps(s))
@@ -620,6 +663,10 @@ def build_app(link, pilot, auto):
     app = web.Application()
     app.router.add_get("/", index)
     app.router.add_get("/ws", ws_handler)
+    app.router.add_get("/airspace/overlay.png", air_overlay)
+    app.router.add_get("/airspace/layers.json", air_layers)
+    app.router.add_get("/airspace/query", air_query)
+    app.router.add_post("/airspace/edit", air_edit)
     app.router.add_static("/static", HERE / "static")
     return app
 
@@ -643,12 +690,24 @@ def main():
     ap.add_argument("--sa-ch", type=int, default=int(os.environ.get("PACKET_SA_CH", 5)),
                     help="RC channel of the SA switch, CH5 on the Boxer (backend control allowed when high). 0 = backend control off")
     ap.add_argument("--routes", default=str(autonomy.ROUTES), help="folder for pads.json and routes")
+    ap.add_argument("--ceiling", choices=("auto", "off"), default="auto",
+                    help="auto: send the legal ceiling to lua/ceil_guard.lua on the FC (sets FENCE_ALT_MAX)")
+    ap.add_argument("--home-offset", type=float, default=0.0,
+                    help="m to add to the home height (a pad on a structure the map does not know)")
+    ap.add_argument("--region", default=None,
+                    help="ceiling map area 'south,west,north,east' (default: greater Seattle)")
     args = ap.parse_args()
 
     link = Link(args.port, args.baud, None if args.qgc == "none" else args.qgc,
                 None if args.tunnel == "none" else args.tunnel)
     pilot = Pilot(link)
     auto = autonomy.Autonomy(link, args.sa_ch, args.routes)
+    region = tuple(float(v) for v in args.region.split(",")) if args.region else None
+    air = (AirspaceService(region, log=print) if region else AirspaceService(log=print)).start()
+    ceil = ceiling.CeilingLink(link, air, enabled=args.ceiling == "auto", home_offset_m=args.home_offset)
+    pilot.ceiling = ceil
+    auto.runner.route_check = lambda route, pad: ceiling.check_route(air, route, pad)
+    ceil.start()
     threading.Thread(target=link.run, daemon=True).start()
     threading.Thread(target=pilot.loop, daemon=True).start()
     if args.cloud_url:
@@ -666,7 +725,8 @@ def main():
     print(f"Packet ground control on http://localhost:{args.http}  (radio {args.port} @ {args.baud})")
     if not args.sa_ch:
         print("SA channel not set (--sa-ch): backend trips are refused")
-    web.run_app(build_app(link, pilot, auto), host="127.0.0.1", port=args.http, print=None)
+    print(f"Legal ceiling: {args.ceiling} (the map loads in the background)")
+    web.run_app(build_app(link, pilot, auto, air, ceil), host="127.0.0.1", port=args.http, print=None)
 
 
 if __name__ == "__main__":

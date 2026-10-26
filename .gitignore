@@ -6,3 +6,6 @@ __pycache__/
 # Wi-Fi passwords for the Pi companion live on the SD card only
 companion/wifi.txt
 **/wifi.txt
+
+# airspace downloads (ground, buildings, FAA, TFR) and operator entries
+airspace/cache/

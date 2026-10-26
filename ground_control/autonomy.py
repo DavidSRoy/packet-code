@@ -354,6 +354,7 @@ class MissionRunner:
                         "reason": None, "cmd_id": None, "started": None, "ended": None}
         self.current_seq = 0
         self.reached_seq = -1
+        self.route_check = None     # route, pad -> reason to refuse (the legal ceiling), set by the server
 
     # ---- state shown to the page / cloud ----------------------------------
     def sa_on(self):
@@ -430,6 +431,10 @@ class MissionRunner:
             return None, f"battery {s['batt_v']} V (need {MIN_CELL_V * 6:.1f} V+)"
         if self.thread and self.thread.is_alive():
             return None, "a trip is already running"
+        if self.route_check:
+            why = self.route_check(route, pads[here])
+            if why:
+                return None, why
         return (here, route), None
 
     # ---- commands ---------------------------------------------------------

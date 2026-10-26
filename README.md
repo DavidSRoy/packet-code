@@ -61,6 +61,35 @@ This is a Cloudflare Worker that the app team reads for the drone position, stat
 .venv/bin/python tools/sync_logs.py /dev/cu.usbserial-DU0E540E 57600 --latest 1
 ```
 
+## Automatic legal ceiling (`airspace/`, `ground_control/ceiling.py`, `lua/ceil_guard.lua`)
+
+Ground control finds the legal maximum height at the drone and sets the FC altitude fence (FENCE_ALT_MAX) to it, 2 times per second.
+
+| Rule | Source |
+|---|---|
+| 400 ft above the ground, or 400 ft above the top of a building within 400 ft (14 CFR 107.51(b)) | USGS 3DEP ground, OpenStreetMap building heights |
+| 100 ft under a Class B / C shelf floor | FAA Class_Airspace |
+| NO-FLY in a Class B/C/D or E2 surface area without a stored ATC authorization (14 CFR 107.41) | FAA Class_Airspace, page **Events** |
+| NO-FLY in an active TFR (also 10 min before it starts) | tfr.faa.gov, refreshed every 5 min |
+| NO-FLY 3 NM around a stadium, 1 h before to 1 h after a game (FDC 4/3621) | game times entered on the page |
+
+- The value at a point is the lowest value within 60 m, so the fence comes down before the drone gets to a lower area.
+- The fence is in m above home (FENCE_ALT_MAX_TP = 1): ceiling - home height - 10 m margin. Home height is the ground, plus the roof when home is inside a building outline, plus `--home-offset`.
+- The laptop refuses a takeoff, and the backend refuses a trip, in a NO-FLY area or on a route above the ceiling.
+- The page shows the ceiling, the fence sent and the fence on the FC. **Layers** shows the ceiling map, airspace, TFRs and stadiums. **Probe** shows the ceiling at a clicked point. **Events** adds stadium games and ATC authorizations.
+- First start downloads about 30 MB to `airspace/cache/` (about 2 min). Later starts use the cache.
+
+On the FC, `lua/ceil_guard.lua` applies the value:
+
+- It sets FENCE_ALT_MAX in RAM (not saved), so the flash is not written all the time.
+- It never puts the fence under the drone. When the drone is above a new, lower ceiling, the fence stays 6 m (plus 3 s of climb) above the drone and follows it down. The FC sends "CEIL: ... descend". There is no sudden breach and RTL.
+- Link lost for 5 s: it uses the fallback (400 ft above the lowest ground within 3 km, under any Class B floor), or the last value if that is lower. With no data since boot: CEIL_DEF_M (100 m).
+- Params: CEIL_ENABLE, CEIL_DEF_M, CEIL_TOUT_S, CEIL_MARGIN, CEIL_GCS (254 = this server).
+
+`--ceiling off` stops the sending; the FC then uses the fallback. Set CEIL_ENABLE = 0 to turn the script off.
+
+Tests: `python -m airspace.test_ceiling` (20 checks) and `python tools/sim/ceiling_test.py --ardupilot ~/ardupilot-x650/ardupilot` (SITL, 17 checks).
+
 ## SD kill switch guard (`lua/sd_guard.lua`)
 
 This guard gates the SD motor kill by height, so a flick of SD by mistake at height does not drop the drone.

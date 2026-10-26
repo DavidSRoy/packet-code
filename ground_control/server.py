@@ -52,6 +52,35 @@ HOVER_AMPS = 25.0        # X650 hover current from the 2026-10-22 flight log, on
 BATT_RESERVE_PCT = 20    # time left counts down to this charge, the landing reserve
 
 
+def lights_mode(pwm):
+    """Arm-light mode for an SB (CH6) value, the same way lua/lights.lua decides it."""
+    if pwm is None or pwm < 800:
+        return "status"          # no RC: the script keeps the safe default
+    if pwm < 970:
+        return "landing"         # ground control only (below the CRSF range)
+    if pwm < 1300:
+        return "status"
+    if pwm < 1700:
+        return "aviation"
+    return "off"
+
+
+def camera_in_lid(rvec, tvec):
+    """Camera position in the lid frame (m) from the lid -> camera pose (Rodrigues rvec, tvec): -R^T t.
+
+    The same as cam_stream.lid_pose, so the radio pose gets the full camera_m too."""
+    th = math.sqrt(sum(v * v for v in rvec))
+    if th < 1e-12:
+        R = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+    else:
+        kx, ky, kz = (v / th for v in rvec)
+        c, s, C = math.cos(th), math.sin(th), 1 - math.cos(th)
+        R = [[c + kx * kx * C, kx * ky * C - kz * s, kx * kz * C + ky * s],
+             [ky * kx * C + kz * s, c + ky * ky * C, ky * kz * C - kx * s],
+             [kz * kx * C - ky * s, kz * ky * C + kx * s, c + kz * kz * C]]
+    return [round(-sum(R[j][i] * tvec[j] for j in range(3)), 4) for i in range(3)]
+
+
 class Link:
     """Serial link to the drone plus the shared telemetry state."""
 
@@ -246,7 +275,9 @@ class Link:
         att = p.get("LIDATT")
         if att is None:
             return
-        lid = {"rx": time.time(), "box": None}
+        now = time.time()
+        self.lid_times = [t for t in getattr(self, "lid_times", []) if now - t <= 5.0] + [now]
+        lid = {"rx": now, "box": None, "hz": round((len(self.lid_times) - 1) / 5.0, 1)}   # detections/s over the radio
         if att[0] >= 0:
             if "LIDPOS" not in p or "LIDCAM" not in p:
                 return
@@ -493,8 +524,10 @@ class CloudPush:
               "rc_ok", "rssi", "sd_stop", "sa_on", "fence_on", "fence_r",
               "lat_fc", "lon_fc", "gps_q", "gps_why", "gps_hdop", "gps_hacc", "pos_filtered")
 
-    def __init__(self, link, url, drone_id, token, hz, auto=None, pi_url=None, cam=True):
+    def __init__(self, link, url, drone_id, token, hz, auto=None, pi_url=None, cam=True,
+                 pilot=None, ceil=None, air=None, snap=None):
         self.link, self.token, self.period, self.auto = link, token, 1.0 / hz, auto
+        self.pilot, self.ceil, self.air, self.snap = pilot, ceil, air, snap
         self.acks = []
         self.base = f"{url.rstrip('/')}/v1/drones/{drone_id}"
         self.url = f"{self.base}/telemetry"
@@ -503,27 +536,55 @@ class CloudPush:
         self.pi_url = pi_url.rstrip("/") if pi_url else None    # "auto" = the address the Pi sends over the radio
         self.cam = bool(cam)
         self.wifi_lid = None                 # full box pose from the Pi over Wi-Fi (/lid.json)
+        self.snap_sent = None                # radio snapshot frame the API has (files_loop)
         link.state["cloud"] = "starting"
         link.state["cloud_cam"] = "off" if not (self.pi_url and self.cam) else "starting"
 
     def box_pose(self):
-        """Box camera pose: Wi-Fi (/lid.json, full detail) when fresh, else the radio pose."""
+        """Box camera pose: Wi-Fi (/lid.json, full detail) when fresh, else the radio pose.
+
+        Both give the full pose: rvec/tvec (lid -> camera) and the camera and drone
+        positions in the lid frame. Wi-Fi adds every box in view, the tag ids, the
+        tag outlines in the picture and the camera details."""
+        now = time.time()
         w = self.wifi_lid
-        if w and time.time() - w["rx"] < 2.0:
-            b = w["boxes"][0] if w["boxes"] else None
-            return {"source": "wifi", "age_s": round(time.time() - w["rx"], 1),
-                    "box": None if b is None else {
-                        "id": b["box"], "tags": b["tags"], "ntags": len(b["tags"]), "px_per_cell": b["px_per_cell"],
-                        "drone_m": b["drone_m"], "camera_m": b["camera_m"],
-                        "yaw_deg": b["yaw_deg"], "tilt_deg": b["tilt_deg"]}}
+        if w and now - w["rx"] < 2.0:
+            boxes = [{"id": b["box"], "tags": b["tags"], "ntags": len(b["tags"]), "px_per_cell": b["px_per_cell"],
+                      "drone_m": b["drone_m"], "camera_m": b["camera_m"],
+                      "yaw_deg": b["yaw_deg"], "tilt_deg": b["tilt_deg"], "range_m": b.get("range_m"),
+                      "rvec": b.get("rvec"), "tvec": b.get("tvec"), "outlines": b.get("outlines")}
+                     for b in w.get("boxes") or []]
+            return {"source": "wifi", "age_s": round(now - w["rx"], 1), "detection_hz": w.get("hz"),
+                    "camera": {"name": w.get("camera"), "hfov_deg": w.get("hfov_deg"), "width": w.get("w"),
+                               "height": w.get("h"), "frames": w.get("frames"), "mount": w.get("mount"),
+                               "error": w.get("error")},
+                    "box": boxes[0] if boxes else None, "boxes": boxes}
         r = self.link.state.get("lid")
-        if r and time.time() - r["rx"] < 3.0:
-            return {"source": "radio", "age_s": round(time.time() - r["rx"], 1),
-                    "box": None if r["box"] is None else {
-                        "id": r["box"], "tags": None, "ntags": r["ntags"], "px_per_cell": round(r["px_per_cell"], 1),
-                        "drone_m": [round(v, 4) for v in r["drone_m"]], "camera_m": [None, None, round(r["camera_z"], 4)],
-                        "yaw_deg": round(r["yaw_deg"], 1), "tilt_deg": round(r["tilt_deg"], 1)}}
+        if r and now - r["rx"] < 3.0:
+            box = None
+            if r["box"] is not None:
+                rv, tv = r.get("rvec"), r.get("tvec")
+                cam = camera_in_lid(rv, tv) if rv and tv else [None, None, round(r["camera_z"], 4)]
+                box = {"id": r["box"], "tags": None, "ntags": r["ntags"], "px_per_cell": round(r["px_per_cell"], 1),
+                       "drone_m": [round(v, 4) for v in r["drone_m"]], "camera_m": cam,
+                       "yaw_deg": round(r["yaw_deg"], 1), "tilt_deg": round(r["tilt_deg"], 1),
+                       "range_m": round(math.sqrt(sum(v * v for v in tv)), 3) if tv else None,
+                       "rvec": [round(v, 5) for v in rv] if rv else None,
+                       "tvec": [round(v, 4) for v in tv] if tv else None, "outlines": None}
+            return {"source": "radio", "age_s": round(now - r["rx"], 1), "detection_hz": r.get("hz"),
+                    "camera": None, "box": box, "boxes": [box] if box else []}
         return None
+
+    def laptop(self):
+        """What the laptop page shows about the laptop side itself."""
+        s, p = self.link.state, self.pilot
+        return {"taking_off": bool(p and p.takeoff_target is not None),
+                "takeoff_target_m": p.takeoff_target if p else None,
+                "speed_limits": dict(p.speeds) if p else None,
+                "camera_forwarding": s.get("cloud_cam"), "pi_url": s.get("pi_url"),
+                "log_file": Path(s["log_file"]).name if s.get("log_file") else None,
+                "sa_channel": self.link.sa_ch or None, "sa_pwm": s.get("sa_raw"),
+                "gps_positions_rejected": s.get("pos_rejected")}
 
     def payload(self):
         s = self.link.state
@@ -532,6 +593,12 @@ class CloudPush:
         d.update(ts=int(time.time() * 1000), link=bool(s["link"]), height=s.get("alt"), alt_msl=s.get("alt_msl"))
         d["box_camera"] = self.box_pose()
         d["camera_live"] = s.get("cloud_cam") == "ok"
+        d["radio_snapshot"] = dict(s["radio_snap"], uploaded_frame=self.snap_sent) if s.get("radio_snap") else None
+        d["lights"] = {"mode": lights_mode(s.get("lights_raw")), "sb_pwm": s.get("lights_raw")}
+        d["ceiling"] = self.ceil.state if self.ceil else None
+        d["laptop"] = self.laptop()
+        d["recording"] = self.auto.recorder.status() if self.auto else None
+        d["pos_rejected"] = s.get("pos_rejected")
         new = [m for m in self.link.messages if m[0] > self.msg_sent_t][-20:]
         d["messages"] = [{"ts": int(t * 1000), "sev": sev, "text": txt[:200]} for t, sev, txt in new]
         if self.auto:
@@ -567,6 +634,61 @@ class CloudPush:
                     self.link.note(f"Laptop: cloud push failed ({exc})", 4)
             time.sleep(max(0.0, self.period - (time.time() - t0)))
 
+
+    def _post(self, path, body, ctype, headers=None):
+        req = urllib.request.Request(f"{self.base}/{path}", data=body, method="POST", headers={
+            "Authorization": f"Bearer {self.token}", "Content-Type": ctype, **(headers or {})})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            r.read()
+
+    def files_loop(self):
+        """Uploads that are not telemetry rows: each new radio snapshot, and, when
+        they change, the routes/pads and the airspace map (layers JSON, overlay PNG).
+
+        Own thread with its own timeouts: never delays the telemetry push or flight
+        control. A failed upload is tried again on the next pass."""
+        sent = {}                            # what the API has: routes / layers JSON, overlay build time
+        next_routes = next_air = 0.0
+        while self.link.running:
+            now = time.time()
+            snap = self.snap
+            try:
+                img, frame, t_img = (snap.jpg, snap.jpg_frame, snap.jpg_t) if snap else (None, None, None)
+                if img and frame != self.snap_sent:
+                    kind = "image/webp" if img[:4] == b"RIFF" and img[8:12] == b"WEBP" else "image/jpeg"
+                    self._post("snapshot", img, kind, {"X-Frame": str(frame), "X-Frame-Time": str(int(t_img * 1000))})
+                    self.snap_sent = frame
+            except Exception:
+                pass
+            if self.auto and now >= next_routes:
+                next_routes = now + 5.0
+                try:
+                    a = self.auto.summary()
+                    body = json.dumps({"pads": a["pads"], "routes": a["routes"], "recording": a["recording"],
+                                       "sa_channel": a["sa_ch"]}, sort_keys=True).encode()
+                    if body != sent.get("routes"):
+                        self._post("routes", body, "application/json")
+                        sent["routes"] = body
+                except Exception:
+                    pass
+            if self.air and self.air.map is not None and now >= next_air:
+                next_air = now + 60.0
+                try:
+                    body = json.dumps(self.air.layers(), sort_keys=True, default=str).encode()
+                    if body != sent.get("layers"):
+                        self._post("airspace/layers", body, "application/json")
+                        sent["layers"] = body
+                    built = self.air.summary().get("built")
+                    if built != sent.get("overlay"):
+                        png = self.air.overlay()
+                        b = self.air.layers().get("bounds")
+                        if png:
+                            self._post("airspace/overlay", png, "image/png",
+                                       {"X-Bounds": json.dumps(b) if b else "null"})
+                            sent["overlay"] = built
+                except Exception:
+                    pass
+            time.sleep(1.0)
 
     def pi(self):
         return self.link.state.get("pi_url") if self.pi_url == "auto" else self.pi_url
@@ -790,8 +912,9 @@ def main():
             raise SystemExit("--cloud-url needs the env PACKET_INGEST_TOKEN")
         pi_url = None if args.pi_url == "none" else args.pi_url
         push = CloudPush(link, args.cloud_url, args.drone_id, token, max(0.2, min(5.0, args.cloud_hz)), auto,
-                         pi_url, args.cloud_cam == 1)
+                         pi_url, args.cloud_cam == 1, pilot=pilot, ceil=ceil, air=air, snap=snap)
         threading.Thread(target=push.loop, daemon=True).start()
+        threading.Thread(target=push.files_loop, daemon=True).start()
         print(f"Pushing telemetry to {push.url} at {args.cloud_hz:g} Hz")
         if push.pi_url:
             threading.Thread(target=push.lid_loop, daemon=True).start()

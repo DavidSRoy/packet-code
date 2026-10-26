@@ -12,6 +12,8 @@ drone ──radio──> laptop ground_control/server.py ──HTTPS POST 1 Hz�
 |---|---|---|
 | Everything in `/position`, `/state`, `/track`, `/messages`, the `/stream` WebSocket, and commands | Drone → telemetry radio → laptop → API | **Yes.** This is the data to build on. |
 | `box_camera` (box pose from the drone's camera) | Pi → FC → telemetry radio → laptop → API | **Yes**, while the camera sees the box tags. |
+| Radio snapshots: `/snapshot` (small box camera pictures) | Pi → FC → telemetry radio → laptop → API | **Yes, but slow**: a few seconds per picture, only while the Pi is not on Wi-Fi. |
+| `/routes`, `/airspace/*` (files from the laptop) | laptop → API | **Yes**, the laptop uploads them when they change. |
 | Camera video: `/camera.h264`, `/camera/stream` | Pi → **Wi-Fi** → laptop → API | **No. Best effort only.** |
 
 The camera frames come only while the laptop reaches the drone's Pi over Wi-Fi. They drop out often: Wi-Fi range, a laptop off the network, a slow upload. The API marks this in the `camera` block (`best_effort: true`, `live`). Never make a flight decision, a trip step or an alarm depend on the camera frames. Show them as a "when available" view only. For the box position, use `box_camera`.
@@ -87,8 +89,32 @@ How the laptop filters `position` (ground_control/gps_guard.py): on the ground, 
 |---|---|
 | `pilot_radio` | The pilot's RC link. `kill_switch_on` is the SD switch (motor stop). `backend_switch_on` is the SA switch (backend trips allowed). |
 | `fence` | The FC geofence: on or off, and the circle radius. |
-| `box_camera` | The drone position relative to the box lid, from the drone's camera. `null` when the Pi sends nothing. `box` is `null` when no box tag is in view. Lid frame: origin at the lid centre, x along the long side, y along the short side, z up, in m. `drone_m` is the drone centre. `yaw_deg` is the drone nose direction from the lid +x axis, counter-clockwise. `source` is `wifi` (all fields) or `radio` (no tag names and no camera x/y). |
+| `box_camera` | The full box camera telemetry. See below. |
 | `camera` | Status of the best-effort camera frames. See below. |
+| `radio_snapshot` | The last box camera picture that came over the telemetry radio: `available`, `frame`, `captured_at`, `age_s`, `bytes`, `content_type`, `url` (`GET` it), and `radio` (the snapshot link: `state` `wifi` / `on` / `telemetry first`, `rate_pps`, `loss_pct`, `period_s`, `rx_bps`, the frame being received). |
+| `lights` | The arm lights: `mode` is `status`, `aviation`, `landing` or `off`; `sb_pwm` is the SB switch value. |
+| `ceiling` | The legal ceiling and no-fly guard from the laptop: `status`, `target_m` (height limit above home), `fallback_m`, `nofly`, `edge` (nearest no-fly edge: `lat`, `lon`, `dist_m`, `inside`), `home_amsl` and `home_src`, `here` (the airspace answer at the drone: class, limits, reasons), `fc` (what `ceil_guard.lua` on the FC reports), `map` (age of the airspace data). |
+| `laptop` | The laptop side: `taking_off`, `takeoff_target_m`, `speed_limits` (the page sliders, m/s and deg/s), `camera_forwarding`, `pi_url`, `log_file`, `sa_channel`, `sa_pwm`, `gps_positions_rejected`. |
+| `files` | When the laptop last uploaded the routes and the airspace map, with their URLs. `null` before the first upload. |
+| `messages` | The last 10 FC text messages (pre-arm checks, fence, failsafes). Severity: 0 emergency … 2 critical … 4 warning … 6 info. |
+
+`gps` also has `positions_rejected` (GPS jumps the laptop filter threw away since it started).
+
+`box_camera` comes over the telemetry radio (`source: "radio"`, about 2 per second), or over Wi-Fi with more detail (`source: "wifi"`). Both have the full pose.
+
+| Field | Meaning |
+|---|---|
+| `source`, `age_s`, `detection_hz` | Where it came from, its age, and the detections per second. |
+| `box` | The first box in view, `null` when no box tag is in view. Same as `boxes[0]`. |
+| `boxes` | Every box in view (the radio sends one, Wi-Fi all). |
+| `box.drone_m` | The drone centre in the lid frame: origin at the lid centre, x along the long side, y along the short side, z up, m. |
+| `box.camera_m` | The camera in the lid frame, m. |
+| `box.yaw_deg`, `box.tilt_deg` | The drone nose direction from the lid +x axis (counter-clockwise), and the drone tilt. |
+| `box.rvec`, `box.tvec` | The full lid → camera pose (OpenCV Rodrigues rotation vector, and the lid origin in the camera frame, m). With these an app can draw the tags on the picture. |
+| `box.range_m` | Camera to lid distance, m. |
+| `box.id`, `box.ntags`, `box.px_per_cell` | Box number, tags seen, tag size in the picture. |
+| `box.tags`, `box.outlines` | Tag names and their outlines in the picture (px). Wi-Fi only, `null` over the radio. |
+| `camera` | Camera details: `name`, `hfov_deg`, `width`, `height`, `frames`, `mount`, `error`. Wi-Fi only. |
 | `messages` | The last 10 FC text messages (pre-arm checks, fence, failsafes). Severity: 0 emergency … 2 critical … 4 warning … 6 info. |
 
 Battery fields:
@@ -142,9 +168,24 @@ The video is H.264 from the Pi's hardware encoder (1280×720, about 10 fps, abou
 - The `camera` block in `/state` says if video comes now (`live`) and the age of the last frame.
 - The API keeps only the frames since the last keyframe, in memory. There is no recording.
 
+### Radio snapshots: `GET /v1/drones/packet-v0/snapshot`
+
+The last box camera picture that came over the telemetry radio (WebP, about 320×180, about 2 KB). The Pi sends them while it is not on Wi-Fi, a few seconds per picture, and only while the telemetry has room. Auth: Bearer `READ_TOKEN`, or `?token=READ_TOKEN` (for `<img src>`). Headers: `X-Frame` (picture number), `X-Frame-Time` (capture time). `404` before the first picture. The stream sends `{"type": "snapshot", "data": {...}}` when a new one is there: fetch it then.
+
+### Routes and pads: `GET /v1/drones/packet-v0/routes`
+
+What the laptop has: `pads` (id, name, lat, lon), `routes` (each with `from`, `to`, `approved`, `problems`, `length_m`, `est_time_s`, `max_alt`, `takeoff_alt`, and `path` as `[lat, lon]` points), `recording` (a route recording in progress) and `sa_channel`. The laptop uploads it when it changes.
+
+### Airspace map
+
+- `GET /v1/drones/packet-v0/airspace/layers`: the airspace data the laptop's map shows, as JSON: `status` (data ages), `bounds`, `classes` and `uasfm` (airspace class and UAS facility map areas), `tfrs`, `stadiums`, `auths`, `events`, `zones`.
+- `GET /v1/drones/packet-v0/airspace/overlay.png`: the ceiling map picture. `X-Bounds` gives its corners (`[[south, west], [north, east]]`). `?token=` works.
+
+The laptop uploads these when its map changes (it checks each minute). The airspace answer for the drone's position is in `ceiling.here` in `/state`.
+
 ### Live stream: `wss://<base>/v1/drones/packet-v0/stream?token=<READ_TOKEN>`
 
-- When you connect, you get the current state. Then you get each update, about once each second, in the same shape as `/state`: `{"type": "state", "data": {...}}`.
+- When you connect, you get the current state. Then you get each update, about once each second, in the same shape as `/state`: `{"type": "state", "data": {...}}`. New radio snapshots come as `{"type": "snapshot", "data": {...}}`.
 - Send `ping` to get `pong`.
 - Browsers cannot set headers on WebSockets, so the token goes in the query string.
 
@@ -166,6 +207,7 @@ The video is H.264 from the Pi's hardware encoder (1280×720, about 10 fps, abou
 - `current_pad` is null while the drone flies or when it is not on a known pad.
 - `can_goto` lists the pads that have an approved route from the current pad.
 - `trip.state`: `idle`, `starting`, `uploading`, `enroute`, `landing`, `arrived`, `holding`, `returning`, `failed`, `pilot` (the pilot took control).
+- `recording` is the route recording in progress (`from`, `to`, `phase`, `samples`), or `null`. The full routes are at `GET /routes`.
 
 ## For the backend team: trip commands
 

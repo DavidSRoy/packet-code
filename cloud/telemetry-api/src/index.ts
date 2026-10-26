@@ -11,6 +11,14 @@
  *   GET  /v1/drones/:id/track       Bearer READ_TOKEN   ?since=<ms or ISO>&limit=<n>
  *   GET  /v1/drones/:id/stream      WebSocket, ?token=READ_TOKEN
  *   GET  /v1/drones/:id/messages    Bearer READ_TOKEN   ?since=<ms or ISO>&limit=<n>  (FC text messages)
+ *   POST /v1/drones/:id/snapshot    Bearer INGEST_TOKEN, image/webp|jpeg, X-Frame, X-Frame-Time (radio snapshot)
+ *   GET  /v1/drones/:id/snapshot    Bearer READ_TOKEN or ?token=   the last radio snapshot
+ *   POST /v1/drones/:id/routes      Bearer INGEST_TOKEN, JSON: pads, routes, recording
+ *   GET  /v1/drones/:id/routes      Bearer READ_TOKEN
+ *   POST /v1/drones/:id/airspace/layers   Bearer INGEST_TOKEN, JSON (the laptop's airspace map data)
+ *   GET  /v1/drones/:id/airspace/layers   Bearer READ_TOKEN
+ *   POST /v1/drones/:id/airspace/overlay  Bearer INGEST_TOKEN, image/png, X-Bounds
+ *   GET  /v1/drones/:id/airspace/overlay.png  Bearer READ_TOKEN or ?token=
  *   POST /v1/drones/:id/camera      Bearer INGEST_TOKEN, H.264 frame records (best effort, see below)
  *   GET  /v1/drones/:id/camera.h264 Bearer READ_TOKEN or ?token=   H.264 Annex B from the last keyframe, 503 when not live
  *   GET  /v1/drones/:id/camera/stream  WebSocket, ?token=READ_TOKEN, one H.264 frame record per message
@@ -76,6 +84,9 @@ export function splitRecords(buf: ArrayBuffer): { off: number; len: number; key:
   }
   return out.length ? out : null;
 }
+const BLOB_CHUNK = 1_000_000;          // bytes per SQLite row for files from the laptop
+const FILE_MAX_BYTES = 25_000_000;     // one file upload (airspace map, routes, snapshot)
+type BlobRow = { name: string; type: string; bytes: number; updated_at: number; meta: string | null };
 const ONLINE_S = 5;                    // no update for this long = offline
 const TRACK_KEEP_MS = 24 * 3600_000;   // keep 24 h of track
 const DRONE_ID = /^[a-z0-9-]{1,32}$/;
@@ -109,6 +120,12 @@ export interface Telemetry {
   gps_hdop?: number | null; gps_hacc?: number | null; pos_filtered?: boolean;
   box_camera?: BoxCamera | null;
   camera_live?: boolean;      // the laptop forwards camera frames now
+  radio_snapshot?: Record<string, unknown> | null;   // box camera pictures over the telemetry radio: link status
+  lights?: { mode: string; sb_pwm: number | null } | null;   // arm lights (lua/lights.lua)
+  ceiling?: Record<string, unknown> | null;          // legal ceiling / no-fly guard (ground_control/ceiling.py)
+  laptop?: Record<string, unknown> | null;           // laptop side: takeoff, speed limits, camera forwarding, log
+  recording?: Record<string, unknown> | null;        // route recording in progress
+  pos_rejected?: number | null;                      // GPS jumps the laptop filter threw away
   messages?: FcMessage[];
   gps_fix?: number; sats?: number;
   home_lat?: number | null; home_lon?: number | null;
@@ -118,12 +135,21 @@ export interface Telemetry {
 
 interface Stored { t: Telemetry; received_at: number }
 
-/** Lid pose from the Pi's box camera (lid frame: x long side, y short side, z up, m). */
+/** Lid pose from the Pi's box camera (lid frame: x long side, y short side, z up, m).
+ *  rvec/tvec: the lid -> camera pose (OpenCV Rodrigues vector; lid origin in the camera frame, m). */
+export interface Box {
+  id: number; tags: string[] | null; ntags: number; px_per_cell: number | null;
+  drone_m: number[]; camera_m: (number | null)[]; yaw_deg: number; tilt_deg: number;
+  range_m: number | null; rvec: (number | null)[] | null; tvec: (number | null)[] | null;
+  outlines: unknown;          // tag outlines in the picture, px (Wi-Fi only)
+}
 export interface BoxCamera {
   source: "wifi" | "radio";
   age_s: number | null;
-  box: null | { id: number; tags: string[] | null; ntags: number; px_per_cell: number | null;
-                drone_m: number[]; camera_m: (number | null)[]; yaw_deg: number; tilt_deg: number };
+  detection_hz: number | null;
+  camera: Record<string, unknown> | null;   // name, hfov_deg, width, height, frames, mount (Wi-Fi only)
+  box: Box | null;            // the first box in view (same as boxes[0])
+  boxes: Box[];               // every box in view (the radio sends one)
 }
 export interface FcMessage { ts: number; sev: number; text: string }
 
@@ -157,6 +183,13 @@ function cleanTelemetry(body: unknown): Telemetry | string {
   out.pos_filtered = b.pos_filtered === true;
   out.camera_live = b.camera_live === true;
   out.box_camera = cleanBox(b.box_camera);
+  out.radio_snapshot = obj(b.radio_snapshot, 4_096);
+  const li = b.lights as Record<string, unknown> | null;
+  out.lights = li && typeof li === "object" && typeof li.mode === "string" ? { mode: li.mode.slice(0, 16), sb_pwm: num(li.sb_pwm) } : null;
+  out.ceiling = obj(b.ceiling, 32_768);
+  out.laptop = obj(b.laptop, 4_096);
+  out.recording = obj(b.recording, 2_048);
+  out.pos_rejected = num(b.pos_rejected);
   out.messages = Array.isArray(b.messages)
     ? b.messages.filter((m): m is FcMessage => !!m && typeof m === "object" && typeof (m as FcMessage).ts === "number"
                                                && typeof (m as FcMessage).text === "string")
@@ -175,20 +208,42 @@ const str = (v: unknown, n = 64) => (typeof v === "string" ? v.slice(0, n) : nul
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
 const nums = (v: unknown, n: number) => (Array.isArray(v) ? v.slice(0, n).map(num) : Array(n).fill(null));
 
+/** A JSON object from the laptop, kept as it is when its JSON is at most maxBytes. */
+function obj(v: unknown, maxBytes = 16_384): Record<string, unknown> | null {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+  const s = JSON.stringify(v);
+  return s.length <= maxBytes ? (JSON.parse(s) as Record<string, unknown>) : null;
+}
+
+function cleanOneBox(v: unknown): Box | null {
+  const b = v as Record<string, unknown> | null;
+  if (!b || typeof b !== "object" || num(b.id) == null) return null;
+  const outlines = b.outlines != null && JSON.stringify(b.outlines).length <= 8_192 ? b.outlines : null;
+  return {
+    id: b.id as number,
+    tags: Array.isArray(b.tags) ? b.tags.filter(x => typeof x === "string").slice(0, 20) as string[] : null,
+    ntags: num(b.ntags) ?? 0, px_per_cell: num(b.px_per_cell),
+    drone_m: nums(b.drone_m, 3) as number[], camera_m: nums(b.camera_m, 3),
+    yaw_deg: num(b.yaw_deg) ?? 0, tilt_deg: num(b.tilt_deg) ?? 0,
+    range_m: num(b.range_m),
+    rvec: Array.isArray(b.rvec) ? nums(b.rvec, 3) : null,
+    tvec: Array.isArray(b.tvec) ? nums(b.tvec, 3) : null,
+    outlines,
+  };
+}
+
 function cleanBox(v: unknown): BoxCamera | null {
   if (!v || typeof v !== "object") return null;
   const c = v as Record<string, unknown>;
-  const b = c.box as Record<string, unknown> | null;
+  const list = Array.isArray(c.boxes) && c.boxes.length ? c.boxes : [c.box];
+  const boxes = list.slice(0, 8).map(cleanOneBox).filter((b): b is Box => b != null);
   return {
     source: c.source === "wifi" ? "wifi" : "radio",
     age_s: num(c.age_s),
-    box: !b || typeof b !== "object" || num(b.id) == null ? null : {
-      id: b.id as number,
-      tags: Array.isArray(b.tags) ? b.tags.filter(x => typeof x === "string").slice(0, 20) as string[] : null,
-      ntags: num(b.ntags) ?? 0, px_per_cell: num(b.px_per_cell),
-      drone_m: nums(b.drone_m, 3) as number[], camera_m: nums(b.camera_m, 3),
-      yaw_deg: num(b.yaw_deg) ?? 0, tilt_deg: num(b.tilt_deg) ?? 0,
-    },
+    detection_hz: num(c.detection_hz),
+    camera: obj(c.camera, 4_096),
+    box: cleanOneBox(c.box) ?? boxes[0] ?? null,
+    boxes,
   };
 }
 const PAD_ID = /^[a-z0-9-]{1,32}$/;
@@ -259,13 +314,16 @@ function toState(id: string, s: Stored | null, now: number) {
     },
     gps: { fix_type: t.gps_fix, satellites: t.sats,
            quality: t.gps_q ?? null, reasons: t.gps_why ?? [], hdop: r1(t.gps_hdop, 2), accuracy_m: r1(t.gps_hacc),
-           position_filtered: t.pos_filtered === true,
+           position_filtered: t.pos_filtered === true, positions_rejected: t.pos_rejected ?? null,
            fc_position: t.lat_fc != null && t.lon_fc != null ? { lat: t.lat_fc, lon: t.lon_fc } : null },
     pilot_radio: { link_ok: t.rc_ok ?? null, rssi: t.rssi ?? null,
                    kill_switch_on: t.sd_stop ?? null, backend_switch_on: t.sa_on ?? null },
     fence: { enabled: t.fence_on ?? null, radius_m: t.fence_r ?? null },
     box_camera: t.box_camera ?? null,
-    autonomy: toAutonomy(t.autonomy),
+    lights: t.lights ?? null,
+    ceiling: t.ceiling ?? null,
+    laptop: t.laptop ?? null,
+    autonomy: toAutonomy(t.autonomy, t.recording),
   };
 }
 
@@ -285,7 +343,7 @@ function toCamera(id: string, frameAt: number | null, laptopLive: boolean, now: 
   };
 }
 
-function toAutonomy(a: Autonomy | null | undefined) {
+function toAutonomy(a: Autonomy | null | undefined, recording: Record<string, unknown> | null | undefined) {
   if (!a) return null;
   const m = a.mission;
   return {
@@ -293,6 +351,7 @@ function toAutonomy(a: Autonomy | null | undefined) {
     current_pad: a.pad,                      // null when flying or not on a known pad
     pads: a.pads,
     can_goto: a.can_goto,                    // pads with an approved route from the current pad
+    recording: recording ?? null,            // route recording in progress (full routes: GET /routes)
     trip: {
       state: m.state, from: m.from, to: m.to,
       progress: m.items ? Math.round((Math.min(m.item, m.items) / m.items) * 100) : 0,
@@ -342,9 +401,66 @@ export class DroneState extends DurableObject<Env> {
       ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS commands (
         id TEXT PRIMARY KEY, action TEXT NOT NULL, pad TEXT, status TEXT NOT NULL, reason TEXT,
         created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`);
+      // Files from the laptop (radio snapshot, routes, airspace map): the latest of each, in chunks
+      // (a SQLite value is at most 2 MB).
+      ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS blob_chunks (
+        name TEXT NOT NULL, idx INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY (name, idx))`);
+      ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS blobs (
+        name TEXT PRIMARY KEY, type TEXT NOT NULL, bytes INTEGER NOT NULL, updated_at INTEGER NOT NULL, meta TEXT)`);
       const row = ctx.storage.sql.exec<{ json: string }>("SELECT json FROM latest WHERE k = 1").toArray()[0];
       this.latest = row ? (JSON.parse(row.json) as Stored) : null;
+      for (const b of ctx.storage.sql.exec<BlobRow>("SELECT * FROM blobs").toArray()) this.blobInfo.set(b.name, b);
     });
+  }
+
+  /* ---- files from the laptop ---- */
+  private blobInfo = new Map<string, BlobRow>();
+
+  async putBlob(name: string, data: ArrayBuffer, type: string, meta: Record<string, unknown> = {}) {
+    const sql = this.ctx.storage.sql, now = Date.now();
+    this.ctx.storage.transactionSync(() => {
+      sql.exec("DELETE FROM blob_chunks WHERE name = ?", name);
+      for (let i = 0, o = 0; o < data.byteLength; i++, o += BLOB_CHUNK)
+        sql.exec("INSERT INTO blob_chunks VALUES (?,?,?)", name, i, data.slice(o, o + BLOB_CHUNK));
+      sql.exec("INSERT OR REPLACE INTO blobs VALUES (?,?,?,?,?)", name, type, data.byteLength, now, JSON.stringify(meta));
+    });
+    this.blobInfo.set(name, { name, type, bytes: data.byteLength, updated_at: now, meta: JSON.stringify(meta) });
+    if (name === "snapshot") {    // tell stream clients a new picture is there (they fetch GET /snapshot)
+      const msg = JSON.stringify({ type: "snapshot", data: this.snapshotInfo(this.droneId ?? "") });
+      for (const ws of this.ctx.getWebSockets("state")) { try { ws.send(msg); } catch { /* closing */ } }
+    }
+  }
+
+  async getBlob(name: string): Promise<{ data: Uint8Array; info: BlobRow } | null> {
+    const info = this.blobInfo.get(name);
+    if (!info) return null;
+    const out = new Uint8Array(info.bytes);
+    let o = 0;
+    for (const c of this.ctx.storage.sql.exec<{ data: ArrayBuffer }>(
+      "SELECT data FROM blob_chunks WHERE name = ? ORDER BY idx", name)) {
+      out.set(new Uint8Array(c.data), o); o += c.data.byteLength;
+    }
+    return { data: out, info };
+  }
+
+  private droneId: string | null = null;
+
+  /** The last box camera picture that came over the telemetry radio, plus the radio link status. */
+  private snapshotInfo(id: string) {
+    const b = this.blobInfo.get("snapshot");
+    const meta = b?.meta ? (JSON.parse(b.meta) as Record<string, unknown>) : {};
+    const captured = num(meta.captured_at);
+    return {
+      available: !!b,
+      frame: num(meta.frame),
+      captured_at: captured == null ? null : new Date(captured).toISOString(),
+      uploaded_at: b ? new Date(b.updated_at).toISOString() : null,
+      age_s: b ? r1((Date.now() - (captured ?? b.updated_at)) / 1000) : null,
+      bytes: b?.bytes ?? null, content_type: b?.type ?? null,
+      url: `/v1/drones/${id}/snapshot`,
+      radio: this.latest?.t.radio_snapshot ?? null,     // link status: state, rate, loss, frame being received
+      note: "About 320x180, sent over the telemetry radio when the Pi is not on Wi-Fi (a few seconds per picture).",
+    };
   }
 
   private setStatus(cid: string, status: string, reason: string | null, now: number) {
@@ -427,9 +543,20 @@ export class DroneState extends DurableObject<Env> {
   }
 
   private stateOf(id: string, now: number) {
+    this.droneId = id;
     const st = toState(id, this.latest, now) as Record<string, unknown>;
     if (!this.latest) return st;
+    const files = (name: string, url: string) => {
+      const b = this.blobInfo.get(name);
+      return b ? { url, updated_at: new Date(b.updated_at).toISOString(), bytes: b.bytes } : null;
+    };
     return { ...st, camera: toCamera(id, this.frameAt, this.latest.t.camera_live === true, now),
+             radio_snapshot: this.snapshotInfo(id),
+             files: {
+               routes: files("routes", `/v1/drones/${id}/routes`),
+               airspace_layers: files("airspace_layers", `/v1/drones/${id}/airspace/layers`),
+               airspace_overlay: files("airspace_overlay", `/v1/drones/${id}/airspace/overlay.png`),
+             },
              messages: this.recentMessages(10) };
   }
 
@@ -525,8 +652,16 @@ const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Authorization, Content-Type",
-  "Access-Control-Expose-Headers": "X-Frame-Time",
+  "Access-Control-Expose-Headers": "X-Frame-Time, X-Frame, X-Frames, X-Bounds, X-Updated-At",
   "Access-Control-Max-Age": "86400",
+};
+
+/** Files the laptop uploads (stored in the drone's Durable Object, the latest of each). */
+const FILES = {
+  snapshot: { name: "snapshot", label: "radio snapshot", types: ["image/webp", "image/jpeg"] },
+  routes: { name: "routes", label: "routes", types: ["application/json"] },
+  layers: { name: "airspace_layers", label: "airspace layers", types: ["application/json"] },
+  overlay: { name: "airspace_overlay", label: "airspace overlay", types: ["image/png"] },
 };
 
 function json(data: unknown, status = 200): Response {
@@ -590,6 +725,45 @@ export default {
       if (!v) return error(503, "camera not live (best effort: it is often down)");
       return new Response(v.h264, { headers: { "Content-Type": "video/h264", "Cache-Control": "no-store",
         "X-Frame-Time": new Date(v.at).toISOString(), "X-Frames": String(v.frames), ...CORS } });
+    }
+
+    // Files from the laptop: the radio snapshot, the routes and pads, the airspace map.
+    const file = what === "snapshot" && parts.length === 4 ? FILES.snapshot
+      : what === "routes" && parts.length === 4 ? FILES.routes
+      : what === "airspace" && parts[4] === "layers" ? FILES.layers
+      : what === "airspace" && (parts[4] === "overlay" || parts[4] === "overlay.png") ? FILES.overlay
+      : null;
+    if (file) {
+      if (request.method === "POST") {
+        if (!(await safeEqual(bearer(request), env.INGEST_TOKEN))) return error(401, "bad ingest token");
+        const type = (request.headers.get("Content-Type") ?? "").split(";")[0].trim();
+        if (!file.types.includes(type)) return error(415, `Content-Type must be ${file.types.join(" or ")}`);
+        const body = await request.arrayBuffer();
+        if (!body.byteLength || body.byteLength > FILE_MAX_BYTES) return error(400, "empty, or over 25 MB");
+        if (type === "application/json") {
+          try { JSON.parse(new TextDecoder().decode(body)); } catch { return error(400, "invalid JSON"); }
+        }
+        const meta: Record<string, unknown> = {};
+        const frame = Number(request.headers.get("X-Frame")), at = Number(request.headers.get("X-Frame-Time"));
+        if (Number.isFinite(frame)) meta.frame = frame;
+        if (Number.isFinite(at) && at > 0) meta.captured_at = at;
+        const bounds = request.headers.get("X-Bounds");
+        if (bounds) { try { meta.bounds = JSON.parse(bounds); } catch { /* ignore */ } }
+        await stub.putBlob(file.name, body, type, meta);
+        return json({ ok: true, bytes: body.byteLength });
+      }
+      if (request.method !== "GET") return error(405, "use GET or POST");
+      const tok = bearer(request) || (url.searchParams.get("token") ?? "");   // token in the URL: for <img src>
+      if (!(await safeEqual(tok, env.READ_TOKEN))) return error(401, "bad read token");
+      const b = await stub.getBlob(file.name);
+      if (!b) return error(404, `no ${file.label} from the laptop yet`);
+      const meta = b.info.meta ? (JSON.parse(b.info.meta) as Record<string, unknown>) : {};
+      const h: Record<string, string> = { "Content-Type": b.info.type, "Cache-Control": "no-store",
+        "X-Updated-At": new Date(b.info.updated_at).toISOString(), ...CORS };
+      if (meta.frame != null) h["X-Frame"] = String(meta.frame);
+      if (typeof meta.captured_at === "number") h["X-Frame-Time"] = new Date(meta.captured_at).toISOString();
+      if (meta.bounds != null) h["X-Bounds"] = JSON.stringify(meta.bounds);
+      return new Response(b.data, { headers: h });
     }
 
     if (what === "telemetry") {

@@ -117,7 +117,8 @@ UW MPSK|<device passphrase>|20
 ```
 
 At every boot, `wifi_join.sh` adds these networks to NetworkManager (with the
-fixed MAC that UW MPSK needs) and connects. `status_screen.sh` shows Wi-Fi, IP,
-internet, setup progress and the last network warning on the HDMI screen in
-place of the login prompt. `setup.sh` runs again at each boot until it finishes.
+fixed MAC that UW MPSK needs) and connects. `setup.sh` runs again at each boot
+until it finishes. (The HDMI `status_screen.sh` was removed on 2026-10-25: it ran
+`cloud-init status`, `nmcli` and a DNS lookup every 5 s, about 1 CPU core, and
+the drone has no screen.)
 Never commit `wifi.txt`; `.gitignore` blocks it.

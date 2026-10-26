@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
-"""Live camera view in a browser: http://<pi>:8080/
+"""Box camera on the Pi: lid detection, H.264 video and the pose over the radio.
 
-Passes the camera's own MJPEG frames through without re-encoding, so the
-Pi Zero 2 W uses very little CPU. Only one program can use the camera at a time.
+The camera gives raw YUYV frames. Each user takes what it needs from them,
+with no JPEG step:
+  detection       the Y plane (grey), full frame, as fast as the CPU allows
+  /h264           hardware H.264 (h264.py), started on demand; the ground-control
+                  page decodes it with WebCodecs, ground control forwards it to the API
+  radio pictures  WebP q20 from the Y plane, on request (snap_proto.py)
 
-/            page that loads /frame.jpg in a loop (works in Safari)
-/frame.jpg   the latest frame
-/stream      multipart MJPEG (works in Chrome, VLC, OpenCV)
 /lid.json    the latest lid detection: box ID, tags, and where the camera and the
              drone are relative to the box (see lid_pose below)
+/h264        the video stream (record format in h264.py)
 
 Example:
-  python3 cam_stream.py --width 1280 --height 800 --fps 15
+  python3 cam_stream.py --width 1280 --height 720 --fps 10
+
+A Logitech C270 gives YUYV 1280x720 at 10 fps (USB 2 bandwidth limit).
 
 Mount (drone body frame, metres): the camera is --mount-fwd ahead of the drone
 centre (the bottom-plate underside), --mount-right to the right and --mount-down
@@ -29,6 +33,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import cv2
 import numpy as np
 
+from h264 import WifiH264
 from lid_tags import LidFinder, camera_matrix
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -36,13 +41,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser()
 ap.add_argument("--dev", default="/dev/video0")
 ap.add_argument("--width", type=int, default=1280)
-ap.add_argument("--height", type=int, default=800)
-ap.add_argument("--fps", type=int, default=15)
+ap.add_argument("--height", type=int, default=720)
+ap.add_argument("--fps", type=int, default=10)
 ap.add_argument("--port", type=int, default=8080)
 ap.add_argument("--hfov", type=float, default=None,
                 help="horizontal FOV, deg. Default: 48.8 for a Logitech C270, else 70 (OV9281)")
 ap.add_argument("--layout", default=os.path.join(HERE, "lid_layout.json"))
-ap.add_argument("--detect-hz", type=float, default=5.0)
 ap.add_argument("--mount-fwd", type=float, default=0.134, help="m, under the GPS mast")
 ap.add_argument("--mount-right", type=float, default=0.0)
 ap.add_argument("--mount-down", type=float, default=0.02)
@@ -52,34 +56,8 @@ ap.add_argument("--mav", default="udpout:127.0.0.1:14650",
 ap.add_argument("--mav-hz", type=float, default=2.0)
 a = ap.parse_args()
 
-latest = {"jpg": None, "n": 0}
+latest = {"y": None, "yuyv": None, "n": 0, "at": 0.0}
 lid = {"t": 0.0, "frame": -1, "boxes": [], "hz": 0.0, "w": 0, "h": 0, "error": None}
-
-
-def _std_dht():
-    """The standard JPEG Huffman tables (DHT segments), taken from an OpenCV JPEG."""
-    import numpy as np
-    ok, enc = cv2.imencode(".jpg", np.zeros((16, 16, 3), np.uint8))
-    d, i, out = enc.tobytes(), 2, b""
-    while i < len(d) and d[i] == 0xFF and d[i + 1] != 0xDA:
-        n = int.from_bytes(d[i + 2:i + 4], "big")
-        if d[i + 1] == 0xC4:
-            out += d[i:i + 2 + n]
-        i += 2 + n
-    return out
-
-
-DHT = _std_dht()
-
-
-def add_dht(jpg):
-    """Many UVC cameras leave the Huffman tables out of MJPEG frames.
-    Chrome and OpenCV do not care, but Safari cannot show such a frame."""
-    head = jpg[:4096]
-    if b"\xff\xc4" in head:
-        return jpg
-    sos = head.find(b"\xff\xda")
-    return jpg if sos < 0 else jpg[:sos] + DHT + jpg[sos:]
 
 
 def camera_name(dev):
@@ -93,24 +71,26 @@ cond = threading.Condition()
 
 def grab():
     cap = cv2.VideoCapture(a.dev, cv2.CAP_V4L2)
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"YUYV"))
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, a.width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, a.height)
     cap.set(cv2.CAP_PROP_FPS, a.fps)
-    cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)          # keep the raw JPEG bytes
+    cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)          # keep the raw YUYV bytes
     while True:
         ok, buf = cap.read()
         if not ok or buf is None:
             time.sleep(0.05)
             continue
-        latest["at"] = time.time()
-        data = buf.tobytes()
-        if not data.startswith(b"\xff\xd8"):        # driver gave decoded pixels: encode
-            ok, enc = cv2.imencode(".jpg", buf, [cv2.IMWRITE_JPEG_QUALITY, 80])
-            data = enc.tobytes()
-        data = add_dht(data)
+        t = time.time()
+        if buf.ndim == 3 and buf.shape[2] == 2:     # YUYV: (h, w, 2), Y in channel 0
+            yuyv = buf
+        else:                                       # the driver gave another layout: skip it
+            print(f"unexpected frame shape {buf.shape}", flush=True)
+            time.sleep(1)
+            continue
+        vid.feed(yuyv, t)
         with cond:
-            latest["jpg"], latest["n"] = data, latest["n"] + 1
+            latest.update(yuyv=yuyv, y=yuyv[:, :, 0], n=latest["n"] + 1, at=t)
             cond.notify_all()
 
 
@@ -143,7 +123,9 @@ def lid_pose(r):
     return {"box": r["box"], "tags": r["tags"], "px_per_cell": round(r["px_per_cell"], 1),
             "camera_m": [round(v, 4) for v in cam], "drone_m": [round(v, 4) for v in centre],
             "yaw_deg": round(yaw, 1), "tilt_deg": round(tilt, 1),
-            "range_m": round(r["range_m"], 3), "outlines": r["outlines"]}
+            "range_m": round(r["range_m"], 3), "outlines": r["outlines"],
+            "rvec": [round(float(v), 5) for v in cv2.Rodrigues(R)[0].ravel()],   # lid -> camera rotation
+            "tvec": [round(float(v), 4) for v in t]}                            # lid origin in the camera frame, m
 
 
 def watchdog():
@@ -152,51 +134,42 @@ def watchdog():
     time.sleep(15)                             # time to open the camera
     while True:
         time.sleep(1)
-        if time.time() - latest.get("at", 0) > 5:
+        if time.time() - latest["at"] > 5:
             print("no camera frame for 5 s: exiting so systemd restarts the camera", flush=True)
             os._exit(3)
 
 
+DETECT_WORKERS = 2          # one search takes about 170 ms on the Pi Zero 2: two workers give 7-8.5 Hz; 3 gave no more
+claim = {"n": -1}
+rate = {"n": 0, "t0": time.time()}
+
+
 def detect():
+    """Full frame, full size, every time. Each worker takes the newest frame that no
+    worker has taken yet, so two workers run on alternate frames on two cores."""
     finder = LidFinder(a.layout)
-    seen, n, t0 = -1, 0, time.time()
     while True:
         with cond:
-            cond.wait_for(lambda: latest["n"] != seen, timeout=2)
-            if latest["n"] == seen:              # no new frame: do not report an old pose as new
-                continue
-            jpg, seen = latest["jpg"], latest["n"]
-        if jpg is None:
-            continue
-        start = time.time()
+            cond.wait_for(lambda: latest["n"] > claim["n"] and latest["y"] is not None, timeout=2)
+            if latest["n"] <= claim["n"] or latest["y"] is None:
+                continue                         # no new frame: do not report an old pose as new
+            y, seen, t_cap = latest["y"], latest["n"], latest["at"]
+            claim["n"] = seen
+        gray = np.ascontiguousarray(y)
         try:
-            gray = cv2.imdecode(np.frombuffer(jpg, np.uint8), cv2.IMREAD_GRAYSCALE)
             K = camera_matrix(gray.shape[1], gray.shape[0], HFOV)
             boxes = [lid_pose(r) for r in finder.find(gray, K)]
             err = None
         except Exception as e:                  # keep the stream running if one frame fails
             boxes, err = [], f"{type(e).__name__}: {e}"
-        n += 1
-        if time.time() - t0 > 2:
-            lid["hz"], n, t0 = round(n / (time.time() - t0), 1), 0, time.time()
-        lid.update(t=time.time(), frame=seen, boxes=boxes, w=gray.shape[1], h=gray.shape[0], error=err)
-        time.sleep(max(0.0, 1.0 / a.detect_hz - (time.time() - start)))
-
-
-PAGE = """<!doctype html><html><head><meta name=viewport content="width=device-width">
-<title>Packet camera</title><style>body{margin:0;background:#000;color:#ccc;font:14px system-ui}
-img{display:block;width:100vw;height:calc(100vh - 28px);object-fit:contain}p{margin:6px 10px}</style></head>
-<body><p>packet-cv &middot; CAMERA &middot; <span id=fps>connecting</span></p><img id=v>
-<script>
-const v = document.getElementById("v"), fps = document.getElementById("fps");
-let n = 0, t0 = performance.now();
-function next() { v.src = "/frame.jpg?" + Date.now(); }
-v.onload = () => { n++; const dt = (performance.now() - t0) / 1000;
-  if (dt > 2) { fps.textContent = (n / dt).toFixed(1) + " fps"; n = 0; t0 = performance.now(); }
-  next(); };
-v.onerror = () => { fps.textContent = "no frame"; setTimeout(next, 500); };
-next();
-</script></body></html>""".replace("CAMERA", camera_name(a.dev)).encode()
+        with cond:
+            rate["n"] += 1
+            if time.time() - rate["t0"] > 2:
+                lid["hz"] = round(rate["n"] / (time.time() - rate["t0"]), 1)
+                rate["n"], rate["t0"] = 0, time.time()
+            if seen > lid["frame"]:              # a slower worker never puts back an older pose
+                lid.update(t=time.time(), frame=seen, boxes=boxes, w=gray.shape[1], h=gray.shape[0],
+                           error=err, latency_ms=round((time.time() - t_cap) * 1000))
 
 
 class H(BaseHTTPRequestHandler):
@@ -210,7 +183,7 @@ class H(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.startswith("/lid.json"):
-            body = json.dumps(dict(lid, camera=NAME, hfov_deg=HFOV, now=time.time(),
+            body = json.dumps(dict(lid, frames=latest["n"], camera=NAME, hfov_deg=HFOV, now=time.time(), h264=vid.stats,
                                    mount={"fwd": a.mount_fwd, "right": a.mount_right,
                                           "down": a.mount_down, "rot": a.mount_rot})).encode()
             self.send_response(200)
@@ -220,45 +193,17 @@ class H(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
-        if self.path == "/":
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html")
-            self.end_headers()
-            self.wfile.write(PAGE)
-            return
-        if self.path.startswith("/frame.jpg"):
-            with cond:
-                cond.wait_for(lambda: latest["jpg"] is not None, timeout=3)
-                jpg = latest["jpg"]
-            if jpg is None:
-                self.send_error(503, "no frame yet")
-                return
+        if self.path.startswith("/h264"):
             self.send_response(200)
             self.send_header("Cache-Control", "no-store")
-            self.send_header("Content-Type", "image/jpeg")
-            self.send_header("Content-Length", str(len(jpg)))
+            self.send_header("Content-Type", "application/octet-stream")
             self.end_headers()
-            self.wfile.write(jpg)
+            try:
+                vid.serve(lambda b: (self.wfile.write(b), self.wfile.flush()))
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                pass
             return
-        if self.path != "/stream":
-            self.send_error(404)
-            return
-        self.send_response(200)
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
-        self.end_headers()
-        seen = -1
-        try:
-            while True:
-                with cond:
-                    cond.wait_for(lambda: latest["n"] != seen, timeout=2)
-                    jpg, seen = latest["jpg"], latest["n"]
-                if jpg is None:
-                    continue
-                self.wfile.write(b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: "
-                                 + str(len(jpg)).encode() + b"\r\n\r\n" + jpg + b"\r\n")
-        except (BrokenPipeError, ConnectionResetError):
-            pass
+        self.send_error(404)
 
 
 def wifi_ip():
@@ -292,15 +237,16 @@ def snapshots(m, send_lock):
                 _, frame, first, count, quality, width = r
                 peer = (msg.get_srcSystem(), msg.get_srcComponent())
                 if frame == 0 or frame != frame_id or not chunks:
-                    jpg = latest["jpg"]
-                    if jpg is None or time.time() - latest.get("at", 0) > 2:
+                    yuyv = latest["yuyv"]       # the page draws the box from the live pose on top
+                    if yuyv is None or time.time() - latest["at"] > 2:
                         continue                          # no fresh camera frame: say nothing
-                    gray = cv2.imdecode(np.frombuffer(jpg, np.uint8), cv2.IMREAD_GRAYSCALE)
                     w = max(64, min(width or 320, 640))
-                    h = int(round(gray.shape[0] * w / gray.shape[1]))
+                    h = int(round(yuyv.shape[0] * w / yuyv.shape[1]))
+                    # colour: about 19% more bytes than grey (measured 2026-10-25, 320x180 q20: 2076 B / 1738 B)
+                    small = cv2.resize(cv2.cvtColor(yuyv, cv2.COLOR_YUV2BGR_YUYV), (w, h), interpolation=cv2.INTER_AREA)
                     # WebP: 2.4x smaller than JPEG at the same quality (measured 2026-10-25:
                     # 320x180 grey, WebP q30 1446 B / 36.5 dB against JPEG q30 3504 B / 36.0 dB)
-                    ok, enc = cv2.imencode(".webp", cv2.resize(gray, (w, h), interpolation=cv2.INTER_AREA),
+                    ok, enc = cv2.imencode(".webp", small,
                                            [cv2.IMWRITE_WEBP_QUALITY, max(1, min(quality or 20, 100))])
                     data = enc.tobytes()
                     frame_id = frame_id % 65535 + 1
@@ -323,12 +269,15 @@ def snapshots(m, send_lock):
 def radio():
     """Send the pose to the ground station over the radio, without Wi-Fi.
 
-    Three DEBUG_VECT messages with no target, so the FC forwards them to the
-    radio (about 250 B/s at 2 Hz):
-      LIDATT  x = box id (-1 = no box in view), y = yaw deg, z = tilt deg
+    DEBUG_VECT messages with no target, so the FC forwards them to the
+    radio (about 420 B/s at 2 Hz). LIDATT comes last: ground control puts the
+    parts with the same time_usec (the detection time) together when it arrives.
+      LIDRV   x, y, z = camera rotation (Rodrigues vector, lid -> camera)
+      LIDTV   x, y, z = lid origin in the camera frame, m
+              (with LIDRV, ground control draws the tags on the radio snapshot)
       LIDPOS  x, y, z = drone centre in the lid frame, m
       LIDCAM  x = camera height m, y = px per tag cell, z = number of tags
-    time_usec = the detection time.
+      LIDATT  x = box id (-1 = no box in view), y = yaw deg, z = tilt deg
     Every 5 s also PIIP: x = a*256+b, y = c*256+d of the Wi-Fi IP a.b.c.d,
     z = the HTTP port, so ground control finds this page when the name
     packet-cv.local does not resolve (other subnet) or the DHCP address changes.
@@ -361,18 +310,22 @@ def radio():
             if b is None:
                 m.mav.debug_vect_send(b"LIDATT", us, -1.0, 0.0, 0.0)
                 continue
-            m.mav.debug_vect_send(b"LIDATT", us, float(b["box"]), b["yaw_deg"], b["tilt_deg"])
+            m.mav.debug_vect_send(b"LIDRV", us, *map(float, b["rvec"]))
+            m.mav.debug_vect_send(b"LIDTV", us, *map(float, b["tvec"]))
             m.mav.debug_vect_send(b"LIDPOS", us, *map(float, b["drone_m"]))
             m.mav.debug_vect_send(b"LIDCAM", us, float(b["camera_m"][2]), float(b["px_per_cell"]),
                                   float(len(b["tags"])))
+            m.mav.debug_vect_send(b"LIDATT", us, float(b["box"]), b["yaw_deg"], b["tilt_deg"])
         except OSError:
             time.sleep(1)
 
 
+vid = WifiH264(a.width, a.height, a.fps)
 threading.Thread(target=grab, daemon=True).start()
 threading.Thread(target=watchdog, daemon=True).start()
 if a.mav != "none":
     threading.Thread(target=radio, daemon=True).start()
-threading.Thread(target=detect, daemon=True).start()
+for _ in range(DETECT_WORKERS):
+    threading.Thread(target=detect, daemon=True).start()
 print(f"streaming on http://0.0.0.0:{a.port}/  camera {NAME}, HFOV {HFOV} deg", flush=True)
 ThreadingHTTPServer(("", a.port), H).serve_forever()

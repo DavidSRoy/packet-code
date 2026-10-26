@@ -11,9 +11,13 @@
  *   GET  /v1/drones/:id/track       Bearer READ_TOKEN   ?since=<ms or ISO>&limit=<n>
  *   GET  /v1/drones/:id/stream      WebSocket, ?token=READ_TOKEN
  *   GET  /v1/drones/:id/messages    Bearer READ_TOKEN   ?since=<ms or ISO>&limit=<n>  (FC text messages)
- *   POST /v1/drones/:id/camera      Bearer INGEST_TOKEN, image/jpeg (best effort, see below)
- *   GET  /v1/drones/:id/camera.jpg  Bearer READ_TOKEN or ?token=   latest frame, 503 when none is recent
- *   GET  /v1/drones/:id/camera/stream  WebSocket, ?token=READ_TOKEN, binary JPEG frames
+ *   POST /v1/drones/:id/camera      Bearer INGEST_TOKEN, H.264 frame records (best effort, see below)
+ *   GET  /v1/drones/:id/camera.h264 Bearer READ_TOKEN or ?token=   H.264 Annex B from the last keyframe, 503 when not live
+ *   GET  /v1/drones/:id/camera/stream  WebSocket, ?token=READ_TOKEN, one H.264 frame record per message
+ *
+ * H.264 frame record (the Pi's format, companion/h264.py), big-endian:
+ *   4 B data length, 1 B flags (1 = keyframe, SPS and PPS in front), 8 B capture time
+ *   (ms since epoch, float64), then one H.264 Annex B access unit.
  *   POST /v1/drones/:id/commands    Bearer COMMAND_TOKEN  {"action":"goto","pad":"qfc"} | hold | resume | return
  *   GET  /v1/drones/:id/commands    Bearer READ_TOKEN or COMMAND_TOKEN (last 20)
  *   GET  /v1/drones/:id/commands/:c Bearer READ_TOKEN or COMMAND_TOKEN
@@ -55,7 +59,23 @@ export interface Autonomy {
 interface Ack { id: string; status: "accepted" | "rejected"; reason: string | null }
 
 const CAMERA_LIVE_S = 5;               // a frame older than this = camera not live
-const CAMERA_MAX_BYTES = 1_000_000;
+const CAMERA_MAX_BYTES = 1_000_000;    // one POST
+const GOP_MAX_BYTES = 4_000_000;       // kept from the last keyframe
+const REC_HDR = 13;
+
+/** Split H.264 frame records. Returns null when the body is not a clean list of records. */
+export function splitRecords(buf: ArrayBuffer): { off: number; len: number; key: boolean; t: number }[] | null {
+  const dv = new DataView(buf), out = [];
+  let o = 0;
+  while (o < buf.byteLength) {
+    if (buf.byteLength - o < REC_HDR) return null;
+    const len = dv.getUint32(o), key = (dv.getUint8(o + 4) & 1) === 1, t = dv.getFloat64(o + 5);
+    if (len === 0 || o + REC_HDR + len > buf.byteLength) return null;
+    out.push({ off: o, len, key, t });
+    o += REC_HDR + len;
+  }
+  return out.length ? out : null;
+}
 const ONLINE_S = 5;                    // no update for this long = offline
 const TRACK_KEEP_MS = 24 * 3600_000;   // keep 24 h of track
 const DRONE_ID = /^[a-z0-9-]{1,32}$/;
@@ -258,7 +278,8 @@ function toCamera(id: string, frameAt: number | null, laptopLive: boolean, now: 
     laptop_forwarding: laptopLive,
     last_frame_at: frameAt == null ? null : new Date(frameAt).toISOString(),
     frame_age_s: r1(age),
-    frame_url: `/v1/drones/${id}/camera.jpg`,
+    format: "H.264 (Annex B), 1280x720, about 10 fps",
+    frame_url: `/v1/drones/${id}/camera.h264`,
     stream_url: `/v1/drones/${id}/camera/stream`,
     note: "Best effort: frames come only while the laptop reaches the drone's Pi over Wi-Fi. Expect gaps. Use box_camera (radio) for the box pose.",
   };
@@ -305,7 +326,8 @@ function commandOut(c: CommandRow) {
 export class DroneState extends DurableObject<Env> {
   private latest: Stored | null = null;
   private inserts = 0;
-  private frame: ArrayBuffer | null = null;   // latest camera frame, memory only (best effort)
+  private gop: ArrayBuffer[] = [];            // frame records from the last keyframe, memory only (best effort)
+  private gopBytes = 0;
   private frameAt: number | null = null;
 
   constructor(ctx: DurableObjectState, env: Env) {
@@ -421,18 +443,38 @@ export class DroneState extends DurableObject<Env> {
              messages: rows.map(m => ({ time: new Date(m.ts).toISOString(), severity: m.sev, text: m.text })) };
   }
 
-  /** Camera frame from the laptop: keep the latest in memory, send it to camera stream clients. */
-  async putFrame(jpg: ArrayBuffer) {
-    this.frame = jpg;
-    this.frameAt = Date.now();
-    for (const ws of this.ctx.getWebSockets("camera")) {
-      try { ws.send(jpg); } catch { /* socket closing */ }
+  /** H.264 frame records from the laptop: keep the frames since the last keyframe in memory
+   *  (a new viewer needs a keyframe to start), and send each frame to camera stream clients. */
+  async putVideo(body: ArrayBuffer) {
+    const recs = splitRecords(body);
+    if (!recs) return;
+    const sockets = this.ctx.getWebSockets("camera");
+    for (const r of recs) {
+      const rec = body.slice(r.off, r.off + REC_HDR + r.len);
+      if (r.key) { this.gop = []; this.gopBytes = 0; }
+      if (this.gop.length || r.key) {
+        this.gop.push(rec); this.gopBytes += rec.byteLength;
+        if (this.gopBytes > GOP_MAX_BYTES) { this.gop = []; this.gopBytes = 0; }   // no keyframe for too long
+      }
+      for (const ws of sockets) {
+        const started = (ws.deserializeAttachment() as { started?: boolean } | null)?.started === true;
+        if (!started && !r.key) continue;                     // a decoder must start at a keyframe
+        if (!started) ws.serializeAttachment({ started: true });
+        try { ws.send(rec); } catch { /* socket closing */ }
+      }
     }
+    this.frameAt = Date.now();
   }
 
-  async getFrame(): Promise<{ jpg: ArrayBuffer; at: number } | null> {
-    if (!this.frame || this.frameAt == null || Date.now() - this.frameAt > CAMERA_LIVE_S * 1000) return null;
-    return { jpg: this.frame, at: this.frameAt };
+  private live() { return this.frameAt != null && Date.now() - this.frameAt <= CAMERA_LIVE_S * 1000; }
+
+  /** H.264 Annex B from the last keyframe to now, or null when the camera is not live. */
+  async getVideo(): Promise<{ h264: Uint8Array; frames: number; at: number } | null> {
+    if (!this.live() || !this.gop.length) return null;
+    const n = this.gop.reduce((a, r) => a + r.byteLength - REC_HDR, 0), out = new Uint8Array(n);
+    let o = 0;
+    for (const r of this.gop) { out.set(new Uint8Array(r, REC_HDR), o); o += r.byteLength - REC_HDR; }
+    return { h264: out, frames: this.gop.length, at: this.frameAt! };
   }
 
   async track(id: string, since: number, limit: number) {
@@ -458,8 +500,9 @@ export class DroneState extends DurableObject<Env> {
     const pair = new WebSocketPair();
     if (u.pathname === "/camera") {
       this.ctx.acceptWebSocket(pair[1], ["camera"]);
-      const f = await this.getFrame();
-      if (f) pair[1].send(f.jpg);
+      const live = this.live() && this.gop.length > 0;
+      pair[1].serializeAttachment({ started: live });
+      if (live) for (const r of this.gop) pair[1].send(r);   // from the last keyframe: the viewer can decode at once
     } else {
       this.ctx.acceptWebSocket(pair[1], ["state"]);
       pair[1].send(JSON.stringify({ type: "state", data: this.stateOf(id, Date.now()) }));
@@ -528,14 +571,14 @@ export default {
     if (what === "camera" && parts.length === 4) {
       if (request.method !== "POST") return error(405, "use POST");
       if (!(await safeEqual(bearer(request), env.INGEST_TOKEN))) return error(401, "bad ingest token");
-      const jpg = await request.arrayBuffer();
-      if (jpg.byteLength < 4 || jpg.byteLength > CAMERA_MAX_BYTES) return error(400, "send one JPEG, up to 1 MB");
-      const h = new Uint8Array(jpg, 0, 2);
-      if (h[0] !== 0xff || h[1] !== 0xd8) return error(400, "not a JPEG");
-      await stub.putFrame(jpg);
-      return json({ ok: true });
+      const body = await request.arrayBuffer();
+      if (body.byteLength > CAMERA_MAX_BYTES) return error(400, "up to 1 MB per POST");
+      const recs = splitRecords(body);
+      if (!recs) return error(400, "send H.264 frame records (see the top of this file)");
+      await stub.putVideo(body);
+      return json({ ok: true, frames: recs.length });
     }
-    if (what === "camera.jpg" || (what === "camera" && parts[4] === "stream")) {
+    if (what === "camera.h264" || (what === "camera" && parts[4] === "stream")) {
       if (request.method !== "GET") return error(405, "use GET");
       const tok = bearer(request) || (url.searchParams.get("token") ?? "");
       if (!(await safeEqual(tok, env.READ_TOKEN))) return error(401, "bad read token");
@@ -543,10 +586,10 @@ export default {
         if (request.headers.get("Upgrade") !== "websocket") return error(426, "WebSocket upgrade required");
         return stub.fetch(new Request(`https://do/camera?drone=${id}`, request));
       }
-      const f = await stub.getFrame();
-      if (!f) return error(503, "camera not live (best effort: it is often down)");
-      return new Response(f.jpg, { headers: { "Content-Type": "image/jpeg", "Cache-Control": "no-store",
-        "X-Frame-Time": new Date(f.at).toISOString(), ...CORS } });
+      const v = await stub.getVideo();
+      if (!v) return error(503, "camera not live (best effort: it is often down)");
+      return new Response(v.h264, { headers: { "Content-Type": "video/h264", "Cache-Control": "no-store",
+        "X-Frame-Time": new Date(v.at).toISOString(), "X-Frames": String(v.frames), ...CORS } });
     }
 
     if (what === "telemetry") {

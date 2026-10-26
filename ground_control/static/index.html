@@ -328,7 +328,7 @@
 <div id="cam" class="panel">
   <div class="att-h"><span class="lbl">Box camera</span>
     <span><span class="lbl" id="cam-rate">—</span><button id="cam-big">EXPAND</button></span></div>
-  <div class="cam-view"><img id="cam-img" alt=""><img id="cam-snap" alt=""><canvas id="cam-ov"></canvas><div class="none" id="cam-none">NO CAMERA</div>
+  <div class="cam-view"><canvas id="cam-vid"></canvas><img id="cam-snap" alt=""><canvas id="cam-ov"></canvas><div class="none" id="cam-none">NO CAMERA</div>
     <div id="cam-snap-tag"></div></div>
   <div class="cam-f">
     <div>
@@ -936,7 +936,7 @@ connect();
   const $ = id => document.getElementById(id);
   const LID_W = 0.3076, LID_H = 0.2112;            // BX-006 lid top face, m
   const STK_W = 0.300, STK_H = 0.200;              // sticker
-  const url = $("cam-url"), img = $("cam-img"), ov = $("cam-ov"), top = $("cam-top");
+  const url = $("cam-url"), vid = $("cam-vid"), ov = $("cam-ov"), top = $("cam-top");
   // Empty = auto: the address the Pi sends over the radio (the name packet-cv.local
   // does not resolve across subnets, and the DHCP address changes).
   let saved = null; try { saved = localStorage.getItem("piUrl"); } catch {}
@@ -948,14 +948,66 @@ connect();
   const base = () => (url.value.trim() || window.radioPiUrl || "").replace(/\/+$/, "");
 
   let frames = 0, fpsT = performance.now(), lid = null, lidAge = Infinity, ok = false;
-  function next() {
-    if (!base()) { setTimeout(next, 1000); return; }   // no address yet: wait for the radio
-    url.placeholder = window.radioPiUrl ? `auto: ${window.radioPiUrl}` : "auto (address from the radio)";
-    img.src = `${base()}/frame.jpg?${Date.now()}`;
+  // Video: hardware H.264 from the Pi (/h264, companion/h264.py), decoded here with
+  // WebCodecs. Record: 4 B length, 1 B flags (1 = keyframe), 8 B capture time ms, Annex B data.
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  function avcCodec(d) {          // "avc1.PPCCLL" from the SPS in a keyframe
+    for (let i = 0; i + 7 < d.length; i++)
+      if (d[i] === 0 && d[i + 1] === 0 && d[i + 2] === 1 && (d[i + 3] & 0x1f) === 7)
+        return "avc1." + [d[i + 4], d[i + 5], d[i + 6]].map(v => v.toString(16).padStart(2, "0")).join("");
+    return null;
   }
-  img.onload = () => { ok = true; frames++; $("cam-none").style.display = "none"; next(); };
-  img.onerror = () => { ok = false; $("cam-none").style.display = "flex"; $("cam-none").textContent = "NO CAMERA"; setTimeout(next, 1000); };
-  next();
+  async function play() {
+    const g = vid.getContext("2d");
+    for (;;) {
+      url.placeholder = window.radioPiUrl ? `auto: ${window.radioPiUrl}` : "auto (address from the radio)";
+      if (!base() || typeof VideoDecoder === "undefined") { await sleep(1000); continue; }
+      const ctl = new AbortController();
+      let dec = null, needKey = true, last = performance.now();
+      const dog = setInterval(() => { if (performance.now() - last > 3000) ctl.abort(); }, 1000);
+      try {
+        const r = await fetch(`${base()}/h264`, { cache: "no-store", signal: ctl.signal });
+        const rd = r.body.getReader();
+        let buf = new Uint8Array(0);
+        for (;;) {
+          const { value, done } = await rd.read();
+          if (done) break;
+          const nb = new Uint8Array(buf.length + value.length); nb.set(buf); nb.set(value, buf.length); buf = nb;
+          let o = 0;
+          while (buf.length - o >= 13) {
+            const dv = new DataView(buf.buffer, buf.byteOffset + o, 13);
+            const len = dv.getUint32(0), key = (dv.getUint8(4) & 1) === 1, t = dv.getFloat64(5);
+            if (buf.length - o < 13 + len) break;
+            const data = buf.slice(o + 13, o + 13 + len); o += 13 + len;
+            if (!dec && key) {
+              const codec = avcCodec(data);
+              if (!codec) continue;
+              dec = new VideoDecoder({
+                output: f => {
+                  if (vid.width !== f.displayWidth) { vid.width = f.displayWidth; vid.height = f.displayHeight; }
+                  g.drawImage(f, 0, 0); f.close();
+                  ok = true; frames++; last = performance.now();
+                },
+                error: () => ctl.abort(),
+              });
+              dec.configure({ codec, optimizeForLatency: true });   // no description: Annex B
+            }
+            if (!dec) continue;
+            if (dec.decodeQueueSize > 4) needKey = true;           // decoder behind: drop to the next keyframe
+            if (needKey && !key) continue;
+            needKey = false;
+            dec.decode(new EncodedVideoChunk({ type: key ? "key" : "delta", timestamp: Math.round(t * 1000), data }));
+          }
+          buf = buf.subarray(o);
+        }
+      } catch {}
+      clearInterval(dog); ctl.abort();
+      if (dec && dec.state !== "closed") dec.close();
+      ok = false;
+      await sleep(1000);
+    }
+  }
+  play();
 
   async function poll() {
     try {
@@ -981,7 +1033,7 @@ connect();
     const r = window.radioLid;
     if (r && r.age < 2.5) {
       const b = r.box == null ? null : { box: r.box, drone_m: r.drone_m, yaw_deg: r.yaw_deg, tilt_deg: r.tilt_deg,
-                                          camera_m: [null, null, r.camera_z] };
+                                          camera_m: [null, null, r.camera_z], rvec: r.rvec, tvec: r.tvec };
       return { src: "RADIO", b, tags: b ? `${r.ntags} tags · ${r.px_per_cell.toFixed(1)} px/cell` : "no tags in view" };
     }
     return { src: null, b: null, tags: lid ? "pose stale" : "no pose (Wi-Fi or radio)" };
@@ -998,13 +1050,14 @@ connect();
       $("cam-rate").textContent = parts.length ? parts.join(" · ") : "—";
       frames = 0; fpsT = performance.now();
     }
-    if (!ok) $("cam-none").textContent = p.src === "RADIO" ? "NO VIDEO · POSE OVER RADIO" : "NO CAMERA";
+    if (!ok) $("cam-none").textContent = typeof VideoDecoder === "undefined" ? "NO VIDEO · THIS BROWSER HAS NO WEBCODECS"
+      : p.src === "RADIO" ? "NO VIDEO · POSE OVER RADIO" : "NO CAMERA";
     // snapshot over the radio when there is no Wi-Fi video (ground_control/radio_snap.py)
     const rs = window.radioSnap, snap = $("cam-snap"), tag = $("cam-snap-tag");
     const showSnap = !ok && rs && rs.frame != null && rs.age_s < 30;
     if (showSnap && snap.dataset.frame !== String(rs.frame)) { snap.src = `/radio_snap.jpg?f=${rs.frame}`; snap.dataset.frame = String(rs.frame); }
     snap.style.display = showSnap ? "block" : "none";
-    img.style.visibility = ok ? "visible" : "hidden";      // no broken-image icon
+    vid.style.visibility = ok ? "visible" : "hidden";
     $("cam-none").style.display = ok || showSnap ? "none" : "flex";
     tag.style.display = !ok && rs && rs.state ? "block" : "none";
     if (!ok && rs) tag.textContent = rs.state === "telemetry first" ? "RADIO SNAPSHOT · PAUSED: TELEMETRY FIRST"
@@ -1018,7 +1071,9 @@ connect();
     setV("cam-yaw", b ? (b.yaw_deg >= 0 ? "+" : "") + b.yaw_deg.toFixed(0) : "—");
     setV("cam-ch", b ? b.camera_m[2].toFixed(3) : "—");
     setV("cam-tilt", b ? b.tilt_deg.toFixed(1) : "—");
-    drawOverlay(b && p.src === "WI-FI" ? lid.boxes : [], lid);
+    if (lid && lid.hfov_deg) camInfo = { hfov: lid.hfov_deg };
+    if (b && p.src === "RADIO" && showSnap) drawRadioBox(b);
+    else drawOverlay(b && p.src === "WI-FI" ? lid.boxes : [], lid);
     drawTop(b);
   }
 
@@ -1034,6 +1089,38 @@ connect();
       g.beginPath(); o.px.forEach(([x, y], i) => g[i ? "lineTo" : "moveTo"](ox + x * s, oy + y * s)); g.closePath(); g.stroke();
       const [x0, y0] = o.px[0]; g.fillStyle = g.strokeStyle; g.fillText(o.tag, ox + x0 * s + 3, oy + y0 * s - 4);
     }
+  }
+
+  // Radio: no tag outlines come over the radio. Make them from the live radio pose
+  // (LIDRV/LIDTV: the full camera pose, the detector's own projection) and draw them
+  // with drawOverlay, as for the Wi-Fi video. Only tags fully in the picture are drawn.
+  let camInfo = { hfov: 48.8 };                    // C270 (cam_stream.py default)
+  const TAG_TL = [[-0.14, 0.09], [0.10, 0.09], [0.10, -0.05], [-0.14, -0.05]];   // 40 mm AprilTags, ids 4*box .. 4*box+3
+  const ARUCO = [[-0.084, 0.084], [0.084, 0.084], [0.084, -0.084], [-0.084, -0.084]];  // 168 mm ArUco, id = box
+  function rodrigues([a, b, c]) {     // rotation vector -> 3x3 matrix, row-major
+    const th = Math.hypot(a, b, c);
+    if (th < 1e-9) return [1, 0, 0, 0, 1, 0, 0, 0, 1];
+    const x = a / th, y = b / th, z = c / th, co = Math.cos(th), si = Math.sin(th), C = 1 - co;
+    return [co + x * x * C, x * y * C - z * si, x * z * C + y * si,
+            y * x * C + z * si, co + y * y * C, y * z * C - x * si,
+            z * x * C - y * si, z * y * C + x * si, co + z * z * C];
+  }
+  function drawRadioBox(b) {
+    const snap = $("cam-snap"), IW = snap.naturalWidth || 320, IH = snap.naturalHeight || 180;
+    if (!b.rvec || !b.tvec) { drawOverlay([], null); return; }      // an older Pi: no camera rotation, draw nothing
+    const R = rodrigues(b.rvec), t = b.tvec, f = IW / 2 / Math.tan(camInfo.hfov * Math.PI / 360);
+    const P = ([x, y]) => {
+      const X = R[0] * x + R[1] * y + t[0], Y = R[3] * x + R[4] * y + t[1], Z = R[6] * x + R[7] * y + t[2];
+      return Z > 0.01 ? [IW / 2 + f * X / Z, IH / 2 + f * Y / Z] : null;
+    };
+    const quads = [{ tag: `A${b.box}`, m: ARUCO },
+                   ...TAG_TL.map(([x, y], i) => ({ tag: `T${4 * b.box + i}`, m: [[x, y], [x + 0.04, y], [x + 0.04, y - 0.04], [x, y - 0.04]] }))];
+    const outlines = [];
+    for (const q of quads) {
+      const px = q.m.map(P);
+      if (px.every(p => p && p[0] >= 0 && p[0] <= IW && p[1] >= 0 && p[1] <= IH)) outlines.push({ tag: q.tag, px });
+    }
+    drawOverlay([{ outlines }], { w: IW, h: IH });
   }
 
   function drawTop(b) {

@@ -12,7 +12,7 @@ drone ──radio──> laptop ground_control/server.py ──HTTPS POST 1 Hz�
 |---|---|---|
 | Everything in `/position`, `/state`, `/track`, `/messages`, the `/stream` WebSocket, and commands | Drone → telemetry radio → laptop → API | **Yes.** This is the data to build on. |
 | `box_camera` (box pose from the drone's camera) | Pi → FC → telemetry radio → laptop → API | **Yes**, while the camera sees the box tags. |
-| Camera frames: `/camera.jpg`, `/camera/stream` | Pi → **Wi-Fi** → laptop → API | **No. Best effort only.** |
+| Camera video: `/camera.h264`, `/camera/stream` | Pi → **Wi-Fi** → laptop → API | **No. Best effort only.** |
 
 The camera frames come only while the laptop reaches the drone's Pi over Wi-Fi. They drop out often: Wi-Fi range, a laptop off the network, a slow upload. The API marks this in the `camera` block (`best_effort: true`, `live`). Never make a flight decision, a trip step or an alarm depend on the camera frames. Show them as a "when available" view only. For the box position, use `box_camera`.
 
@@ -62,7 +62,8 @@ This has the same fields as `/position`, plus:
   },
   "camera": { "best_effort": true, "live": false, "laptop_forwarding": false,
               "last_frame_at": "2026-10-26T04:23:58.119Z", "frame_age_s": 13.9,
-              "frame_url": "/v1/drones/packet-v0/camera.jpg", "stream_url": "/v1/drones/packet-v0/camera/stream",
+              "format": "H.264 (Annex B), 1280x720, about 10 fps",
+              "frame_url": "/v1/drones/packet-v0/camera.h264", "stream_url": "/v1/drones/packet-v0/camera/stream",
               "note": "Best effort: ..." },
   "messages": [ { "time": "2026-10-26T04:23:46.590Z", "severity": 2, "text": "PreArm: Radio failsafe on" } ]
 }
@@ -125,10 +126,21 @@ The FC text messages, kept for 24 h. The default is the last hour. `limit` is 1�
 
 ### Camera (best effort, not reliable)
 
-- `GET /v1/drones/packet-v0/camera.jpg`: the latest frame (JPEG, 1280×720). Auth: Bearer `READ_TOKEN`, or `?token=READ_TOKEN` for an `<img>` tag. The `X-Frame-Time` header gives the capture time. It gives `503` when no frame came in the last 5 s. Expect `503` often.
-- `wss://<base>/v1/drones/packet-v0/camera/stream?token=<READ_TOKEN>`: binary messages, one JPEG each, about 2 frames per second while live. Nothing comes while the camera is down. The socket stays open.
-- The `camera` block in `/state` says if frames come now (`live`) and the age of the last frame.
-- The API keeps only the latest frame, in memory. There is no recording.
+The video is H.264 from the Pi's hardware encoder (1280×720, about 10 fps, about 1.5 Mbit/s, a keyframe each second). The API does not re-encode it.
+
+- `GET /v1/drones/packet-v0/camera.h264`: the video from the last keyframe to now, as raw H.264 Annex B (`video/h264`). It always starts with a keyframe, so any H.264 decoder shows the latest picture (for example `ffplay camera.h264`, or decode the last frame). Auth: Bearer `READ_TOKEN`, or `?token=READ_TOKEN`. Headers: `X-Frame-Time` (time of the last POST), `X-Frames`. It gives `503` when no video came in the last 5 s. Expect `503` often.
+- `wss://<base>/v1/drones/packet-v0/camera/stream?token=<READ_TOKEN>`: live video, one binary message per frame. The first message is a keyframe. Each message is one frame record:
+
+  | Bytes | Content |
+  |---|---|
+  | 4 | data length, big-endian |
+  | 1 | flags: 1 = keyframe (SPS and PPS in front of it) |
+  | 8 | capture time, ms since epoch, big-endian float64 |
+  | rest | one H.264 Annex B access unit |
+
+  In a browser, decode with WebCodecs: `new VideoDecoder(...)`, `configure({ codec: "avc1.PPCCLL" from the SPS, optimizeForLatency: true })` with no `description` (Annex B), then one `EncodedVideoChunk` per message. `ground_control/static/index.html` (`play()`) does this. Nothing comes while the camera is down. The socket stays open.
+- The `camera` block in `/state` says if video comes now (`live`) and the age of the last frame.
+- The API keeps only the frames since the last keyframe, in memory. There is no recording.
 
 ### Live stream: `wss://<base>/v1/drones/packet-v0/stream?token=<READ_TOKEN>`
 
@@ -263,4 +275,4 @@ export PACKET_INGEST_TOKEN=<INGEST_TOKEN>
 
 The top bar of the ground control page shows `Cloud OK` when the pushes succeed. If the push fails, flight control is not affected.
 
-The server also forwards the Pi camera when it reaches the Pi over Wi-Fi: `--pi-url` (default `http://packet-cv.local:8080`, `none` to turn off) and `--cloud-cam-fps` (default 2, 0 to turn off). At 2 fps this is about 150 KB/s of upload. The camera has its own thread, so a lost camera does not delay the telemetry.
+The server also forwards the Pi's H.264 video when it reaches the Pi over Wi-Fi: `--pi-url` (default `auto`, the address the Pi sends over the radio; `none` to turn off) and `--cloud-cam` (default 1, 0 to turn off). It POSTs the Pi's frame records to `/camera` unchanged, about every 0.5 s: about 190 KB/s of upload. The camera has its own thread, so a lost camera does not delay the telemetry.

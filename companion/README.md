@@ -97,8 +97,10 @@ Printing:
 - Focus: set the M12 lens sharp at about 6 m (or infinity), then lock it with
   glue. With focus at infinity, the blur stays at about 0.27 of a corner-tag
   cell at all distances, also at 0.1 m, because the tags grow at the same rate.
-- Live view in a browser: `python3 cam_stream.py`, then open
-  `http://<pi-ip>:8080/`. It passes the camera's own JPEG frames through.
+- Live view: `cam_stream.py` (service `packet-cam`) captures raw YUYV
+  (C270: 1280x720 at 10 fps). Detection uses the Y plane on the full frame
+  with two workers (7-8.5 Hz). The video is hardware H.264 at `/h264`; the
+  ground-control page decodes it with WebCodecs. There is no JPEG step.
 - The earlier OV2311 (B0322) gave only empty UVC headers and no image (USB link
   good, sensor gave no frames). It went back as defective.
 - The SD card has `dtoverlay=dwc2,dr_mode=host` in `config.txt` from the

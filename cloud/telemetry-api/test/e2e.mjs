@@ -72,25 +72,50 @@ r = await get(`/v1/drones/${ID}/messages?since=0`);
 j = await r.json();
 check("messages endpoint", j.count === 3 && j.messages[0].severity === 4);
 
-r = await get(`/v1/drones/${ID}/camera.jpg`);
-check("no frame -> 503", r.status === 503);
+// H.264 frame record: 4 B length, 1 B flags (1 = key), 8 B time ms (float64), Annex B data
+const rec = (key, payload) => {
+  const b = new Uint8Array(13 + payload.length), dv = new DataView(b.buffer);
+  dv.setUint32(0, payload.length); dv.setUint8(4, key ? 1 : 0); dv.setFloat64(5, Date.now()); b.set(payload, 13);
+  return b;
+};
+const cat = (...a) => { const o = new Uint8Array(a.reduce((n, x) => n + x.length, 0)); let i = 0; for (const x of a) { o.set(x, i); i += x.length; } return o; };
+const KEY = new Uint8Array([0, 0, 0, 1, 0x67, 0x42, 0, 0x1f, 0, 0, 0, 1, 0x68, 1, 0, 0, 0, 1, 0x65, 9]);   // SPS, PPS, IDR
+const P1 = new Uint8Array([0, 0, 0, 1, 0x41, 7]), P2 = new Uint8Array([0, 0, 0, 1, 0x41, 8]);
+const CAM = { ...ING, "Content-Type": "application/x-packet-h264" };
+r = await get(`/v1/drones/${ID}/camera.h264`);
+check("no video -> 503", r.status === 503);
 const camWs = new WebSocket(`${BASE.replace("http", "ws")}/v1/drones/${ID}/camera/stream?token=dev-read-token`);
 camWs.binaryType = "arraybuffer";
 const frames = [];
-camWs.onmessage = (e) => frames.push(e.data);
+camWs.onmessage = (e) => frames.push(new Uint8Array(e.data));
 await new Promise((res, rej) => { camWs.onopen = res; camWs.onerror = rej; });
-const jpg = new Uint8Array([0xff, 0xd8, 1, 2, 3, 0xff, 0xd9]);
-r = await fetch(`${BASE}/v1/drones/${ID}/camera`, { method: "POST", headers: { ...ING, "Content-Type": "image/jpeg" }, body: jpg });
-check("camera post", r.ok);
-r = await fetch(`${BASE}/v1/drones/${ID}/camera`, { method: "POST", headers: { ...ING, "Content-Type": "image/jpeg" }, body: "nope" });
-check("camera post not jpeg -> 400", r.status === 400);
-r = await get(`/v1/drones/${ID}/camera.jpg`);
-const b = new Uint8Array(await r.arrayBuffer());
-check("camera.jpg returns the frame", r.ok && b.length === 7 && b[0] === 0xff && r.headers.get("X-Frame-Time") !== null);
-r = await fetch(`${BASE}/v1/drones/${ID}/camera.jpg?token=dev-read-token`);
-check("camera.jpg with ?token", r.ok);
+r = await fetch(`${BASE}/v1/drones/${ID}/camera`, { method: "POST", headers: CAM, body: rec(false, P2) });
+check("camera post of a delta frame before any keyframe", r.ok);
+r = await fetch(`${BASE}/v1/drones/${ID}/camera`, { method: "POST", headers: CAM, body: cat(rec(true, KEY), rec(false, P1)) });
+check("camera post key + delta", r.ok && (await r.json()).frames === 2);
+r = await fetch(`${BASE}/v1/drones/${ID}/camera`, { method: "POST", headers: CAM, body: "nope" });
+check("camera post not records -> 400", r.status === 400);
+r = await fetch(`${BASE}/v1/drones/${ID}/camera`, { method: "POST", headers: CAM, body: rec(true, KEY).slice(0, 20) });
+check("camera post cut record -> 400", r.status === 400);
+r = await get(`/v1/drones/${ID}/camera.h264`);
+let b = new Uint8Array(await r.arrayBuffer());
+check("camera.h264 is Annex B from the keyframe", r.ok && b.length === KEY.length + P1.length && b[4] === 0x67
+  && r.headers.get("X-Frames") === "2" && r.headers.get("Content-Type") === "video/h264");
+r = await fetch(`${BASE}/v1/drones/${ID}/camera.h264?token=dev-read-token`);
+check("camera.h264 with ?token", r.ok);
 await new Promise((res) => setTimeout(res, 300));
-check("camera stream got the frame", frames.length >= 1 && frames.at(-1).byteLength === 7);
+check("camera stream starts at the keyframe", frames.length === 2 && (frames[0][4] & 1) === 1 && frames[0][13 + 4] === 0x67
+  && frames[1].length === 13 + P1.length, `(${frames.length} msgs)`);
+const late = new WebSocket(`${BASE.replace("http", "ws")}/v1/drones/${ID}/camera/stream?token=dev-read-token`);
+late.binaryType = "arraybuffer";
+const lateFrames = [];
+late.onmessage = (e) => lateFrames.push(new Uint8Array(e.data));
+await new Promise((res, rej) => { late.onopen = res; late.onerror = rej; });
+await fetch(`${BASE}/v1/drones/${ID}/camera`, { method: "POST", headers: CAM, body: rec(false, P2) });
+await new Promise((res) => setTimeout(res, 300));
+check("a late viewer gets the GOP from the keyframe, then new frames", lateFrames.length === 3 && (lateFrames[0][4] & 1) === 1,
+  `(${lateFrames.length} msgs)`);
+late.close();
 camWs.close();
 r = await get(`/v1/drones/${ID}/state`);
 j = await r.json();

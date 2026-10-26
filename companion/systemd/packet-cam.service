@@ -5,7 +5,7 @@ After=network.target packet-tunnel.service
 [Service]
 User=packet
 WorkingDirectory=/home/packet/companion
-ExecStart=/home/packet/companion/.venv/bin/python -u cam_stream.py --width 1280 --height 720 --fps 15
+ExecStart=/home/packet/companion/.venv/bin/python -u cam_stream.py --width 1280 --height 720 --fps 10
 Restart=always
 RestartSec=3
 

@@ -217,7 +217,7 @@ class Link:
                 self.estimate_time()
 
     def lid_update(self, msg):
-        """Put the three LID* DEBUG_VECT parts of one detection together."""
+        """Put the LID* DEBUG_VECT parts of one detection together (LIDATT comes last)."""
         p = self.lid_parts
         if p.get("us") != msg.time_usec:
             p.clear()
@@ -233,6 +233,8 @@ class Link:
             cam = p["LIDCAM"]
             lid.update(box=int(att[0]), yaw_deg=att[1], tilt_deg=att[2], drone_m=list(p["LIDPOS"]),
                        camera_z=cam[0], px_per_cell=cam[1], ntags=int(cam[2]))
+            if "LIDRV" in p and "LIDTV" in p:     # full camera pose: the page draws the tags exactly
+                lid.update(rvec=list(p["LIDRV"]), tvec=list(p["LIDTV"]))
         self.state["lid"] = lid
 
     def filter_current(self):
@@ -457,7 +459,7 @@ class CloudPush:
               "rc_ok", "rssi", "sd_stop", "sa_on", "fence_on", "fence_r",
               "lat_fc", "lon_fc", "gps_q", "gps_why", "gps_hdop", "gps_hacc", "pos_filtered")
 
-    def __init__(self, link, url, drone_id, token, hz, auto=None, pi_url=None, cam_fps=0.0):
+    def __init__(self, link, url, drone_id, token, hz, auto=None, pi_url=None, cam=True):
         self.link, self.token, self.period, self.auto = link, token, 1.0 / hz, auto
         self.acks = []
         self.base = f"{url.rstrip('/')}/v1/drones/{drone_id}"
@@ -465,10 +467,10 @@ class CloudPush:
         self.last_error_note = 0.0
         self.msg_sent_t = time.time() - 60   # FC messages newer than this are not sent yet
         self.pi_url = pi_url.rstrip("/") if pi_url else None    # "auto" = the address the Pi sends over the radio
-        self.cam_period = 1.0 / cam_fps if cam_fps > 0 else 0.0
+        self.cam = bool(cam)
         self.wifi_lid = None                 # full box pose from the Pi over Wi-Fi (/lid.json)
         link.state["cloud"] = "starting"
-        link.state["cloud_cam"] = "off" if not (self.pi_url and self.cam_period) else "starting"
+        link.state["cloud_cam"] = "off" if not (self.pi_url and self.cam) else "starting"
 
     def box_pose(self):
         """Box camera pose: Wi-Fi (/lid.json, full detail) when fresh, else the radio pose."""
@@ -532,39 +534,64 @@ class CloudPush:
             time.sleep(max(0.0, self.period - (time.time() - t0)))
 
 
-    def camera_loop(self):
-        """Forward the Pi camera to the API while the laptop reaches the Pi over Wi-Fi.
+    def pi(self):
+        return self.link.state.get("pi_url") if self.pi_url == "auto" else self.pi_url
 
-        Gets /frame.jpg and /lid.json from the Pi (companion/cam_stream.py) and POSTs
-        the frame to {base}/camera. Own thread: a slow Pi or upload never delays the
-        telemetry push or flight control."""
-        hdr = {"Authorization": f"Bearer {self.token}", "Content-Type": "image/jpeg"}
+    def lid_loop(self):
+        """Full box pose from the Pi over Wi-Fi (/lid.json) for box_camera, at 4 Hz."""
         while self.link.running:
-            t0 = time.time()
-            pi = self.link.state.get("pi_url") if self.pi_url == "auto" else self.pi_url
+            pi = self.pi()
+            try:
+                if not pi:
+                    raise OSError("no Pi address")
+                with urllib.request.urlopen(f"{pi}/lid.json", timeout=1) as r:
+                    lid = json.loads(r.read())
+                if lid.get("now", 0) - lid.get("t", 0) < 1.5:
+                    self.wifi_lid = dict(lid, rx=time.time())
+                time.sleep(0.25)
+            except Exception:
+                time.sleep(2.0)
+
+    def camera_loop(self):
+        """Forward the Pi's H.264 video to the API while the laptop reaches the Pi over Wi-Fi.
+
+        Reads the Pi's /h264 stream (companion/h264.py: frame records, the first one a
+        keyframe) and POSTs the records to {base}/camera about every 0.5 s, unchanged.
+        Own thread: a slow Pi or upload never delays the telemetry push or flight control.
+        A failed POST drops those frames (best effort); the API keeps the frames from the
+        last keyframe, so a viewer starts again at the next keyframe (1 s)."""
+        hdr = {"Authorization": f"Bearer {self.token}", "Content-Type": "application/x-packet-h264"}
+        REC = struct.Struct(">IBd")
+        while self.link.running:
+            pi = self.pi()
             if not pi:
                 self.link.state["cloud_cam"] = "no camera"
                 time.sleep(2.0)
                 continue
             try:
-                with urllib.request.urlopen(f"{pi}/lid.json", timeout=1) as r:
-                    lid = json.loads(r.read())
-                if lid.get("now", 0) - lid.get("t", 0) < 1.5:
-                    self.wifi_lid = dict(lid, rx=time.time())
-                with urllib.request.urlopen(f"{pi}/frame.jpg", timeout=1) as r:
-                    jpg = r.read()
+                with urllib.request.urlopen(f"{pi}/h264", timeout=3) as r:
+                    batch, t_send = [], time.time() + 0.5
+                    while self.link.running:
+                        head = r.read(REC.size)
+                        if len(head) < REC.size:
+                            break
+                        n = REC.unpack(head)[0]
+                        data = r.read(n)
+                        if len(data) < n:
+                            break
+                        batch.append(head + data)
+                        if time.time() >= t_send:
+                            body, batch, t_send = b"".join(batch), [], time.time() + 0.5
+                            try:
+                                req = urllib.request.Request(f"{self.base}/camera", data=body, method="POST", headers=hdr)
+                                urllib.request.urlopen(req, timeout=3).read()
+                                self.link.state["cloud_cam"] = "ok"
+                            except Exception:
+                                self.link.state["cloud_cam"] = "error"
             except Exception:
-                self.link.state["cloud_cam"] = "no camera"   # the Pi is not reachable over Wi-Fi
-                time.sleep(2.0)
-                continue
-            try:
-                req = urllib.request.Request(f"{self.base}/camera", data=jpg, method="POST", headers=hdr)
-                urllib.request.urlopen(req, timeout=3).read()
-                self.link.state["cloud_cam"] = "ok"
-            except Exception:
-                self.link.state["cloud_cam"] = "error"
-                time.sleep(1.0)
-            time.sleep(max(0.0, self.cam_period - (time.time() - t0)))
+                pass
+            self.link.state["cloud_cam"] = "no camera"   # the Pi is not reachable over Wi-Fi
+            time.sleep(2.0)
 
 
 def build_app(link, pilot, auto, air, ceil):
@@ -689,7 +716,7 @@ def main():
                          "'auto' = the IP the Pi sends over the radio; 'none' to turn off")
     ap.add_argument("--radio-snap", type=int, default=1,
                     help="1 = box camera snapshots over the radio when the Pi is not on Wi-Fi (telemetry first); 0 = off")
-    ap.add_argument("--cloud-cam-fps", type=float, default=2.0, help="camera frames per second to the API; 0 = off")
+    ap.add_argument("--cloud-cam", type=int, default=1, help="1 = forward the Pi H.264 video (about 1.5 Mbit/s) to the API when reachable; 0 = off")
     ap.add_argument("--sa-ch", type=int, default=int(os.environ.get("PACKET_SA_CH", 5)),
                     help="RC channel of the SA switch, CH5 on the Boxer (backend control allowed when high). 0 = backend control off")
     ap.add_argument("--routes", default=str(autonomy.ROUTES), help="folder for pads.json and routes")
@@ -725,12 +752,14 @@ def main():
             raise SystemExit("--cloud-url needs the env PACKET_INGEST_TOKEN")
         pi_url = None if args.pi_url == "none" else args.pi_url
         push = CloudPush(link, args.cloud_url, args.drone_id, token, max(0.2, min(5.0, args.cloud_hz)), auto,
-                         pi_url, max(0.0, min(10.0, args.cloud_cam_fps)))
+                         pi_url, args.cloud_cam == 1)
         threading.Thread(target=push.loop, daemon=True).start()
         print(f"Pushing telemetry to {push.url} at {args.cloud_hz:g} Hz")
-        if push.pi_url and push.cam_period:
+        if push.pi_url:
+            threading.Thread(target=push.lid_loop, daemon=True).start()
+        if push.pi_url and push.cam:
             threading.Thread(target=push.camera_loop, daemon=True).start()
-            print(f"Forwarding the Pi camera ({push.pi_url}) at {args.cloud_cam_fps:g} fps when reachable")
+            print(f"Forwarding the Pi H.264 video ({push.pi_url}) when reachable")
     print(f"Packet ground control on http://localhost:{args.http}  (radio {args.port} @ {args.baud})")
     if not args.sa_ch:
         print("SA channel not set (--sa-ch): backend trips are refused")

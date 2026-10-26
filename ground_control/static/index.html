@@ -555,7 +555,8 @@ function updateMap(s) {
     const h = [s.home_lat, s.home_lon];
     if (!map.hasLayer(home)) home.addTo(map);
     home.setLatLng(h);
-    if (s.fence_on && s.fence_r) { if (!map.hasLayer(fence)) fence.addTo(map); fence.setLatLng(h).setRadius(s.fence_r); }
+    const circle = ((s.ceil && s.ceil.fc && s.ceil.fc.fence_type) & 2) !== 0;   // FENCE_TYPE bit 1 = circle
+    if (s.fence_on && s.fence_r && circle) { if (!map.hasLayer(fence)) fence.addTo(map); fence.setLatLng(h).setRadius(s.fence_r); }
     else if (map.hasLayer(fence)) map.removeLayer(fence);
   }
 }
@@ -879,7 +880,9 @@ function render(down) {
   dot("d-batt", bcls);
   $("t-batt").textContent = s.batt_v ? (pct != null ? `${pct}% · ` : "") + `${s.batt_v.toFixed(1)} V` : "—";
   dot("d-fence", s.fence_on ? "ok" : "warn");
-  $("t-fence").textContent = s.fence_on == null ? "—" : s.fence_on ? `${Math.round(s.fence_r)} m` : "OFF";
+  const ftype = s.ceil && s.ceil.fc ? s.ceil.fc.fence_type : null;
+  $("t-fence").textContent = s.fence_on == null ? "—" : !s.fence_on ? "OFF"
+    : ftype != null && !(ftype & 2) ? "ALT ONLY" : `${Math.round(s.fence_r)} m`;
   dot("d-log", s.log_file ? "ok" : "");
   $("t-log").textContent = s.log_file ? "TLOG" : "OFF";
   dot("d-cloud", s.cloud === "ok" ? "ok" : s.cloud === "error" ? "bad" : "");

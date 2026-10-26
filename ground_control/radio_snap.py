@@ -153,6 +153,9 @@ class RadioSnap:
             time.sleep(CYCLE)
             now = time.time()
             s = self.link.state
+            for q in self.seen.values():                  # keep only the last HEALTH_WINDOW
+                while q and now - q[0] > HEALTH_WINDOW:
+                    q.popleft()
             state = "wifi" if self.wifi(now) else None
             if state is None:
                 if not self.healthy(now):

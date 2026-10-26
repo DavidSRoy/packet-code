@@ -740,7 +740,7 @@ def build_app(link, pilot, auto, air, ceil):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--port", default="/dev/cu.usbserial-DU0E540E", help="telemetry radio serial port")
-    ap.add_argument("--baud", type=int, default=115200, help="radio serial speed; FC SERIAL1_BAUD and both SiK radios SERIAL_SPEED are 115 (2026-10-25)")
+    ap.add_argument("--baud", type=int, default=57600, help="radio serial speed (FC SERIAL1_BAUD and both SiK radios SERIAL_SPEED are 57; 115200 lost data, 2026-10-26)")
     ap.add_argument("--http", type=int, default=8650)
     ap.add_argument("--qgc", default="udpout:127.0.0.1:14550", help="forward to QGC; 'none' to turn off")
     ap.add_argument("--tunnel", default="udpout:127.0.0.1:14560",

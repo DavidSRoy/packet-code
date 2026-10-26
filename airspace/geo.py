@@ -187,3 +187,20 @@ def png_rgba(rgba):
 
     return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
             + chunk(b"IDAT", zlib.compress(raw, 6)) + chunk(b"IEND", b""))
+
+
+def nearest_on_ring(lat, lon, ring):
+    """(distance m, lat, lon) of the point on a ring's edge nearest to (lat, lon)."""
+    best = (math.inf, None, None)
+    k_lon = M_PER_DEG * math.cos(math.radians(lat))
+    pts = [((p[0] - lat) * M_PER_DEG, (p[1] - lon) * k_lon) for p in ring]
+    for i in range(len(pts)):
+        (ay, ax), (by, bx) = pts[i - 1], pts[i]
+        dy, dx = by - ay, bx - ax
+        L2 = dx * dx + dy * dy
+        t = 0.0 if L2 == 0 else max(0.0, min(1.0, -(ax * dx + ay * dy) / L2))
+        py, px = ay + t * dy, ax + t * dx
+        d = math.hypot(px, py)
+        if d < best[0]:
+            best = (d, lat + py / M_PER_DEG, lon + px / k_lon)
+    return best

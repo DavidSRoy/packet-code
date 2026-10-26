@@ -11,7 +11,12 @@ Village and the ground control server (ceiling map from airspace/cache), then:
   4. the event is removed: the fence goes back up,
   5. the ground control server stops (link lost): the FC changes to the
      fallback ceiling within CEIL_TOUT_S,
-  6. the server starts again: the FC follows ground control again.
+  6. the server starts again: the FC follows ground control again,
+  7. horizontal NO-FLY guard: a 50 m keep-out zone 150 m west of QFC:
+     a. a GUIDED goto through the zone: the FC stops the drone before the edge,
+     b. a goto away from the zone: no stop,
+     c. LOITER with the roll stick toward the zone: the FC changes to BRAKE
+        before the edge; the drone never enters the zone.
 
 Run (the map cache must exist: start the server once, or run airspace/test_ceiling.py):
   python tools/sim/ceiling_test.py --ardupilot ~/ardupilot-x650/ardupilot
@@ -29,6 +34,8 @@ import time
 import urllib.request
 from pathlib import Path
 
+import math
+
 import aiohttp
 os.environ.setdefault("MAVLINK20", "1")
 from pymavlink import mavutil   # noqa: E402
@@ -40,7 +47,7 @@ results = []
 
 
 def check(name, ok, extra=""):
-    results.append(ok)
+    results.append(bool(ok))
     print(f"{'PASS' if ok else 'FAIL'} {name} {extra}", flush=True)
 
 
@@ -82,6 +89,9 @@ class Pilot:
         self.nvf, self.params, self.texts = {}, {}, []
         self.lock = threading.Lock()
         self.running = True
+        self.roll = 65535                 # RC override for CH1; 65535 = no override
+        self.pitch = 65535                # CH2; low = nose down = forward
+        self.thr = 1000                   # CH3: low to arm, mid (1500) to hold height in LOITER
         threading.Thread(target=self._rx, daemon=True).start()
         threading.Thread(target=self._rc, daemon=True).start()
         for mid, hz in ((33, 5), (0, 2)):
@@ -113,8 +123,8 @@ class Pilot:
 
     def _rc(self):
         while self.running:
-            with self.lock:   # throttle mid, SA off, SD run
-                self.m.mav.rc_channels_override_send(1, 1, 65535, 65535, 1500, 65535, 1000, 65535, 65535, 1000, *([0] * 10))
+            with self.lock:   # SA off, SD run
+                self.m.mav.rc_channels_override_send(1, 1, self.roll, self.pitch, self.thr, 65535, 1000, 65535, 65535, 1000, *([0] * 10))
             time.sleep(0.1)
 
     def param(self, name, value):
@@ -139,13 +149,13 @@ class Pilot:
     def set_mode(self, name):
         with self.lock:
             self.m.mav.set_mode_send(1, mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
-                                     {"GUIDED": 4, "LAND": 9, "LOITER": 5}[name])
+                                     {"GUIDED": 4, "LAND": 9, "LOITER": 5, "BRAKE": 17}[name])
 
-    def goto_alt(self, alt):
+    def goto_alt(self, alt, lat=QFC[0], lon=QFC[1]):
         with self.lock:
             self.m.mav.set_position_target_global_int_send(
                 0, 1, 1, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT, 0b0000_1111_1111_1000,
-                int(QFC[0] * 1e7), int(QFC[1] * 1e7), alt, 0, 0, 0, 0, 0, 0, 0, 0)
+                int(lat * 1e7), int(lon * 1e7), alt, 0, 0, 0, 0, 0, 0, 0, 0)
 
     def wait(self, cond, timeout, what):
         end = time.time() + timeout
@@ -155,6 +165,25 @@ class Pilot:
             time.sleep(0.2)
         print(f"   timeout waiting for {what}", flush=True)
         return False
+
+
+def dist_m(a, b):
+    return math.hypot((b[0] - a[0]) * 111320.0, (b[1] - a[1]) * 111320.0 * math.cos(math.radians(a[0])))
+
+
+def west(p, m):
+    return p[0], p[1] - m / (111320.0 * math.cos(math.radians(p[0])))
+
+
+def watch_zone(pilot, centre, radius, secs):
+    """Fly for secs; return (closest distance to the zone edge, modes seen)."""
+    closest, modes = 1e9, set()
+    end = time.time() + secs
+    while time.time() < end:
+        closest = min(closest, dist_m(pilot.pos, centre) - radius)
+        modes.add(pilot.mode)
+        time.sleep(0.1)
+    return closest, modes
 
 
 def start_server(py, logf):
@@ -173,15 +202,23 @@ def main():
     ardu = Path(args.ardupilot).expanduser()
     work = Path(tempfile.mkdtemp(prefix="packet_ceil_"))
     (work / "scripts").mkdir()
+    os.environ["PACKET_AIR_OPERATOR"] = str(work / "operator.json")   # the server is a child: it gets this
     shutil.copy(REPO / "lua" / "ceil_guard.lua", work / "scripts")
+    shutil.copy(REPO / "tools/sim/x650.json", work)          # SITL loads the model by a path relative to work/
     (work / "extra.parm").write_text("FENCE_ENABLE 1\nFENCE_TYPE 1\nFENCE_ALT_MAX 30\nFENCE_ALT_MAX_TP 1\nFENCE_ACTION 1\n"
-                                     "FS_GCS_ENABLE 0\n")
+                                     "FS_GCS_ENABLE 0\n"
+                                     # RC overrides count only from GCS ids: test pilot 250, ground control 254
+                                     "MAV_GCS_SYSID 250\nMAV_GCS_SYSID_HI 255\n"
+                                     # match the real drone (x650.json is the airframe model)
+                                     "SIM_BATT_VOLTAGE 25.2\nFRAME_TYPE 1\nMOT_THST_HOVER 0.26\n"
+                                     "MOT_BAT_VOLT_MAX 25.2\nMOT_BAT_VOLT_MIN 19.8\n")
     logs = {n: open(work / f"{n}.log", "w") for n in ("sitl", "server")}
     procs = []
     print("work dir:", work, flush=True)
     try:
         defaults = f"{ardu}/Tools/autotest/default_params/copter.parm,{REPO}/tools/sim/sim_params.parm,{work}/extra.parm"
-        procs.append(subprocess.Popen([str(ardu / "build/sitl/bin/arducopter"), "-w", "--model", "quad",
+        procs.append(subprocess.Popen([str(ardu / "build/sitl/bin/arducopter"), "-w", "--model",
+                                       "x:x650.json",                         # SITL runs in work/: a relative path
                                        "--speedup", str(args.speedup), "--home", f"{QFC[0]},{QFC[1]},20,0",
                                        "--defaults", defaults, "-I0"],
                                       cwd=work, stdout=logs["sitl"], stderr=subprocess.STDOUT, start_new_session=True))
@@ -229,6 +266,7 @@ def main():
         pilot.cmd(mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 40)
         ok = pilot.wait(lambda: pilot.pos and pilot.pos[2] > 39, 120, "40 m")
         check("3. took off to 40 m", ok, str(pilot.pos))
+        pilot.thr = 1500                                     # mid stick: LOITER holds the height
         pilot.set_mode("LOITER")
         pilot.wait(lambda: pilot.mode == "LOITER", 10, "LOITER")
         n_txt = len(pilot.texts)
@@ -278,6 +316,58 @@ def main():
         air_edit({"kind": "remove", "list": "events", "index": 0})
         ok = pilot.wait(lambda: pilot.fc("CEIL_FC") is not None and abs(pilot.fc("CEIL_FC") - target) < 1.0, 20, "fence up")
         check("4. fence back to the ceiling in the air", ok and pilot.fc("CEIL_ST") == 0, str(pilot.fc("CEIL_FC")))
+
+        # 7. horizontal NO-FLY guard
+        ZR = 50.0
+        zc = west(QFC, 150)
+        air_edit({"kind": "zone", "name": "sitl test", "lat": zc[0], "lon": zc[1], "radius_m": ZR})
+        ok = pilot.wait(lambda: ((ws_state().get("ceil") or {}).get("edge") or {}).get("name", "").startswith("keep-out"),
+                        20, "zone edge")
+        e = (ws_state().get("ceil") or {}).get("edge") or {}
+        check("7. ground control sends the zone edge", ok and abs(e.get("dist_m", 0) - (dist_m(pilot.pos, zc) - ZR)) < 3,
+              f"edge {e.get('dist_m')} m, drone {dist_m(pilot.pos, zc) - ZR:.0f} m from the zone")
+        pilot.wait(lambda: (pilot.fc("CEIL_NFL") or -1) > 0, 10, "CEIL_NFL")
+        check("7. FC reports the distance lower bound", pilot.fc("CEIL_NFL") is not None
+              and pilot.fc("CEIL_NFL") <= e.get("dist_m", 0) + 0.5, str(pilot.fc("CEIL_NFL")))
+        # 7a. GUIDED goto through the zone
+        pilot.set_mode("GUIDED")
+        pilot.wait(lambda: pilot.mode == "GUIDED", 10, "GUIDED")
+        pilot.goto_alt(30)
+        pilot.wait(lambda: abs(pilot.pos[2] - 30) < 1 and dist_m(pilot.pos, QFC) < 3, 60, "QFC at 30 m")
+        n_txt = len(pilot.texts)
+        far = west(QFC, 320)
+        pilot.goto_alt(30, *far)
+        closest, modes = watch_zone(pilot, zc, ZR, 30)
+        stops = [t for t in pilot.texts[n_txt:] if "NO-FLY edge" in t]
+        check("7a. GUIDED goto through the zone: FC stops it, never inside", stops and closest > 0 and dist_m(pilot.pos, far) > 150,
+              f"closest {closest:.1f} m from the edge, now {dist_m(pilot.pos, zc) - ZR:.1f} m, {stops[:2]}")
+        check("7a. stays GUIDED (hold) after the stop", modes == {"GUIDED"}, str(modes))
+        # 7b. away from the zone
+        n_txt = len(pilot.texts)
+        pilot.goto_alt(30)
+        ok = pilot.wait(lambda: dist_m(pilot.pos, QFC) < 3, 60, "back at QFC")
+        check("7b. flying away from the zone is free", ok and not any("NO-FLY edge" in t for t in pilot.texts[n_txt:]),
+              str(pilot.texts[n_txt:]))
+        # 7c. face west, LOITER, full pitch forward toward the zone
+        pilot.cmd(mavutil.mavlink.MAV_CMD_CONDITION_YAW, 270, 45, 0, 0)
+        time.sleep(8)
+        pilot.set_mode("LOITER")
+        pilot.wait(lambda: pilot.mode == "LOITER", 10, "LOITER")
+        n_txt = len(pilot.texts)
+        pilot.pitch = 1100
+        closest, modes = watch_zone(pilot, zc, ZR, 30)
+        pilot.pitch = 65535
+        check("7c. LOITER toward the zone: FC changes to BRAKE before the edge", "BRAKE" in modes and closest > 0
+              and any("NO-FLY edge" in t for t in pilot.texts[n_txt:]),
+              f"closest {closest:.1f} m from the edge, modes {modes}")
+        pilot.set_mode("LOITER")
+        pilot.wait(lambda: pilot.mode == "LOITER", 10, "LOITER")
+        d = air_edit({"kind": "remove", "list": "zones", "index": 0})
+        check("7. zone removed", not d.get("zones"))
+        pilot.set_mode("GUIDED")
+        pilot.wait(lambda: pilot.mode == "GUIDED", 10, "GUIDED")
+        pilot.goto_alt(30)
+        pilot.wait(lambda: dist_m(pilot.pos, QFC) < 5, 60, "back at QFC")
 
         # 5. link lost: stop the server
         fb = ws_state()["ceil"]["fallback_m"]

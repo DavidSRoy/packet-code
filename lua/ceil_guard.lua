@@ -27,18 +27,43 @@
 --   - when the pilot changes the mode during the descent, the script stops
 --     for 30 s (the pilot flies; the fence still stops a climb).
 --
+-- Horizontal NO-FLY guard (CEIL_NF_ENABLE = 1): ground control also sends the
+-- nearest NO-FLY edge (CEIL_NLA, CEIL_NLO = edge point; CEIL_NFD = distance,
+-- negative inside). The script keeps a lower bound of the distance:
+--   distance sent - distance moved since then - speed x 1 s (link delay)
+-- and stops the drone when the stop distance toward the edge
+--   v^2 / (2 x CEIL_NF_DECEL) + v x 0.5 s
+-- would take it within CEIL_NF_BUF of the edge:
+--   - GUIDED: new target = the present position (the drone holds there);
+--   - STABILIZE, ALT_HOLD, AUTO, LOITER, POSHOLD: change to BRAKE;
+--   - it does not interrupt RTL, SMART_RTL or LAND;
+--   - motion away from the edge is free; the pilot can fly out again.
+-- No fresh edge data (link lost): the guard is not active.
+--
 -- Reports to ground control (NAMED_VALUE_FLOAT, 1 Hz): CEIL_FC = fence now,
 -- CEIL_ST = 0 following ground control, 1 link-loss fallback, 2 holding above
--- the ceiling (descend), -1 off.
+-- the ceiling (descend), -1 off; CEIL_NFL = the NO-FLY distance lower bound (m).
 
 local TABLE_KEY = 78
-assert(param:add_table(TABLE_KEY, "CEIL_", 6), "CEIL_ param table failed")
+-- The table has 10 slots. An FC that ran the 6-slot version needs one reboot
+-- for the CEIL_NF_ params (a table cannot grow at run time); until then the
+-- guard uses the defaults below.
+local NF_DEFAULTS = { ENABLE = 1, BUF = 20, DECEL = 1.5 }
+local big = param:add_table(TABLE_KEY, "CEIL_", 10)
+if not big then
+  assert(param:add_table(TABLE_KEY, "CEIL_", 6), "CEIL_ param table failed")
+end
 assert(param:add_param(TABLE_KEY, 1, "ENABLE", 1), "CEIL_ENABLE")
 assert(param:add_param(TABLE_KEY, 2, "DEF_M", 100), "CEIL_DEF_M")     -- no data since boot: 400 ft - 22 m margin
 assert(param:add_param(TABLE_KEY, 3, "TOUT_S", 5), "CEIL_TOUT_S")
 assert(param:add_param(TABLE_KEY, 4, "MARGIN", 6), "CEIL_MARGIN")     -- m between the drone and a held fence
 assert(param:add_param(TABLE_KEY, 5, "GCS", 254), "CEIL_GCS")         -- system id of ground control
 assert(param:add_param(TABLE_KEY, 6, "DESCEND", 1), "CEIL_DESCEND")   -- 1 = descend to the ceiling, not RTL
+if big then
+  assert(param:add_param(TABLE_KEY, 7, "NF_ENABLE", NF_DEFAULTS.ENABLE), "CEIL_NF_ENABLE") -- 1 = NO-FLY guard on
+  assert(param:add_param(TABLE_KEY, 8, "NF_BUF", NF_DEFAULTS.BUF), "CEIL_NF_BUF")          -- m: stop this far out
+  assert(param:add_param(TABLE_KEY, 9, "NF_DECEL", NF_DEFAULTS.DECEL), "CEIL_NF_DECEL")    -- m/s/s for the stop distance
+end
 
 local P_ENABLE = Parameter("CEIL_ENABLE")
 local P_DEF = Parameter("CEIL_DEF_M")
@@ -47,11 +72,20 @@ local P_MARGIN = Parameter("CEIL_MARGIN")
 local P_GCS = Parameter("CEIL_GCS")
 local P_DESCEND = Parameter("CEIL_DESCEND")
 local P_FENCE = Parameter("FENCE_ALT_MAX")
+local function fixed(v) return { get = function() return v end } end
+local P_NF_ENABLE = big and Parameter("CEIL_NF_ENABLE") or fixed(NF_DEFAULTS.ENABLE)
+local P_NF_BUF = big and Parameter("CEIL_NF_BUF") or fixed(NF_DEFAULTS.BUF)
+local P_NF_DECEL = big and Parameter("CEIL_NF_DECEL") or fixed(NF_DEFAULTS.DECEL)
 
 local NVF_ID = 251                 -- NAMED_VALUE_FLOAT
 local FENCE_MIN, FENCE_MAX = 10, 1000
 local PERIOD_MS = 100
-local MODE_GUIDED, MODE_RTL = 4, 6
+local MODE_GUIDED, MODE_RTL, MODE_BRAKE = 4, 6, 17
+-- modes the NO-FLY guard stops: STABILIZE, ALT_HOLD, AUTO, GUIDED, LOITER, POSHOLD
+local NF_STOP = { [0] = true, [2] = true, [3] = true, [4] = true, [5] = true, [16] = true }
+local NF_LATENCY_S = 1.0           -- link delay allowance
+local NF_REACT_S = 0.5             -- time before the brake acts
+local NF_AGAIN_MS = 2000           -- stop again at most this often
 -- STABILIZE, ALT_HOLD, AUTO, GUIDED, LOITER, POSHOLD, BRAKE
 local TAKE_OVER = { [0] = true, [2] = true, [3] = true, [4] = true, [5] = true, [16] = true, [17] = true }
 local FENCE_ALT_BIT = 1            -- AC_FENCE_TYPE_ALT_MAX
@@ -70,6 +104,15 @@ local state = -1
 local descending = false
 local pause_until = 0
 local next_target = 0
+local target_goal = nil            -- height the GUIDED descent goes to (m above home)
+
+-- NO-FLY edge from ground control
+local nf_lat, nf_lon = nil, nil    -- edge point (deg)
+local nf_dist = nil                -- distance when received (m), negative inside
+local nf_rx_loc = nil              -- drone position when received
+local nf_t = nil                   -- millis when received
+local nf_next_stop, nf_next_tip = 0, 0
+local nf_lb = nil                  -- last lower bound (report)
 
 -- The binding gives the C struct mavlink_message_t: checksum(2) magic(1) len(1)
 -- incompat(1) compat(1) seq(1) sysid(1) compid(1) msgid(3), then the payload.
@@ -97,6 +140,14 @@ local function read_messages()
         last_set = millis():tofloat()
       elseif name == "CEIL_FB" then
         fallback = value
+      elseif name == "CEIL_NLA" then
+        nf_lat = value
+      elseif name == "CEIL_NLO" then
+        nf_lon = value
+      elseif name == "CEIL_NFD" then
+        nf_dist = value
+        nf_rx_loc = ahrs:get_location()
+        nf_t = millis():tofloat()
       end
     end
   end
@@ -129,11 +180,54 @@ local function descend(now, goal, h, over)
   if now >= next_target then
     next_target = now + 1000
     local loc = ahrs:get_location()
+    target_goal = goal - BELOW_M
     if loc and loc:change_alt_frame(1) then          -- 1 = above home
-      loc:alt(math.floor((goal - BELOW_M) * 100))
+      loc:alt(math.floor(target_goal * 100))
       vehicle:set_target_location(loc)
     end
   end
+end
+
+-- Horizontal NO-FLY guard: stop before the edge
+local function nofly_guard(now)
+  nf_lb = nil
+  if P_NF_ENABLE:get() < 1 or nf_t == nil or now - nf_t > P_TOUT:get() * 1000 then return end
+  if nf_dist == nil or nf_dist >= 9000 or nf_lat == nil or nf_lon == nil then return end
+  local here = ahrs:get_location()
+  local v = ahrs:get_velocity_NED()
+  if not (here and v and nf_rx_loc) then return end
+  local speed = math.sqrt(v:x() * v:x() + v:y() * v:y())
+  local lb = nf_dist - here:get_distance(nf_rx_loc) - speed * NF_LATENCY_S
+  nf_lb = lb
+  if not (arming:is_armed() and vehicle:get_likely_flying()) then return end
+  if nf_dist < 0 then                      -- inside: the ceiling descent acts; tell the pilot
+    if now >= nf_next_tip then
+      nf_next_tip = now + 10000
+      gcs:send_text(2, "CEIL: inside a NO-FLY area, leave it")
+    end
+    return
+  end
+  local edge = Location()
+  edge:lat(math.floor(nf_lat * 1e7 + 0.5))
+  edge:lng(math.floor(nf_lon * 1e7 + 0.5))
+  local b = here:get_bearing(edge)         -- radians from north
+  local toward = v:x() * math.cos(b) + v:y() * math.sin(b)
+  if toward < 0.3 then return end          -- still, or moving away
+  local stop = toward * toward / (2 * P_NF_DECEL:get()) + toward * NF_REACT_S
+  if lb - stop >= P_NF_BUF:get() or now < nf_next_stop then return end
+  local mode = vehicle:get_mode()
+  if not NF_STOP[mode] then return end     -- BRAKE already, or RTL / SMART_RTL / LAND
+  nf_next_stop = now + NF_AGAIN_MS
+  if mode == MODE_GUIDED then
+    local hold = ahrs:get_location()
+    if hold and hold:change_alt_frame(1) then
+      if descending then hold:alt(math.floor((target_goal or 0) * 100)) end
+      vehicle:set_target_location(hold)
+    end
+  else
+    vehicle:set_mode(MODE_BRAKE)
+  end
+  gcs:send_text(2, string.format("CEIL: NO-FLY edge %.0f m ahead, stopped", math.max(0, lb)))
 end
 
 local function update()
@@ -184,6 +278,7 @@ local function update()
     descending = false
   end
   descend(now, goal, h, over)
+  nofly_guard(now)
   new = math.max(FENCE_MIN, math.min(FENCE_MAX, new))
   if math.abs(new - cur) > 0.25 then
     param:set("FENCE_ALT_MAX", new)
@@ -196,6 +291,7 @@ local function update()
     next_report = now + 1000
     gcs:send_named_float("CEIL_FC", new)
     gcs:send_named_float("CEIL_ST", state)
+    if nf_lb then gcs:send_named_float("CEIL_NFL", nf_lb) end
   end
   return update, PERIOD_MS
 end
@@ -209,5 +305,5 @@ local function protected()
   return protected, b
 end
 
-gcs:send_text(6, "CEIL guard loaded")
+gcs:send_text(6, big and "CEIL guard loaded" or "CEIL guard loaded (reboot once for CEIL_NF_ params)")
 return protected, 1000

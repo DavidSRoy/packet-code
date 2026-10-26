@@ -73,9 +73,10 @@ Ground control finds the legal maximum height at the drone and sets the FC altit
 | NO-FLY in an active TFR (also 10 min before it starts) | tfr.faa.gov, refreshed every 5 min |
 | NO-FLY 3 NM around a stadium, 1 h before to 1 h after a game (FDC 4/3621) | game times entered on the page |
 
-- The value at a point is the lowest value within 60 m, so the fence comes down before the drone gets to a lower area.
+- The ceiling at a point is the lowest value within 60 m, so the fence comes down before the drone gets to a lower area. A NO-FLY area starts at its exact edge; the horizontal guard (below) stops the drone before it.
+- **Keep-out zones**: circles the operator adds on the page (**Events**). They are NO-FLY until removed.
 - The fence is in m above home (FENCE_ALT_MAX_TP = 1): ceiling - home height - 10 m margin. Home height is the ground, plus the roof when home is inside a building outline, plus `--home-offset`.
-- The laptop refuses a takeoff, and the backend refuses a trip, in a NO-FLY area or on a route above the ceiling.
+- The laptop refuses a takeoff, and the backend refuses a trip, in a NO-FLY area, on a route within 50 m of one, or on a route above the ceiling.
 - The page shows the ceiling, the fence sent and the fence on the FC. **Layers** shows the ceiling map, airspace, TFRs and stadiums. **Probe** shows the ceiling at a clicked point. **Events** adds stadium games and ATC authorizations.
 - First start downloads about 30 MB to `airspace/cache/` (about 2 min). Later starts use the cache.
 
@@ -85,11 +86,12 @@ On the FC, `lua/ceil_guard.lua` applies the value:
 - It never puts the fence under the drone. When the drone is above a new, lower ceiling, the fence stays 6 m (plus 3 s of climb) above the drone and follows it down. There is no sudden breach and RTL.
 - Above the ceiling by more than 1 m in flight, the FC changes to GUIDED, holds position and descends to 2 m under the ceiling, then holds there (CEIL_DESCEND = 1). It takes over STABILIZE, ALT_HOLD, AUTO, GUIDED, LOITER, POSHOLD, BRAKE and an RTL that the altitude fence started. It does not stop a failsafe RTL, SMART_RTL or LAND. When the pilot changes the mode during the descent, it stops for 30 s and the pilot flies.
 - Link lost for 5 s: it uses the fallback (400 ft above the lowest ground within 3 km, under any Class B floor), or the last value if that is lower. With no data since boot: CEIL_DEF_M (100 m).
-- Params: CEIL_ENABLE, CEIL_DEF_M, CEIL_TOUT_S, CEIL_MARGIN, CEIL_GCS (254 = this server), CEIL_DESCEND.
+- **Horizontal NO-FLY guard** (CEIL_NF_ENABLE = 1): ground control also sends the nearest NO-FLY edge within 2 km (CEIL_NFD distance, CEIL_NLA / CEIL_NLO edge point). The FC keeps a safe lower bound of the distance (distance sent, less the distance flown since then, less 1 s at the present speed). When the stop distance toward the edge (v² / (2 × CEIL_NF_DECEL) + 0.5 s × v) would end within CEIL_NF_BUF (20 m) of the edge, it stops the drone: GUIDED holds the position; STABILIZE, ALT_HOLD, AUTO, LOITER and POSHOLD change to BRAKE. It does not stop RTL, SMART_RTL or LAND. Flight away from the edge is free. With no fresh edge data, the guard is not active.
+- Params: CEIL_ENABLE, CEIL_DEF_M, CEIL_TOUT_S, CEIL_MARGIN, CEIL_GCS (254 = this server), CEIL_DESCEND, CEIL_NF_ENABLE, CEIL_NF_BUF, CEIL_NF_DECEL. The CEIL_NF_ params need one FC reboot after an update from the 6-param script; until then the guard uses the defaults.
 
 `--ceiling off` stops the sending; the FC then uses the fallback. Set CEIL_ENABLE = 0 to turn the script off.
 
-Tests: `python -m airspace.test_ceiling` (20 checks) and `python tools/sim/ceiling_test.py --ardupilot ~/ardupilot-x650/ardupilot` (SITL, 19 checks).
+Tests: `python -m airspace.test_ceiling` (22 checks) and `python tools/sim/ceiling_test.py --ardupilot ~/ardupilot-x650/ardupilot` (SITL, 26 checks). The SITL test flies `tools/sim/x650.json`, a model of the real drone from the flight logs (2.92 kg, 6S, hover throttle 0.26; SITL gives 0.27).
 
 ## SD kill switch guard (`lua/sd_guard.lua`)
 

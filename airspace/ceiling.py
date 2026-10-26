@@ -15,6 +15,11 @@ Live part, checked at each query: TFRs from tfr.faa.gov and stadium events
 
 Look-ahead: the value for a point is the lowest value within LOOKAHEAD_M, so
 the fence comes down before the drone reaches a lower area.
+
+NO-FLY areas (surface areas without authorization, active TFRs from the
+ground, stadium events, operator keep-out zones) are tested exactly at the
+point. query() also gives the nearest NO-FLY edge, which the FC uses to stop
+the drone before it enters (lua/ceil_guard.lua).
 """
 import math
 import time
@@ -34,6 +39,7 @@ TFR_LEAD_S = 600                  # a TFR counts as active this long before it s
 TFR_WARN_S = 1800                 # warn about TFRs that start within 30 min
 STADIUM_RADIUS_M = 3 * 1852.0
 STADIUM_PAD_S = 3600
+EDGE_SEARCH_M = 2000.0            # report NO-FLY edges within this distance
 
 # Stadiums under the blanket stadium TFR (MLB, NFL, NCAA D-I football). Positions: OpenStreetMap, 2026-10-26.
 STADIUMS = {
@@ -152,7 +158,7 @@ class CeilingMap:
         return float(sub.min())
 
     # ------------------------------------------------------------ query
-    def query(self, lat, lon, now=None, tfrs=(), events=(), auths=()):
+    def query(self, lat, lon, now=None, tfrs=(), events=(), auths=(), zones=()):
         """Ceiling at a point, with the reason. All heights in metres MSL (NAVD88 ground)."""
         now = time.time() if now is None else now
         g = self.grid
@@ -175,21 +181,15 @@ class CeilingMap:
             reason = "400 ft above ground"
         nofly = False
 
-        # surface areas: authorization needed
-        if self.surface_la[cell]:
-            auth = next((a for a in auths if a["start"] <= now <= a["end"]
-                         and math.hypot(*geo.local_m(a["lat"], a["lon"], lat, lon)) <= a["radius_m"] - LOOKAHEAD_M),
-                        None)
-            name = next((n for n, ring in self.surface_names if geo.ring_touches_disk(lat, lon, LOOKAHEAD_M, ring)),
-                        "controlled airspace")
-            if auth:
-                cap = ground + auth["max_ft"] * FT
-                if cap < ceil:
-                    ceil, reason = cap, f"ATC authorization '{auth['name']}' {auth['max_ft']:.0f} ft"
-            else:
-                nofly, reason = True, f"{name} surface area: needs an ATC authorization"
+        # authorization in a surface area: the authorized height is the ceiling there
+        auth = next((a for a in auths if a["start"] <= now <= a["end"]
+                     and math.hypot(*geo.local_m(a["lat"], a["lon"], lat, lon)) <= a["radius_m"]), None)
+        if auth and any(geo.point_in_ring(lat, lon, ring) for _, ring in self.surface_names):
+            cap = ground + auth["max_ft"] * FT
+            if cap < ceil:
+                ceil, reason = cap, f"ATC authorization '{auth['name']}' {auth['max_ft']:.0f} ft"
 
-        # TFRs
+        # TFRs with a floor above the ground lower the ceiling
         for t in tfrs:
             for a in t["areas"]:
                 active = any((s is None or s - TFR_LEAD_S <= now) and (e is None or now <= e) for s, e in a["schedule"])
@@ -200,23 +200,51 @@ class CeilingMap:
                     warnings.append(f"TFR {t['id']} starts soon")
                     continue
                 lower = a["lower_m"] + (ground if a["lower_ref"] == "AGL" else 0.0)
-                if lower <= ground + 1.0:
-                    nofly, reason = True, f"TFR {t['id']} ({t.get('type') or 'TFR'})"
-                elif lower - CLASS_MARGIN_M < ceil:
+                if lower > ground + 1.0 and lower - CLASS_MARGIN_M < ceil:
                     ceil, reason = lower - CLASS_MARGIN_M, f"TFR {t['id']} floor"
 
-        # stadium events
-        for ev in events:
-            st = STADIUMS.get(ev["stadium"])
-            if not st or not (ev["start"] - STADIUM_PAD_S - TFR_LEAD_S <= now <= ev["end"] + STADIUM_PAD_S):
-                continue
-            if math.hypot(*geo.local_m(st[1], st[2], lat, lon)) <= STADIUM_RADIUS_M + LOOKAHEAD_M:
-                nofly, reason = True, f"stadium TFR: {st[0]} event"
+        # NO-FLY areas: exact test here, and the nearest edge for the FC guard
+        edge = None
+        for name, ring in self.nofly_regions(lat, lon, now, ground, tfrs, events, auths, zones):
+            d, elat, elon = geo.nearest_on_ring(lat, lon, ring)
+            inside = geo.point_in_ring(lat, lon, ring)
+            if inside:
+                nofly, reason = True, name
+            # an area the drone is in wins over one it is outside; then the nearest edge
+            if edge is None or (inside, -d) > (edge["inside"], -edge["dist_m"]):
+                edge = {"inside": inside, "dist_m": round(d, 1), "lat": elat, "lon": elon, "name": name}
 
         if not nofly and ceil < ground + 10:
             nofly, reason = True, reason + " (less than 10 m above ground)"
         return {"ok": True, "lat": lat, "lon": lon, "ground_m": round(ground, 1), "ceiling_amsl": round(ceil, 1),
-                "ceiling_agl": round(ceil - ground, 1), "nofly": nofly, "reason": reason, "warnings": warnings}
+                "ceiling_agl": round(ceil - ground, 1), "nofly": nofly, "reason": reason, "warnings": warnings,
+                "edge": edge}
+
+    def nofly_regions(self, lat, lon, now, ground, tfrs=(), events=(), auths=(), zones=(), search_m=EDGE_SEARCH_M):
+        """[(name, ring)] of the NO-FLY areas that are active now and within search_m."""
+        out = []
+        near = lambda ring: geo.ring_touches_disk(lat, lon, search_m, ring)
+        covered = any(a["start"] <= now <= a["end"]
+                      and math.hypot(*geo.local_m(a["lat"], a["lon"], lat, lon)) <= a["radius_m"] for a in auths)
+        if not covered:
+            out += [(f"{n} surface area: needs an ATC authorization", r) for n, r in self.surface_names if near(r)]
+        for t in tfrs:
+            for a in t["areas"]:
+                active = any((s is None or s - TFR_LEAD_S <= now) and (e is None or now <= e) for s, e in a["schedule"])
+                lower = a["lower_m"] + (ground if a["lower_ref"] == "AGL" else 0.0)
+                if active and lower <= ground + 1.0 and near(a["ring"]):
+                    out.append((f"TFR {t['id']} ({t.get('type') or 'TFR'})", a["ring"]))
+        for ev in events:
+            st = STADIUMS.get(ev["stadium"])
+            if st and ev["start"] - STADIUM_PAD_S - TFR_LEAD_S <= now <= ev["end"] + STADIUM_PAD_S:
+                ring = geo.circle_ring(st[1], st[2], STADIUM_RADIUS_M, 96)
+                if near(ring):
+                    out.append((f"stadium TFR: {st[0]} event", ring))
+        for z in zones:
+            ring = geo.circle_ring(z["lat"], z["lon"], z["radius_m"], 48)
+            if near(ring):
+                out.append((f"keep-out zone '{z['name']}'", ring))
+        return out
 
     # ------------------------------------------------------------ picture for the map
     def overlay_png(self):

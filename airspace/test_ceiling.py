@@ -83,7 +83,20 @@ def main():
                                                        "upper_m": 400 * FT, "upper_ref": "AGL", "schedule": [(now - 60, now + 600)]}]}
     inside = offset(s, w, 3000, 2000)
     check("active TFR: NO-FLY", m.query(*inside, tfrs=[tfr])["nofly"])
-    check("TFR edge within look-ahead: NO-FLY", m.query(*offset(*inside, 0, 150 + 40), tfrs=[tfr])["nofly"])
+    q = m.query(*offset(*inside, 0, 150 + 40), tfrs=[tfr])
+    e = q["edge"] or {}
+    check("40 m outside a TFR: not NO-FLY, edge 40 m away", not q["nofly"] and not e.get("inside")
+          and abs(e.get("dist_m", 0) - 40) < 1.5, str(q))
+    zone = {"name": "pad", "lat": inside[0], "lon": inside[1] + 0.02, "radius_m": 50}
+    zc = (zone["lat"], zone["lon"])
+    q = m.query(*zc, zones=[zone])
+    check("keep-out zone: NO-FLY inside", q["nofly"] and "keep-out" in q["reason"] and q["edge"]["inside"], str(q))
+    q = m.query(*offset(*zc, 0, 80), zones=[zone])
+    e = q["edge"] or {}
+    check("30 m outside a keep-out zone: edge 30 m, edge point toward the zone",
+          not q["nofly"] and abs(e.get("dist_m", 0) - 30) < 1.5 and e["lon"] < offset(*zc, 0, 80)[1], str(q))
+    q = m.query(*offset(*zc, 0, -2200), zones=[zone])
+    check("zone more than 2 km away: no edge", q.get("ok") and q["edge"] is None, str(q))
     later = dict(tfr, areas=[dict(tfr["areas"][0], schedule=[(now + 1200, now + 3600)])])
     q = m.query(*inside, tfrs=[later])
     check("TFR in 20 min: warning only", not q["nofly"] and q["warnings"], str(q))

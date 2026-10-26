@@ -623,10 +623,12 @@ def build_app(link, pilot, auto, air, ceil):
             elif kind == "auth":
                 air.add_auth(d.get("name", "LAANC"), d["lat"], d["lon"], float(d["radius_m"]),
                              float(d["max_ft"]), float(d["start"]), float(d["end"]))
+            elif kind == "zone":
+                air.add_zone(d.get("name", "zone"), float(d["lat"]), float(d["lon"]), float(d["radius_m"]))
             elif kind == "remove":
                 air.remove(d["list"], int(d["index"]))
             else:
-                raise ValueError("kind must be event, auth or remove")
+                raise ValueError("kind must be event, auth, zone or remove")
         except (KeyError, ValueError, TypeError) as exc:
             return web.json_response({"error": str(exc)}, status=400)
         link.note(f"Laptop: airspace {kind} saved")

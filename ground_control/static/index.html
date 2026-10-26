@@ -48,12 +48,20 @@
   #top { top: 12px; left: 12px; right: 12px; height: 40px; display: flex; align-items: center; gap: 18px; padding: 0 14px; }
   #brand { font-weight: 700; letter-spacing: .22em; font-size: 11px; white-space: nowrap; }
   #brand i { font-style: normal; color: var(--dim); font-weight: 500; }
-  .stat-row { display: flex; gap: 18px; flex: 1; min-width: 0; overflow: hidden; }
-  .st { display: flex; align-items: center; gap: 7px; white-space: nowrap; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-  .st b { color: var(--text); font-weight: 600; font-family: var(--mono); letter-spacing: 0; text-transform: none; }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
-  .dot.ok { background: var(--ok); box-shadow: 0 0 8px var(--ok); } .dot.warn { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
-  .dot.bad { background: var(--bad); box-shadow: 0 0 8px var(--bad); }
+  .stat-row { display: flex; gap: 0; flex: 1; min-width: 0; overflow: hidden; align-self: stretch; }
+  /* status cells: flat, hairline dividers, colour only when something is wrong */
+  .st { display: flex; align-items: center; gap: 8px; white-space: nowrap; padding: 0 14px; border-left: 1px solid var(--line);
+    font-size: 9.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+  .st:last-child { border-right: 1px solid var(--line); }
+  .st b { color: var(--text); font-weight: 500; font-size: 11.5px; font-family: var(--mono); letter-spacing: .02em; text-transform: none; }
+  .dot { width: 6px; height: 6px; border-radius: 0; background: transparent; border: 1px solid var(--dim); flex: none; }
+  .dot.ok { background: #c9ced6; border-color: #c9ced6; }
+  .dot.warn { background: var(--warn); border-color: var(--warn); }
+  .dot.bad { background: var(--bad); border-color: var(--bad); }
+  .st:has(.dot.warn) b { color: var(--warn); }
+  .st:has(.dot.bad) { background: rgba(255, 77, 77, .08); box-shadow: inset 0 -2px 0 var(--bad); }
+  .st:has(.dot.bad) b { color: var(--bad); }
+  .st:has(.dot.warn) { box-shadow: inset 0 -2px 0 var(--warn); }
   #clock { font-family: var(--mono); color: var(--muted); font-size: 11px; white-space: nowrap; }
 
   /* left: asset card */
@@ -420,6 +428,7 @@
   <div class="air-f">
     <span>Fence sent</span><b id="air-sent">—</b>
     <span>Fence on FC</span><b id="air-fc">—</b>
+    <span>No-fly edge</span><b id="air-nf">—</b>
   </div>
   <div class="row3">
     <button class="mini" id="air-layers">Layers</button>
@@ -436,6 +445,7 @@
     <label class="chk"><input type="checkbox" data-l="tfr"><i style="background:rgba(255,77,77,.6)"></i>TFRs (FAA, live)</label>
     <label class="chk"><input type="checkbox" data-l="stad"><i style="border:1.5px dashed #ff9d4d"></i>Stadiums (3 NM)</label>
     <label class="chk"><input type="checkbox" data-l="auth"><i style="background:rgba(79,214,138,.5)"></i>ATC authorizations</label>
+    <label class="chk"><input type="checkbox" data-l="zone"><i style="border:1.5px dashed #ff4d4d;background:rgba(255,77,77,.18)"></i>Keep-out zones</label>
     <h4>Data</h4>
     <div class="ages" id="air-ages">—</div>
   </div>
@@ -456,6 +466,13 @@
       <button class="mini full" id="au-add">Add, centred on the map centre</button>
     </div>
     <div class="lst" id="au-list"></div>
+    <h4>Keep-out zone (the drone stops at the edge)</h4>
+    <div class="frm">
+      <input id="zo-name" placeholder="name" maxlength="60">
+      <input id="zo-r" type="number" min="10" max="20000" step="5" placeholder="radius m">
+      <button class="mini full" id="zo-add">Add, centred on the map centre</button>
+    </div>
+    <div class="lst" id="zo-list"></div>
   </div>
   <div class="err" id="air-err"></div>
 </div>
@@ -703,8 +720,8 @@ function setNum(id, txt) { const el = $(id); el.firstChild.nodeValue = txt; }
 /* ---------- legal ceiling / airspace ---------- */
 const FT = 0.3048;
 map.createPane("air"); map.getPane("air").style.zIndex = 380;
-const airG = { ceil: null, cls: L.layerGroup(), laanc: L.layerGroup(), tfr: L.layerGroup(), stad: L.layerGroup(), auth: L.layerGroup() };
-const AIR_DEF = { ceil: true, cls: true, laanc: false, tfr: true, stad: true, auth: true };
+const airG = { ceil: null, cls: L.layerGroup(), laanc: L.layerGroup(), tfr: L.layerGroup(), stad: L.layerGroup(), auth: L.layerGroup(), zone: L.layerGroup() };
+const AIR_DEF = { ceil: true, cls: true, laanc: false, tfr: true, stad: true, auth: true, zone: true };
 let airOn = { ...AIR_DEF };
 try { airOn = { ...AIR_DEF, ...JSON.parse(localStorage.getItem("air-layers") || "{}") }; } catch (e) {}
 let airData = null, airBuiltAt = null, airProbe = false, airPopMode = null;
@@ -781,6 +798,14 @@ function drawAir(d) {
       .bindTooltip(`<div class="air-tip"><b>${esc2(a.name)}</b> · ${a.max_ft} ft AGL<br>${tStr(a.start)} → ${tStr(a.end)}</div>`, { sticky: true })
       .addTo(airG.auth);
   }
+  airG.zone.clearLayers();
+  for (const z of (d.zones || [])) {
+    L.circle([z.lat, z.lon], { pane: "air", radius: z.radius_m, color: "#ff4d4d", weight: 1.5, dashArray: "5 4", fillOpacity: 0.14 })
+      .bindTooltip(`<div class="air-tip"><b>${esc2(z.name)}</b> · keep-out zone · ${Math.round(z.radius_m)} m</div>`, { sticky: true })
+      .addTo(airG.zone);
+  }
+  $("zo-list").innerHTML = (d.zones || []).map((z, i) =>
+    `<div><span>${esc2(z.name)} · ${Math.round(z.radius_m)} m</span><button data-rm="zones" data-i="${i}">×</button></div>`).join("");
   $("ev-list").innerHTML = (d.events || []).map((e, i) => {
     const sd = (d.stadiums || []).find(x => x.key === e.stadium);
     return `<div><span>${esc2(sd ? sd.name : e.stadium)} · ${tStr(e.start)}</span><button data-rm="events" data-i="${i}">×</button></div>`;
@@ -804,6 +829,10 @@ async function airPost(body) {
 }
 const epoch = id => { const v = $(id).value; return v ? new Date(v).getTime() / 1000 : NaN; };
 $("ev-add").onclick = () => airPost({ kind: "event", stadium: $("ev-st").value, start: epoch("ev-start"), end: epoch("ev-end") });
+$("zo-add").onclick = () => {
+  const c = map.getCenter();
+  airPost({ kind: "zone", name: $("zo-name").value || "zone", lat: c.lat, lon: c.lng, radius_m: +$("zo-r").value });
+};
 $("au-add").onclick = () => {
   const c = map.getCenter();
   airPost({ kind: "auth", name: $("au-name").value || "LAANC", lat: c.lat, lon: c.lng, radius_m: +$("au-r").value,
@@ -836,6 +865,12 @@ map.on("click", async e => {
 airLoad();
 setInterval(airLoad, 60000);
 
+let nfPoly = null;
+function nfLine(pts) {          // thin line from the drone to the nearest NO-FLY edge
+  if (!pts) { if (nfPoly) { nfPoly.remove(); nfPoly = null; } return; }
+  if (!nfPoly) nfPoly = L.polyline(pts, { pane: "air", color: "#ff4d4d", weight: 1, dashArray: "2 4", interactive: false }).addTo(map);
+  else nfPoly.setLatLngs(pts);
+}
 function renderAir(c, down) {
   const box = $("air"), badge = $("air-badge");
   if (down || !c) { badge.textContent = "—"; badge.className = "badge"; dot("d-ceil", ""); $("t-ceil").textContent = "—"; return; }
@@ -855,6 +890,11 @@ function renderAir(c, down) {
   $("air-reason").title = [h.reason, st, ...(h.warnings || [])].filter(Boolean).join(" · ");
   $("air-sent").textContent = c.target_m == null ? "—" : `${c.target_m.toFixed(0)} m`;
   $("air-fc").textContent = fc.fresh && fc.fence != null ? `${fc.fence.toFixed(0)} m` : "no reply";
+  const e = c.edge;
+  $("air-nf").textContent = !e ? "none within 2 km" : e.inside ? "INSIDE" : `${Math.round(e.dist_m)} m`;
+  $("air-nf").title = e ? e.name : "";
+  $("air-nf").style.color = e && (e.inside || e.dist_m < 100) ? "var(--bad)" : e && e.dist_m < 300 ? "var(--warn)" : "";
+  nfLine(e && !e.inside && e.dist_m < 500 && state.lat ? [[state.lat, state.lon], [e.lat, e.lon]] : null);
   dot("d-ceil", nofly || over ? "bad" : st === "active" ? "ok" : "warn");
   $("t-ceil").textContent = nofly ? "NO-FLY" : h.ok ? `${Math.round(h.ceiling_agl / FT)} ft` : "—";
   const m = c.map || {};

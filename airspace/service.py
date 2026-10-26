@@ -7,9 +7,11 @@
   ground-control page (saved in airspace/cache/operator.json).
 """
 import json
+import os
 import threading
 import time
 import traceback
+from pathlib import Path
 
 from . import geo, sources
 from .ceiling import STADIUMS, CeilingMap
@@ -28,7 +30,9 @@ class AirspaceService:
         self.status = {"state": "loading", "error": None, "built": None, "tfr_t": None,
                        "class_t": None, "bld_t": None, "buildings": 0}
         self.lock = threading.Lock()
-        self.op_path = sources._cache("operator.json")
+        # PACKET_AIR_OPERATOR: another file (tests), so test zones never reach the real one
+        op = os.environ.get("PACKET_AIR_OPERATOR")
+        self.op_path = Path(op) if op else sources._cache("operator.json")
         self.operator = {"events": [], "auths": []}
         try:
             self.operator = json.loads(self.op_path.read_text())
@@ -102,6 +106,14 @@ class AirspaceService:
                                        "start": float(start), "end": float(end)})
         self._prune()
 
+    def add_zone(self, name, lat, lon, radius_m):
+        """Operator keep-out zone (a circle). It stays until the operator removes it."""
+        if not 10 <= radius_m <= 20000:
+            raise ValueError("keep-out zone: radius 10-20000 m")
+        self.operator.setdefault("zones", []).append({"name": str(name)[:60] or "zone", "lat": float(lat),
+                                                      "lon": float(lon), "radius_m": float(radius_m)})
+        self._save()
+
     def remove(self, kind, index):
         lst = self.operator.get(kind)
         if lst is not None and 0 <= index < len(lst):
@@ -124,7 +136,8 @@ class AirspaceService:
             return {"ok": False, "reason": "ceiling map not loaded yet", "nofly": False}
         with self.lock:
             tfrs = list(self.tfrs)
-        return m.query(lat, lon, now, tfrs, self.operator["events"], self.operator["auths"])
+        return m.query(lat, lon, now, tfrs, self.operator["events"], self.operator["auths"],
+                       self.operator.get("zones", []))
 
     def home_amsl(self, lat, lon, extra_m=0.0):
         """Height (m, NAVD88) of the take-off point: ground, plus the roof when the
@@ -173,6 +186,7 @@ class AirspaceService:
                                     "active": any(e["start"] - 3600 <= now <= e["end"] + 3600 for e in evs)})
         out["auths"] = self.operator["auths"]
         out["events"] = self.operator["events"]
+        out["zones"] = self.operator.get("zones", [])
         return out
 
     def summary(self):

@@ -9,6 +9,13 @@ lua/ceil_guard.lua on the flight controller as NAMED_VALUE_FLOAT:
 
 The script on the FC sets FENCE_ALT_MAX and reports back CEIL_FC / CEIL_ST.
 
+Horizontal NO-FLY guard: it also sends the nearest NO-FLY edge
+
+  CEIL_NLA, CEIL_NLO = the nearest point on the edge (deg; float32, about 0.6 m)
+  CEIL_NFD = distance to that edge (m), negative inside, NO_EDGE_M if none near
+
+and ceil_guard.lua stops the drone before it reaches the edge.
+
 Home height: ground under home (USGS 3DEP), plus the roof when home is inside
 a building outline, plus --home-offset (for a pad on a structure that the map
 does not know).
@@ -20,6 +27,8 @@ from pymavlink import mavutil
 
 VERTICAL_MARGIN_M = 10.0     # GPS/baro/map error budget
 SEND_PERIOD_S = 0.5
+NO_EDGE_M = 9999.0           # CEIL_NFD when no NO-FLY edge is within EDGE_SEARCH_M
+ROUTE_EDGE_BUF_M = 50.0      # trips keep this far from NO-FLY edges
 NO_POS = (None, 0)
 
 
@@ -41,6 +50,8 @@ class CeilingLink:
                 self.fc["fence"], self.fc["t"] = round(msg.value, 1), time.time()
             elif name == "CEIL_ST":
                 self.fc["state"] = int(round(msg.value))
+            elif name == "CEIL_NFL":
+                self.fc["nf_lb"] = round(msg.value, 1)
         elif t == "PARAM_VALUE":
             pid = msg.param_id if isinstance(msg.param_id, str) else msg.param_id.decode(errors="ignore")
             if pid == "FENCE_ALT_MAX_TP":
@@ -93,7 +104,7 @@ class CeilingLink:
         fb_amsl = self.air.fallback_amsl(pos[0], pos[1])
         fb = None if fb_amsl is None else fb_amsl - home_amsl - VERTICAL_MARGIN_M
         st.update(home_amsl=round(home_amsl, 1), home_src=self.home[3], target_m=round(target, 1),
-                  fallback_m=None if fb is None else round(fb, 1), nofly=q["nofly"])
+                  fallback_m=None if fb is None else round(fb, 1), nofly=q["nofly"], edge=q.get("edge"))
         fc_ok = time.time() - self.fc["t"] < 3
         st["fc"] = dict(self.fc, fresh=fc_ok)
         if self.fc["tp"] not in (None, 1):
@@ -106,6 +117,13 @@ class CeilingLink:
             self._send("CEIL_SET", max(10.0, min(1000.0, target)))
             if fb is not None:
                 self._send("CEIL_FB", max(10.0, min(1000.0, fb)))
+            e = q.get("edge")
+            if e:                                        # point first: the FC acts on CEIL_NFD
+                self._send("CEIL_NLA", e["lat"])
+                self._send("CEIL_NLO", e["lon"])
+                self._send("CEIL_NFD", -e["dist_m"] if e["inside"] else e["dist_m"])
+            else:
+                self._send("CEIL_NFD", NO_EDGE_M)
             if not fc_ok:
                 st["status"] = "sent; no reply from ceil_guard.lua on the FC (script not installed?)"
             elif self.fc["state"] == 2:
@@ -162,6 +180,9 @@ def check_route(airspace, route, pad, step_m=25.0):
             return f"legal ceiling unknown on the route ({q.get('reason')})"
         if q["nofly"]:
             return f"route crosses a NO-FLY area: {q['reason']}"
+        e = q.get("edge")
+        if e and e["dist_m"] < ROUTE_EDGE_BUF_M:
+            return f"route passes {e['dist_m']:.0f} m from a NO-FLY area ({e['name']}); keep {ROUTE_EDGE_BUF_M:.0f} m"
         if home_amsl + rel > q["ceiling_amsl"] - VERTICAL_MARGIN_M:
             return (f"route height {rel:.0f} m is above the legal ceiling there "
                     f"({q['ceiling_amsl'] - home_amsl - VERTICAL_MARGIN_M:.0f} m above the pad: {q['reason']})")

@@ -116,10 +116,14 @@ class WifiH264:
                     continue
                 yuyv, t = self.inq.popleft()
             p = self.proc
-            if p is None or len(self.pending_t) > 4:    # encoder behind: skip, keep the delay low
+            # No skip on the number of frames in the encoder: it holds several frames
+            # before its first output, and a limit here stopped the video for good.
+            # When ffmpeg is behind, the write waits and inq drops the old frames.
+            if p is None:
                 continue
             try:
                 self.pending_t.append(t)
+                del self.pending_t[:-30]
                 p.stdin.write(memoryview(yuyv).cast("B") if yuyv.flags.c_contiguous else yuyv.tobytes())
             except (BrokenPipeError, OSError, ValueError):
                 with self.lock:

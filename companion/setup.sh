@@ -28,9 +28,11 @@ cp "$SRC"/README.md "$DST"/ 2>/dev/null || true
 rm -f "$DST"/wifi.txt
 chown packet:packet "$DST"/*
 
-# Debian OpenCV is used from the venv (no slow pip build on the Zero 2 W).
+# The venv sees Debian's numpy. OpenCV comes from the prebuilt aarch64 wheel (no
+# build on the Zero 2 W): lid_tags.py needs >= 4.12 (one-pass multi-dictionary
+# detection); Debian has 4.10.
 sudo -u packet python3 -m venv --system-site-packages "$DST/.venv"
-sudo -u packet "$DST/.venv/bin/pip" install --no-cache-dir pymavlink
+sudo -u packet "$DST/.venv/bin/pip" install --no-cache-dir pymavlink "opencv-python-headless==4.12.0.88"
 
 sudo -u packet "$DST/.venv/bin/python" -c "import cv2, pymavlink; print('cv2', cv2.__version__, 'aruco ok' if hasattr(cv2, 'aruco') else 'NO ARUCO')"
 touch /var/lib/packet-setup-done

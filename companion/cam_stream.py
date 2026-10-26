@@ -3,7 +3,7 @@
 
 The camera gives raw YUYV frames. Each user takes what it needs from them,
 with no JPEG step:
-  detection       the Y plane (grey), full frame, as fast as the CPU allows
+  detection       the Y plane (grey), full frame, every frame (10 Hz)
   /h264           hardware H.264 (h264.py), started on demand; the ground-control
                   page decodes it with WebCodecs, ground control forwards it to the API
   radio pictures  WebP q20 from the Y plane, on request (snap_proto.py)
@@ -139,22 +139,18 @@ def watchdog():
             os._exit(3)
 
 
-DETECT_WORKERS = 2          # one search takes about 170 ms on the Pi Zero 2: two workers give 7-8.5 Hz; 3 gave no more
-claim = {"n": -1}
-rate = {"n": 0, "t0": time.time()}
-
-
 def detect():
-    """Full frame, full size, every time. Each worker takes the newest frame that no
-    worker has taken yet, so two workers run on alternate frames on two cores."""
+    """Full frame, full size, every frame, never an old frame twice. One search takes
+    about 57 ms on the Pi Zero 2 (lid_tags.py, one pass for both dictionaries), so one
+    worker keeps up with the camera (10 fps)."""
     finder = LidFinder(a.layout)
+    seen, n, t0 = -1, 0, time.time()
     while True:
         with cond:
-            cond.wait_for(lambda: latest["n"] > claim["n"] and latest["y"] is not None, timeout=2)
-            if latest["n"] <= claim["n"] or latest["y"] is None:
+            cond.wait_for(lambda: latest["n"] != seen and latest["y"] is not None, timeout=2)
+            if latest["n"] == seen or latest["y"] is None:
                 continue                         # no new frame: do not report an old pose as new
             y, seen, t_cap = latest["y"], latest["n"], latest["at"]
-            claim["n"] = seen
         gray = np.ascontiguousarray(y)
         try:
             K = camera_matrix(gray.shape[1], gray.shape[0], HFOV)
@@ -162,14 +158,11 @@ def detect():
             err = None
         except Exception as e:                  # keep the stream running if one frame fails
             boxes, err = [], f"{type(e).__name__}: {e}"
-        with cond:
-            rate["n"] += 1
-            if time.time() - rate["t0"] > 2:
-                lid["hz"] = round(rate["n"] / (time.time() - rate["t0"]), 1)
-                rate["n"], rate["t0"] = 0, time.time()
-            if seen > lid["frame"]:              # a slower worker never puts back an older pose
-                lid.update(t=time.time(), frame=seen, boxes=boxes, w=gray.shape[1], h=gray.shape[0],
-                           error=err, latency_ms=round((time.time() - t_cap) * 1000))
+        n += 1
+        if time.time() - t0 > 2:
+            lid["hz"], n, t0 = round(n / (time.time() - t0), 1), 0, time.time()
+        lid.update(t=time.time(), frame=seen, boxes=boxes, w=gray.shape[1], h=gray.shape[0],
+                   error=err, latency_ms=round((time.time() - t_cap) * 1000))
 
 
 class H(BaseHTTPRequestHandler):
@@ -325,7 +318,6 @@ threading.Thread(target=grab, daemon=True).start()
 threading.Thread(target=watchdog, daemon=True).start()
 if a.mav != "none":
     threading.Thread(target=radio, daemon=True).start()
-for _ in range(DETECT_WORKERS):
-    threading.Thread(target=detect, daemon=True).start()
+threading.Thread(target=detect, daemon=True).start()
 print(f"streaming on http://0.0.0.0:{a.port}/  camera {NAME}, HFOV {HFOV} deg", flush=True)
 ThreadingHTTPServer(("", a.port), H).serve_forever()

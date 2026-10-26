@@ -103,6 +103,7 @@ def grab():
         if not ok or buf is None:
             time.sleep(0.05)
             continue
+        latest["at"] = time.time()
         data = buf.tobytes()
         if not data.startswith(b"\xff\xd8"):        # driver gave decoded pixels: encode
             ok, enc = cv2.imencode(".jpg", buf, [cv2.IMWRITE_JPEG_QUALITY, 80])
@@ -145,12 +146,25 @@ def lid_pose(r):
             "range_m": round(r["range_m"], 3), "outlines": r["outlines"]}
 
 
+def watchdog():
+    """The webcam can stop sending frames (seen 2026-10-25: cap.read() blocked
+    after about 9 min). Then exit, and systemd restarts the program (Restart=always)."""
+    time.sleep(15)                             # time to open the camera
+    while True:
+        time.sleep(1)
+        if time.time() - latest.get("at", 0) > 5:
+            print("no camera frame for 5 s: exiting so systemd restarts the camera", flush=True)
+            os._exit(3)
+
+
 def detect():
     finder = LidFinder(a.layout)
     seen, n, t0 = -1, 0, time.time()
     while True:
         with cond:
             cond.wait_for(lambda: latest["n"] != seen, timeout=2)
+            if latest["n"] == seen:              # no new frame: do not report an old pose as new
+                continue
             jpg, seen = latest["jpg"], latest["n"]
         if jpg is None:
             continue
@@ -247,6 +261,18 @@ class H(BaseHTTPRequestHandler):
             pass
 
 
+def wifi_ip():
+    """This Pi's IPv4 address on the default route (no packet is sent)."""
+    import socket
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as u:
+            u.connect(("192.0.2.1", 9))
+            ip = u.getsockname()[0]
+        return None if ip.startswith("127.") else ip
+    except OSError:
+        return None
+
+
 def radio():
     """Send the pose to the ground station over the radio, without Wi-Fi.
 
@@ -256,12 +282,26 @@ def radio():
       LIDPOS  x, y, z = drone centre in the lid frame, m
       LIDCAM  x = camera height m, y = px per tag cell, z = number of tags
     time_usec = the detection time.
+    Every 5 s also PIIP: x = a*256+b, y = c*256+d of the Wi-Fi IP a.b.c.d,
+    z = the HTTP port, so ground control finds this page when the name
+    packet-cv.local does not resolve (other subnet) or the DHCP address changes.
     """
     os.environ.setdefault("MAVLINK20", "1")
     from pymavlink import mavutil
     m = mavutil.mavlink_connection(a.mav, source_system=1, source_component=191)
+    next_ip = 0.0
     while True:
         time.sleep(1.0 / a.mav_hz)
+        if time.time() >= next_ip:
+            next_ip = time.time() + 5
+            ip = wifi_ip()
+            if ip:
+                o = [int(v) for v in ip.split(".")]
+                try:
+                    m.mav.debug_vect_send(b"PIIP", int(time.time() * 1e6), float(o[0] * 256 + o[1]),
+                                          float(o[2] * 256 + o[3]), float(a.port))
+                except OSError:
+                    pass
         if time.time() - lid["t"] > 1.5:        # detection stopped: send nothing
             continue
         us = int(lid["t"] * 1e6)
@@ -279,6 +319,7 @@ def radio():
 
 
 threading.Thread(target=grab, daemon=True).start()
+threading.Thread(target=watchdog, daemon=True).start()
 if a.mav != "none":
     threading.Thread(target=radio, daemon=True).start()
 threading.Thread(target=detect, daemon=True).start()

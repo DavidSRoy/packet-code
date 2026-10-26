@@ -650,6 +650,7 @@ function render(down) {
   $("pos").textContent = s.lat != null ? `${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}` : "NO POSITION";
   window.attitudeUpdate && window.attitudeUpdate(s);
   window.radioLid = s.lid;
+  window.radioPiUrl = s.pi_url;
   renderTrips(s.auto);
 
   const big = $("keys-big"), p = $("keys-p");
@@ -676,21 +677,29 @@ connect();
   const LID_W = 0.3076, LID_H = 0.2112;            // BX-006 lid top face, m
   const STK_W = 0.300, STK_H = 0.200;              // sticker
   const url = $("cam-url"), img = $("cam-img"), ov = $("cam-ov"), top = $("cam-top");
-  url.value = new URLSearchParams(location.search).get("pi")
-    || (() => { try { return localStorage.getItem("piUrl"); } catch { return null; } })()
-    || "http://packet-cv.local:8080";
-  url.onchange = () => { try { localStorage.setItem("piUrl", url.value.trim()); } catch {} };
+  // Empty = auto: the address the Pi sends over the radio (the name packet-cv.local
+  // does not resolve across subnets, and the DHCP address changes).
+  let saved = null; try { saved = localStorage.getItem("piUrl"); } catch {}
+  if (saved === "http://packet-cv.local:8080") saved = null;     // old default: use auto
+  url.value = new URLSearchParams(location.search).get("pi") || saved || "";
+  url.placeholder = "auto (address from the radio)";
+  url.onchange = () => { try { const v = url.value.trim(); v ? localStorage.setItem("piUrl", v) : localStorage.removeItem("piUrl"); } catch {} };
   url.onkeydown = e => e.stopPropagation();       // typing here must not fly the drone
-  const base = () => url.value.trim().replace(/\/+$/, "");
+  const base = () => (url.value.trim() || window.radioPiUrl || "").replace(/\/+$/, "");
 
   let frames = 0, fpsT = performance.now(), lid = null, lidAge = Infinity, ok = false;
-  function next() { img.src = `${base()}/frame.jpg?${Date.now()}`; }
+  function next() {
+    if (!base()) { setTimeout(next, 1000); return; }   // no address yet: wait for the radio
+    url.placeholder = window.radioPiUrl ? `auto: ${window.radioPiUrl}` : "auto (address from the radio)";
+    img.src = `${base()}/frame.jpg?${Date.now()}`;
+  }
   img.onload = () => { ok = true; frames++; $("cam-none").style.display = "none"; next(); };
   img.onerror = () => { ok = false; $("cam-none").style.display = "flex"; $("cam-none").textContent = "NO CAMERA"; setTimeout(next, 1000); };
   next();
 
   async function poll() {
     try {
+      if (!base()) throw new Error("no Pi address yet");
       const r = await fetch(`${base()}/lid.json`, { cache: "no-store", signal: AbortSignal.timeout(800) });
       lid = await r.json(); lidAge = lid.now - lid.t;
     } catch { lid = null; }

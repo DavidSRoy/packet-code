@@ -69,6 +69,7 @@ class Link:
             "home_lat": None, "home_lon": None, "fence_on": None, "fence_r": None,
             "alt_msl": None, "cloud": "off", "sa_on": False, "sa_raw": None,
             "lid": None,    # box camera pose from the Pi over the radio (cam_stream.py radio())
+            "pi_url": None, # the Pi camera page, from the Pi's IP sent over the radio (PIIP)
             # GPS quality and the jump filter (gps_guard.py). lat/lon above are the
             # filtered position for display; lat_fc/lon_fc are what the FC reports.
             "lat_fc": None, "lon_fc": None, "gps_q": None, "gps_why": [], "gps_hdop": None,
@@ -192,6 +193,10 @@ class Link:
                 s["sa_on"] = 1700 < raw < 2200  # SA down/on = backend may fly
         elif t == "DEBUG_VECT" and msg.name.startswith("LID"):
             self.lid_update(msg)
+        elif t == "DEBUG_VECT" and msg.name == "PIIP":
+            a, b = divmod(int(msg.x), 256)
+            c, d = divmod(int(msg.y), 256)
+            s["pi_url"] = f"http://{a}.{b}.{c}.{d}:{int(msg.z)}"
         elif t == "STATUSTEXT":
             self.gps.on_text(msg.text)
             self.note(msg.text, msg.severity)
@@ -450,7 +455,7 @@ class CloudPush:
         self.url = f"{self.base}/telemetry"
         self.last_error_note = 0.0
         self.msg_sent_t = time.time() - 60   # FC messages newer than this are not sent yet
-        self.pi_url = pi_url.rstrip("/") if pi_url else None
+        self.pi_url = pi_url.rstrip("/") if pi_url else None    # "auto" = the address the Pi sends over the radio
         self.cam_period = 1.0 / cam_fps if cam_fps > 0 else 0.0
         self.wifi_lid = None                 # full box pose from the Pi over Wi-Fi (/lid.json)
         link.state["cloud"] = "starting"
@@ -527,12 +532,17 @@ class CloudPush:
         hdr = {"Authorization": f"Bearer {self.token}", "Content-Type": "image/jpeg"}
         while self.link.running:
             t0 = time.time()
+            pi = self.link.state.get("pi_url") if self.pi_url == "auto" else self.pi_url
+            if not pi:
+                self.link.state["cloud_cam"] = "no camera"
+                time.sleep(2.0)
+                continue
             try:
-                with urllib.request.urlopen(f"{self.pi_url}/lid.json", timeout=1) as r:
+                with urllib.request.urlopen(f"{pi}/lid.json", timeout=1) as r:
                     lid = json.loads(r.read())
                 if lid.get("now", 0) - lid.get("t", 0) < 1.5:
                     self.wifi_lid = dict(lid, rx=time.time())
-                with urllib.request.urlopen(f"{self.pi_url}/frame.jpg", timeout=1) as r:
+                with urllib.request.urlopen(f"{pi}/frame.jpg", timeout=1) as r:
                     jpg = r.read()
             except Exception:
                 self.link.state["cloud_cam"] = "no camera"   # the Pi is not reachable over Wi-Fi
@@ -626,8 +636,9 @@ def main():
                     help="Packet telemetry API base URL (or env PACKET_API_URL); token in env PACKET_INGEST_TOKEN")
     ap.add_argument("--drone-id", default="packet-v0")
     ap.add_argument("--cloud-hz", type=float, default=1.0)
-    ap.add_argument("--pi-url", default="http://packet-cv.local:8080",
-                    help="the Pi camera (companion/cam_stream.py), sent to the API when reachable; 'none' to turn off")
+    ap.add_argument("--pi-url", default="auto",
+                    help="the Pi camera (companion/cam_stream.py), sent to the API when reachable. "
+                         "'auto' = the IP the Pi sends over the radio; 'none' to turn off")
     ap.add_argument("--cloud-cam-fps", type=float, default=2.0, help="camera frames per second to the API; 0 = off")
     ap.add_argument("--sa-ch", type=int, default=int(os.environ.get("PACKET_SA_CH", 5)),
                     help="RC channel of the SA switch, CH5 on the Boxer (backend control allowed when high). 0 = backend control off")

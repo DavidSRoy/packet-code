@@ -3,7 +3,7 @@
 
 The camera gives raw YUYV frames. Each user takes what it needs from them,
 with no JPEG step:
-  detection       the Y plane (grey), full frame, every frame (10 Hz)
+  detection       the Y plane (grey), full frame, newest frame each time (about 5 Hz)
   /h264           hardware H.264 (h264.py), started on demand; the ground-control
                   page decodes it with WebCodecs, ground control forwards it to the API
   radio pictures  WebP q20 from the Y plane, on request (snap_proto.py)
@@ -143,9 +143,9 @@ def watchdog():
 
 
 def detect():
-    """Full frame, full size, every frame, never an old frame twice. One search takes
-    about 57 ms on the Pi Zero 2 (lid_tags.py, one pass for both dictionaries), so one
-    worker keeps up with the camera (10 fps)."""
+    """Full frame, full size, always the newest frame, never an old frame twice. One
+    search takes about 190 ms on the Pi Zero 2 with 7 threshold windows (lid_tags.py),
+    so detection runs at about 5 Hz; the CPU is full, so a second worker would not help."""
     finder = LidFinder(a.layout)
     seen, n, t0 = -1, 0, time.time()
     while True:

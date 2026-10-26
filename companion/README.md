@@ -99,7 +99,7 @@ Printing:
   cell at all distances, also at 0.1 m, because the tags grow at the same rate.
 - Live view: `cam_stream.py` (service `packet-cam`) captures raw YUYV
   (C270: 1280x720 at 10 fps). Detection uses the Y plane on the full frame
-  at every frame (10 Hz, one pass for both tag types, OpenCV 4.12). The video is hardware H.264 at `/h264`; the
+  at about 5 Hz (one pass for both tag types, OpenCV 4.12; 7 threshold windows 3-63 px for the landing light and all heights). The video is hardware H.264 at `/h264`; the
   ground-control page decodes it with WebCodecs. There is no JPEG step.
 - The earlier OV2311 (B0322) gave only empty UVC headers and no image (USB link
   good, sensor gave no frames). It went back as defective.

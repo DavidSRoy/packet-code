@@ -139,7 +139,7 @@ class Pilot:
     def set_mode(self, name):
         with self.lock:
             self.m.mav.set_mode_send(1, mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
-                                     {"GUIDED": 4, "LAND": 9}[name])
+                                     {"GUIDED": 4, "LAND": 9, "LOITER": 5}[name])
 
     def goto_alt(self, alt):
         with self.lock:
@@ -219,7 +219,7 @@ def main():
         ok = pilot.wait(lambda: pilot.fc("CEIL_FC") is not None and abs(pilot.fc("CEIL_FC") - target) < 0.6, 20, "fence back")
         check("2. fence back to the ceiling", ok, str(pilot.fc("CEIL_FC")))
 
-        # 3. in the air at 40 m, the event comes back
+        # 3. in the air at 40 m in LOITER, the area becomes NO-FLY (ceiling 10 m)
         pilot.set_mode("GUIDED")
         pilot.wait(lambda: pilot.mode == "GUIDED", 10, "GUIDED")
         for _ in range(15):
@@ -229,30 +229,50 @@ def main():
         pilot.cmd(mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 40)
         ok = pilot.wait(lambda: pilot.pos and pilot.pos[2] > 39, 120, "40 m")
         check("3. took off to 40 m", ok, str(pilot.pos))
+        pilot.set_mode("LOITER")
+        pilot.wait(lambda: pilot.mode == "LOITER", 10, "LOITER")
+        n_txt = len(pilot.texts)
         now = time.time()
         air_edit({"kind": "event", "stadium": "husky", "start": now + 600, "end": now + 3 * 3600})
-        ok = pilot.wait(lambda: pilot.fc("CEIL_ST") == 2, 20, "hold state")
-        time.sleep(3)
-        f = pilot.read("FENCE_ALT_MAX")
-        h = pilot.pos[2]
-        check("3. fence held over the drone (not dropped to 10 m)", ok and f is not None and h + 3 < f < h + 15,
-              f"fence {f} m, height {h:.1f} m")
+        ok = pilot.wait(lambda: pilot.mode == "GUIDED" and any("too high, descend to" in t for t in pilot.texts[n_txt:]), 20,
+                        "GUIDED descent")
+        check("3. above the ceiling: FC changes LOITER -> GUIDED and descends", ok, f"{pilot.mode} {pilot.texts[n_txt:]}")
+        modes, fence_under = set(), []
+        end = time.time() + 120
+        while time.time() < end and not (pilot.pos[2] < 9.0):
+            modes.add(pilot.mode)
+            f = pilot.fc("CEIL_FC")
+            if f is not None and f < pilot.pos[2]:
+                fence_under.append((round(f, 1), round(pilot.pos[2], 1)))
+            time.sleep(0.3)
+        check("3. descended to 2 m under the ceiling (8 m)", 7.0 < pilot.pos[2] < 9.0, f"{pilot.pos[2]:.1f} m")
+        check("3. no RTL and no breach in the descent", modes == {"GUIDED"} and not any("breach" in t for t in pilot.texts[n_txt:]),
+              f"{modes} {[t for t in pilot.texts[n_txt:] if 'breach' in t]}")
+        check("3. fence never under the drone", not fence_under, str(fence_under[:3]))
+        time.sleep(5)
+        check("3. holds at the legal height in GUIDED", pilot.mode == "GUIDED" and 7.0 < pilot.pos[2] < 9.5
+              and any("at the legal height" in t for t in pilot.texts[n_txt:]), f"{pilot.mode} {pilot.pos[2]:.1f} m")
+
+        # 3b. the pilot takes over during a descent: the script stops for 30 s
+        air_edit({"kind": "remove", "list": "events", "index": 0})
+        pilot.wait(lambda: pilot.fc("CEIL_ST") == 0, 20, "ceiling back")
+        pilot.goto_alt(40)
+        pilot.wait(lambda: pilot.pos[2] > 39, 90, "40 m again")
         n_txt = len(pilot.texts)
+        now = time.time()
+        air_edit({"kind": "event", "stadium": "husky", "start": now + 600, "end": now + 3 * 3600})
+        pilot.wait(lambda: any("too high, descend to" in t for t in pilot.texts[n_txt:]), 20, "descent start")
+        time.sleep(2)
+        pilot.set_mode("LOITER")
+        pilot.wait(lambda: pilot.mode == "LOITER", 10, "pilot LOITER")
         modes = set()
-        end = time.time() + 12
+        end = time.time() + 8
         while time.time() < end:
             modes.add(pilot.mode)
             time.sleep(0.2)
-        check("3. no breach for 12 s: stays GUIDED", modes == {"GUIDED"} and not any("breach" in t for t in pilot.texts[n_txt:]),
-              f"{modes} {pilot.texts[n_txt:]}")
-        check("3. FC tells the pilot to descend", any("descend" in t for t in pilot.texts))
-        pilot.goto_alt(20)
-        pilot.wait(lambda: pilot.pos[2] < 21, 90, "20 m")
-        time.sleep(3)
-        f = pilot.read("FENCE_ALT_MAX")
-        check("3. fence followed the drone down", f is not None and f < pilot.pos[2] + 15 < 40,
-              f"fence {f} m at {pilot.pos[2]:.1f} m")
-        check("3. still no breach (GUIDED)", pilot.mode == "GUIDED" and not any("breach" in t for t in pilot.texts), pilot.mode)
+        check("3b. pilot mode change: script pauses, pilot keeps LOITER", modes == {"LOITER"}
+              and any("paused" in t for t in pilot.texts[n_txt:]), f"{modes} {pilot.texts[n_txt:]}")
+        check("3b. no breach while the pilot flies", not any("breach" in t for t in pilot.texts[n_txt:]))
 
         # 4. event removed in the air
         air_edit({"kind": "remove", "list": "events", "index": 0})
@@ -269,7 +289,7 @@ def main():
         expect = min(fb, target)
         check("5. link lost: FC uses the fallback ceiling", ok and f is not None and abs(f - expect) < 0.6,
               f"after {time.time() - t_lost:.1f} s: fence {f} m, fallback {fb} m, last target {target} m")
-        check("5. the drone keeps flying (GUIDED)", pilot.mode == "GUIDED", pilot.mode)
+        check("5. the drone keeps its mode (no RTL)", pilot.mode in ("GUIDED", "LOITER"), pilot.mode)
 
         # 6. server back
         server = start_server(args.python, logs["server"])

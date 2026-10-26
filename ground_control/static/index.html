@@ -123,7 +123,7 @@
   #actions { top: 64px; right: 12px; width: 252px; padding: 12px; max-height: calc(100vh - 84px - var(--air-h, 190px)); overflow-y: auto; }
   /* trips (backend pad-to-pad) */
   #trips, #lights { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
-  #lights .row2 { margin-bottom: 0; }
+  #lights .row2 { margin-bottom: 0; grid-template-columns: repeat(4, 1fr); }
   .trip-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
   .badge { font: 600 10px var(--mono); padding: 2px 6px; border-radius: 2px; border: 1px solid var(--line-2); color: var(--muted); }
   .badge.on { color: #001018; background: var(--ok); border-color: var(--ok); }
@@ -403,6 +403,7 @@
     <div class="row2">
       <button class="mini" data-lights="status" title="ArduPilot status colours (SB up)">Status</button>
       <button class="mini" data-lights="aviation" title="Red left, green right, white tail, strobe (SB middle)">Nav</button>
+      <button class="mini" data-lights="landing" title="Landing: all arms steady white, for the box camera at night (ground control only)">Land</button>
       <button class="mini" data-lights="off" title="All lights off (SB down)">Off</button>
     </div>
   </div>
@@ -976,8 +977,8 @@ function render(down) {
   $("b-takeoff").disabled = down || !s.link || !!s.armed;
   $("b-takeoff").title = down || !s.link ? "No link to the drone" : s.armed ? "Already armed" : "";
   fitTop();
-  // lights: what the FC reads on CH6 (lua/lights.lua: <1300 status, <1700 nav, else off)
-  const lr = s.lights_raw, lmode = !lr ? null : lr < 1300 ? "status" : lr < 1700 ? "aviation" : "off";
+  // lights: what the FC reads on CH6 (lua/lights.lua: 800..969 landing (laptop only), <1300 status, <1700 nav, else off)
+  const lr = s.lights_raw, lmode = !lr ? null : lr >= 800 && lr < 970 ? "landing" : lr < 1300 ? "status" : lr < 1700 ? "aviation" : "off";
   document.querySelectorAll("[data-lights]").forEach(b => {
     b.classList.toggle("on", b.dataset.lights === lmode); b.disabled = down || !s.link;
   });

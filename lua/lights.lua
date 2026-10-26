@@ -8,6 +8,13 @@
 --                           rear arms       white (tail light)
 --                           all arms: white double flash each second (anti-collision)
 --   SB bottom (high PWM): off
+--   800..969 (ground control only, CH6 override 900): below the 988..2012 us
+--   CRSF range, so the Boxer cannot send it (unless EdgeTX extended limits are on
+--   for this model; the FC logs show the SB at 999 / 1503 / 2000 us). Landing light for the box camera at night: all arms
+--   steady white at LIT_BRT. White gives the white sticker paper the most
+--   brightness and leaves the black tag cells dark, and the detector uses only
+--   brightness (the camera Y plane). Steady, because a flash makes moving
+--   bright bands in the camera picture (rolling shutter, seen 2026-10-25).
 --
 -- Setup: SERVO9..12_FUNCTION = 94..97 (Script1..4), one LED strip each.
 -- LIT_FL/FR/RL/RR say which Script output is on which arm (1..4).
@@ -57,6 +64,7 @@ end
 local function sb_mode()
   local pwm = rc:get_pwm(math.floor(P.CH:get()))
   if pwm == nil or pwm < 800 then return "status" end   -- no RC: keep the safe default
+  if pwm < 970 then return "landing" end                -- ground control only (below the CRSF range)
   if pwm < 1300 then return "status" end
   if pwm < 1700 then return "aviation" end
   return "off"
@@ -100,6 +108,9 @@ local function update()
     for i = 1, 4 do fill(i, r or 0, g or 0, b or 0) end
   elseif mode == "aviation" then
     aviation(now)
+  elseif mode == "landing" then
+    local br = math.max(0, math.min(255, math.floor(P.BRT:get())))
+    for i = 1, 4 do fill(i, br, br, br) end
   else
     for i = 1, 4 do fill(i, 0, 0, 0) end
   end

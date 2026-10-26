@@ -34,7 +34,7 @@ from radio_snap import RadioSnap
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent))
 from airspace.service import AirspaceService  # noqa: E402
-LOGS = HERE.parent / "logs"
+LOGS = Path(os.environ["PACKET_LOG_DIR"]) if os.environ.get("PACKET_LOG_DIR") else HERE.parent / "logs"  # tests: own folder
 
 # Hard limits. The page can lower the speeds, never raise them past these.
 MAX_H = 3.0      # m/s horizontal

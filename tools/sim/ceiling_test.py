@@ -203,6 +203,7 @@ def main():
     work = Path(tempfile.mkdtemp(prefix="packet_ceil_"))
     (work / "scripts").mkdir()
     os.environ["PACKET_AIR_OPERATOR"] = str(work / "operator.json")   # the server is a child: it gets this
+    os.environ["PACKET_LOG_DIR"] = str(work / "gc_logs")              # SITL tlogs stay out of the repo logs/
     shutil.copy(REPO / "lua" / "ceil_guard.lua", work / "scripts")
     shutil.copy(REPO / "tools/sim/x650.json", work)          # SITL loads the model by a path relative to work/
     (work / "extra.parm").write_text("FENCE_ENABLE 1\nFENCE_TYPE 1\nFENCE_ALT_MAX 30\nFENCE_ALT_MAX_TP 1\nFENCE_ACTION 1\n"

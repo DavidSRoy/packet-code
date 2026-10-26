@@ -35,5 +35,9 @@ sudo -u packet python3 -m venv --system-site-packages "$DST/.venv"
 sudo -u packet "$DST/.venv/bin/pip" install --no-cache-dir pymavlink "opencv-python-headless==4.12.0.88"
 
 sudo -u packet "$DST/.venv/bin/python" -c "import cv2, pymavlink; print('cv2', cv2.__version__, 'aruco ok' if hasattr(cv2, 'aruco') else 'NO ARUCO')"
+# Raw YUYV camera: drop incomplete frames (nodrop=1 passes them on, and the missing
+# part keeps old data: torn, smeared pictures; seen 2026-10-25 with the C270).
+echo "options uvcvideo nodrop=0" > /etc/modprobe.d/uvcvideo-nodrop.conf
+
 touch /var/lib/packet-setup-done
 echo "=== packet setup done"

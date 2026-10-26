@@ -83,7 +83,10 @@ def grab():
             continue
         t = time.time()
         if buf.ndim == 3 and buf.shape[2] == 2:     # YUYV: (h, w, 2), Y in channel 0
-            yuyv = buf
+            # copy: in raw mode the array can point into the driver's capture buffer,
+            # which the next capture overwrites while the encoder and detection read it
+            # (seen 2026-10-25: torn, smeared H.264 frames and missed tags)
+            yuyv = buf.copy()
         else:                                       # the driver gave another layout: skip it
             print(f"unexpected frame shape {buf.shape}", flush=True)
             time.sleep(1)
@@ -212,51 +215,68 @@ def wifi_ip():
 
 
 def snapshots(m, send_lock):
-    """Answer snapshot requests from ground control (snap_proto.py).
+    """Send radio snapshots to ground control (push protocol, snap_proto.py).
 
-    Sends only the pieces that ground control asked for; ground control asks
-    only while the telemetry arrives at its full rate (telemetry first)."""
+    The pieces go out evenly spaced at the rate ground control allows, and only
+    while its CTRL messages keep coming (it stops them when the telemetry is not
+    at full rate): telemetry first."""
     import snap_proto as sp
-    frame_id, chunks, queue = 0, [], []
+    ctrl_t, rate, quality, width, peer = 0.0, 0.0, 20, 320, None
+    frame_id, chunks, queue, seq = 0, [], [], 0
+    pass_done = False          # first pass of the current picture sent
+    last_sent, frame_t = 0.0, 0.0
+    next_t = 0.0
     while True:
+        now = time.time()
+        wait = max(0.002, min(0.05, next_t - now)) if queue and rate > 0 else 0.05
         try:
-            msg = m.recv_match(type="TUNNEL", blocking=True, timeout=0.05)
+            msg = m.recv_match(type="TUNNEL", blocking=True, timeout=wait)
         except OSError:
             msg = None
+        now = time.time()
         if msg is not None and msg.target_system == 1 and msg.target_component == 191 \
                 and msg.payload_type == sp.PAYLOAD_TYPE:
             r = sp.unpack(bytes(msg.payload[:msg.payload_length]))
-            if r and r[0] == "req":
-                _, frame, first, count, quality, width = r
-                peer = (msg.get_srcSystem(), msg.get_srcComponent())
-                if frame == 0 or frame != frame_id or not chunks:
-                    yuyv = latest["yuyv"]       # the page draws the box from the live pose on top
-                    if yuyv is None or time.time() - latest["at"] > 2:
-                        continue                          # no fresh camera frame: say nothing
-                    w = max(64, min(width or 320, 640))
-                    h = int(round(yuyv.shape[0] * w / yuyv.shape[1]))
-                    # colour: about 19% more bytes than grey (measured 2026-10-25, 320x180 q20: 2076 B / 1738 B)
-                    small = cv2.resize(cv2.cvtColor(yuyv, cv2.COLOR_YUV2BGR_YUYV), (w, h), interpolation=cv2.INTER_AREA)
-                    # WebP: 2.4x smaller than JPEG at the same quality (measured 2026-10-25:
-                    # 320x180 grey, WebP q30 1446 B / 36.5 dB against JPEG q30 3504 B / 36.0 dB)
-                    ok, enc = cv2.imencode(".webp", small,
-                                           [cv2.IMWRITE_WEBP_QUALITY, max(1, min(quality or 20, 100))])
-                    data = enc.tobytes()
-                    frame_id = frame_id % 65535 + 1
-                    chunks = [data[i:i + sp.CHUNK] for i in range(0, len(data), sp.CHUNK)]
-                    first = 0
-                queue = [(peer, i) for i in range(first, min(first + count, len(chunks)))]
-        # send the asked pieces, spaced so the FC can mix in its telemetry
-        if queue:
-            peer, i = queue.pop(0)
-            payload = sp.pack_data(frame_id, i, len(chunks), chunks[i])
+            if r and r[0] == "ctrl":
+                _, frame, complete, rate, quality, width, have, nbits = r
+                ctrl_t, peer = now, (msg.get_srcSystem(), msg.get_srcComponent())
+                if chunks and frame == frame_id:
+                    if complete:
+                        chunks, queue = [], []                    # ground has it: next picture
+                    elif pass_done and not queue and now - last_sent > 0.3:
+                        queue = [i for i in range(len(chunks)) if i not in have]   # send the missing again
+        if now - ctrl_t > sp.CTRL_TIMEOUT or rate <= 0 or peer is None:
+            continue                                              # nobody asks: send nothing
+        if chunks and now - frame_t > 6:                          # stuck picture: give up, take a new one
+            chunks, queue = [], []
+        if not chunks:
+            yuyv = latest["yuyv"]                                 # the page draws the box from the live pose on top
+            if yuyv is None or now - latest["at"] > 2:
+                continue                                          # no fresh camera frame: say nothing
+            w = max(64, min(width or 320, 640))
+            h = int(round(yuyv.shape[0] * w / yuyv.shape[1]))
+            # colour: about 19% more bytes than grey (measured 2026-10-25, 320x180 q20: 2076 B / 1738 B)
+            small = cv2.resize(cv2.cvtColor(yuyv, cv2.COLOR_YUV2BGR_YUYV), (w, h), interpolation=cv2.INTER_AREA)
+            ok, enc = cv2.imencode(".webp", small, [cv2.IMWRITE_WEBP_QUALITY, max(1, min(quality or 20, 100))])
+            data = enc.tobytes()
+            frame_id = frame_id % 65535 + 1
+            chunks = [data[i:i + sp.CHUNK] for i in range(0, len(data), sp.CHUNK)]
+            queue, pass_done, frame_t = list(range(len(chunks))), False, now
+            next_t = max(next_t, now)
+        if queue and now >= next_t:
+            i = queue.pop(0)
+            seq = (seq + 1) & 0xFFFF
+            payload = sp.pack_data(seq, frame_id, i, len(chunks), chunks[i])
             try:
                 with send_lock:
                     m.mav.tunnel_send(peer[0], peer[1], sp.PAYLOAD_TYPE, len(payload),
                                       list(payload) + [0] * (128 - len(payload)))
             except OSError:
                 pass
-            time.sleep(0.02)
+            last_sent = now
+            next_t = max(next_t, now - 0.5 / rate) + 1.0 / rate   # even spacing; no catch-up burst
+            if not queue:
+                pass_done = True
 
 
 def radio():

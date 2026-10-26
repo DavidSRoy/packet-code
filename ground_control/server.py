@@ -741,7 +741,8 @@ def main():
         """The last box camera snapshot that came over the radio (radio_snap.py)."""
         if not snap or not snap.jpg:
             return web.Response(status=404, text="no radio snapshot yet")
-        return web.Response(body=snap.jpg, content_type="image/jpeg", headers={"Cache-Control": "no-store"})
+        kind = "image/webp" if snap.jpg[:4] == b"RIFF" and snap.jpg[8:12] == b"WEBP" else "image/jpeg"
+        return web.Response(body=snap.jpg, content_type=kind, headers={"Cache-Control": "no-store"})
     app.router.add_get("/radio_snap.jpg", radio_snap_jpg)
     web.run_app(app, host="127.0.0.1", port=args.http, print=None)
 

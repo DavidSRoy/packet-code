@@ -1008,7 +1008,7 @@ connect();
     $("cam-none").style.display = ok || showSnap ? "none" : "flex";
     tag.style.display = !ok && rs && rs.state ? "block" : "none";
     if (!ok && rs) tag.textContent = rs.state === "telemetry first" ? "RADIO SNAPSHOT · PAUSED: TELEMETRY FIRST"
-      : showSnap ? `RADIO SNAPSHOT · ${rs.age_s.toFixed(0)} S OLD · ${(rs.bytes / 1024).toFixed(1)} KB` + (rs.receiving ? ` · NEXT ${rs.receiving}` : "")
+      : showSnap ? `RADIO SNAPSHOT · ${rs.age_s.toFixed(0)} S OLD · ${(rs.bytes / 1024).toFixed(1)} KB` + (rs.period_s ? ` · EVERY ${rs.period_s.toFixed(1)} S` : "") + (rs.receiving ? ` · NEXT ${rs.receiving}` : "")
       : `RADIO SNAPSHOT · WAITING${rs.receiving ? " " + rs.receiving : ""}`;
     $("cam-id").textContent = b ? String(b.box) : "—";
     $("cam-tags").textContent = p.tags;

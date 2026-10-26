@@ -32,7 +32,7 @@ W_START, W_MAX = 2, 16  # pieces per cycle
 MIN_GAP = 1.0           # s between pictures
 FRAME_TIMEOUT = 10.0    # s to finish one picture
 PIECE_TIMEOUT = 1.5     # s before a piece is asked for again
-WIDTH, QUALITY = 320, 30
+WIDTH, QUALITY = 320, 20     # WebP q20: about 1.2 KB for 320x180 grey
 
 
 class RadioSnap:
@@ -51,6 +51,7 @@ class RadioSnap:
         self.jpg = None                     # last complete picture
         self.jpg_t = 0.0
         self.jpg_frame = 0
+        self.period = None                  # smoothed seconds between complete pictures
         self.wifi_ok = False
         self.wifi_checked = 0.0
         self.sent_bytes = deque()           # (t, bytes) of received pieces
@@ -76,6 +77,9 @@ class RadioSnap:
             self.n_got += 1
             if len(self.parts) == self.nchunks:
                 self.jpg = b"".join(self.parts[i] for i in range(self.nchunks))
+                if self.jpg_t:
+                    gap = time.time() - self.jpg_t
+                    self.period = gap if self.period is None else self.period + 0.3 * (gap - self.period)
                 self.jpg_t, self.jpg_frame = time.time(), frame
                 self.parts, self.nchunks, self.asked = {}, 0, {}
                 self.w = min(W_MAX, self.w + 1)         # finished while healthy: allow more next time
@@ -177,6 +181,7 @@ class RadioSnap:
                 "age_s": round(now - self.jpg_t, 1) if self.jpg else None,
                 "bytes": len(self.jpg) if self.jpg else None,
                 "pieces_per_cycle": self.w,
+                "period_s": round(self.period, 2) if self.period else None,
                 "rx_bps": round(sum(b for _, b in self.sent_bytes) / 5),
                 "receiving": f"{len(self.parts)}/{self.nchunks}" if self.parts else None,
                 "asked_got": [self.n_asked, self.n_got],

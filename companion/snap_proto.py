@@ -9,7 +9,7 @@ sends a piece that nobody asked for.
 
 REQ with frame 0 (or an unknown frame) asks for a new picture: the Pi takes
 the newest camera frame, makes it grey, scales it to `width` and encodes it as
-JPEG at `quality`.
+WebP at `quality` (JPEG before 2026-10-25; the receiver checks the file header).
 
 TUNNEL payload (max 128 bytes), payload_type PAYLOAD_TYPE:
   REQ   B kind=1, H frame, H first, B count, B quality, H width

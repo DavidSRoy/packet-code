@@ -69,7 +69,7 @@ class Link:
             "roll": 0.0, "pitch": 0.0, "yaw": None,
             "batt_v": None, "batt_a": None, "gps_fix": 0, "sats": 0,
             "batt_pct": None, "batt_mah": None, "batt_cap": None, "batt_min": None, "batt_min_basis": None,
-            "rc_ok": False, "rssi": 0, "sd_stop": False,
+            "rc_ok": False, "rssi": 0, "sd_stop": False, "lights_raw": None,
             "lat": None, "lon": None, "log_file": None,
             "home_lat": None, "home_lon": None, "fence_on": None, "fence_r": None,
             "alt_msl": None, "cloud": "off", "sa_on": False, "sa_raw": None,
@@ -125,6 +125,25 @@ class Link:
         self.send(self.m.mav.set_position_target_local_ned_send, 0, self.sysid, self.compid,
                   mavutil.mavlink.MAV_FRAME_LOCAL_NED, VEL_YAWRATE_MASK,
                   0, 0, 0, vn, ve, vd, 0, 0, 0, 0, yaw_rate_rad)
+
+    LIGHTS_PWM = {"status": 1000, "aviation": 1500, "off": 2000}   # lua/lights.lua: SB top / middle / bottom
+
+    def lights(self, mode, ch=6, gcs_sysid=255):
+        """Set the arm lights with an RC override of the SB channel (LIT_CH).
+
+        The FC takes RC overrides only from MAV_GCS_SYSID (255), so this one message
+        goes out with that system id. With no receiver input the FC keeps the value;
+        when the Boxer is on, its SB switch takes over again after RC_OVERRIDE_TIME (3 s)."""
+        pwm = self.LIGHTS_PWM.get(mode)
+        if pwm is None or self.sysid is None:
+            return
+        ch_vals = [65535] * 8                       # 65535 = leave the channel to the receiver
+        ch_vals[ch - 1] = pwm
+        enc = mavutil.mavlink.MAVLink(None, srcSystem=gcs_sysid, srcComponent=190)
+        buf = enc.rc_channels_override_encode(self.sysid, self.compid, *ch_vals, *([0] * 10)).pack(enc)
+        with self.lock:
+            self.m.write(buf)
+        self.note(f"Laptop: lights {mode}")
 
     def note(self, text, sev=6):
         self.messages.append((time.time(), sev, text))
@@ -192,6 +211,7 @@ class Link:
             s["rc_ok"] = msg.chancount > 0
             s["rssi"] = msg.rssi
             s["sd_stop"] = msg.chan8_raw > 1700  # SD on CH8 = motor emergency stop
+            s["lights_raw"] = msg.chan6_raw        # SB on CH6 = lights (lua/lights.lua, LIT_CH 6)
             if 1 <= self.sa_ch <= 18:
                 raw = getattr(msg, f"chan{self.sa_ch}_raw", 0)
                 s["sa_raw"] = raw
@@ -687,6 +707,8 @@ def build_app(link, pilot, auto, air, ceil):
                     pilot.hold()
                 elif kind == "kill":
                     pilot.kill()
+                elif kind == "lights":
+                    link.lights(d.get("mode"))
                 elif kind == "rec_start":
                     why = auto.recorder.start(d.get("from"), d.get("to"))
                     if why:

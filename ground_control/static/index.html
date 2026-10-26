@@ -122,7 +122,8 @@
   /* right: actions + log */
   #actions { top: 64px; right: 12px; width: 252px; padding: 12px; max-height: calc(100vh - 84px - var(--air-h, 190px)); overflow-y: auto; }
   /* trips (backend pad-to-pad) */
-  #trips { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  #trips, #lights { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  #lights .row2 { margin-bottom: 0; }
   .trip-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
   .badge { font: 600 10px var(--mono); padding: 2px 6px; border-radius: 2px; border: 1px solid var(--line-2); color: var(--muted); }
   .badge.on { color: #001018; background: var(--ok); border-color: var(--ok); }
@@ -397,6 +398,14 @@
   <button class="btn" id="b-rtl" data-air="1"><span>Return home</span><kbd>RTL</kbd></button>
   <button class="btn" id="b-hold" data-air="1"><span>Hold</span><kbd>SPACE</kbd></button>
   <button class="btn kill" id="b-kill"><span class="fill" id="kill-fill"></span><span>Kill motors</span><kbd>HOLD 1 S</kbd></button>
+  <div id="lights">
+    <div class="trip-h"><span class="lbl">Arm lights</span><span class="lbl" id="lights-note"></span></div>
+    <div class="row2">
+      <button class="mini" data-lights="status" title="ArduPilot status colours (SB up)">Status</button>
+      <button class="mini" data-lights="aviation" title="Red left, green right, white tail, strobe (SB middle)">Nav</button>
+      <button class="mini" data-lights="off" title="All lights off (SB down)">Off</button>
+    </div>
+  </div>
   <div id="trips">
     <div class="trip-h"><span class="lbl">Trips · pad to pad</span><span class="badge" id="sa-badge">SA —</span></div>
     <div id="trip-state">—</div>
@@ -737,6 +746,7 @@ $("b-kill").addEventListener("pointerdown", () => {
   }, 30);
 });
 ["pointerup", "pointerleave", "pointercancel"].forEach(t => $("b-kill").addEventListener(t, killUp));
+document.querySelectorAll("[data-lights]").forEach(b => b.onclick = () => send({ type: "lights", mode: b.dataset.lights }));
 
 /* ---------- render ---------- */
 function dot(id, cls) { $(id).className = "dot " + (cls || ""); }
@@ -966,6 +976,12 @@ function render(down) {
   $("b-takeoff").disabled = down || !s.link || !!s.armed;
   $("b-takeoff").title = down || !s.link ? "No link to the drone" : s.armed ? "Already armed" : "";
   fitTop();
+  // lights: what the FC reads on CH6 (lua/lights.lua: <1300 status, <1700 nav, else off)
+  const lr = s.lights_raw, lmode = !lr ? null : lr < 1300 ? "status" : lr < 1700 ? "aviation" : "off";
+  document.querySelectorAll("[data-lights]").forEach(b => {
+    b.classList.toggle("on", b.dataset.lights === lmode); b.disabled = down || !s.link;
+  });
+  $("lights-note").textContent = s.rc_ok ? "Boxer SB overrides" : "";
 
   $("mode").textContent = s.mode || "—";
   // ArduCopter modes whose allows_arming() is false (mode.h, 4.7)

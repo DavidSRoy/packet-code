@@ -170,6 +170,25 @@
   .home-ico { width: 18px; height: 18px; border: 1.5px solid var(--text); background: rgba(0,0,0,.5); color: var(--text);
     font: 700 10px var(--mono); display: flex; align-items: center; justify-content: center; }
   .leaflet-div-icon { background: none; border: 0; }
+  /* GPS quality: chip, accuracy circle, dimmed marker */
+  #gpsq { top: 64px; right: 322px; padding: 9px 12px 9px 11px; display: none; min-width: 210px;
+    border-left: 2px solid var(--warn); transition: border-color .3s; }
+  #gpsq.bad { border-left-color: var(--bad); }
+  #gpsq .head { display: flex; align-items: center; gap: 8px; }
+  #gpsq .head b { font: 600 11px var(--mono); letter-spacing: .14em; color: var(--warn); }
+  #gpsq.bad .head b { color: var(--bad); }
+  #gpsq .facts { margin-top: 5px; font: 11px var(--mono); color: var(--text); letter-spacing: .04em; }
+  #gpsq .note { margin-top: 4px; font-size: 10.5px; color: var(--muted); }
+  #gpsq .bars { display: inline-flex; gap: 2px; align-items: flex-end; height: 11px; margin-left: auto; }
+  #gpsq .bars i { width: 3px; background: var(--line-2); border-radius: 1px; }
+  #gpsq .bars i.on { background: var(--warn); } #gpsq.bad .bars i.on { background: var(--bad); }
+  .acc { transition: stroke .4s, fill .4s; }
+  .acc.bad { animation: acc-breathe 2.4s ease-in-out infinite; }
+  @keyframes acc-breathe { 50% { fill-opacity: .26; stroke-opacity: 1; } }
+  .drone-ico path, .drone-ico circle { transition: fill .4s, stroke .4s; }
+  .gps-poor .drone-ico path { fill: var(--warn); } .gps-poor .drone-ico circle { stroke: rgba(255,176,32,.55); }
+  .gps-bad .drone-ico path { fill: var(--bad); } .gps-bad .drone-ico circle { stroke: rgba(255,77,77,.6); stroke-dasharray: 3 3; }
+  .drone-ico { filter: drop-shadow(0 0 3px rgba(0,0,0,.8)); }
   #offline { position: fixed; z-index: 450; left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--dim); font-size: 11px; letter-spacing: .16em; display: none; }
 
   /* box camera (Pi companion) */
@@ -284,6 +303,13 @@
   <div class="cam-url"><span class="lbl">Pi</span><input id="cam-url" spellcheck="false"></div>
 </div>
 
+<div id="gpsq" class="panel">
+  <div class="head"><span class="dot" id="gq-dot"></span><b id="gq-title">GPS POOR</b>
+    <span class="bars" title="Satellites"><i style="height:3px"></i><i style="height:5px"></i><i style="height:7px"></i><i style="height:9px"></i><i style="height:11px"></i></span></div>
+  <div class="facts" id="gq-facts">—</div>
+  <div class="note" id="gq-note"></div>
+</div>
+
 <div id="mapctl" class="panel">
   <button id="m-follow" class="on" title="Follow the drone">◎</button>
   <button id="m-in" title="Zoom in">+</button>
@@ -367,6 +393,41 @@ const home = L.marker([0, 0], { icon: L.divIcon({ className: "", iconSize: [18, 
 const fence = L.circle([0, 0], { radius: 50, color: "#ffb020", weight: 1, dashArray: "6 6", fill: false, interactive: false });
 const trail = L.polyline([], { color: "#5ad1ff", weight: 2, opacity: 0.7, interactive: false }).addTo(map);
 const lead = L.polyline([], { color: "#4fd68a", weight: 2, dashArray: "3 5", interactive: false }).addTo(map);
+// GPS accuracy circle (radius = the GPS horizontal accuracy), coloured by quality
+const acc = L.circle([0, 0], { radius: 1, weight: 1.5, color: "#5ad1ff", fillColor: "#5ad1ff", fillOpacity: 0.14,
+  opacity: 0.8, interactive: false, className: "acc" });
+const GQ = { good: "#5ad1ff", poor: "#ffb020", bad: "#ff4d4d" };
+
+function updateGps(s) {
+  const q = s.gps_q || "bad", box = $("gpsq");
+  // map: accuracy circle and marker style
+  if (s.lat != null && s.gps_hacc != null && !(s.lat === 0 && s.lon === 0)) {
+    if (!map.hasLayer(acc)) acc.addTo(map);
+    acc.setLatLng([s.lat, s.lon]).setRadius(Math.max(1, Math.min(s.gps_hacc, 200)));
+    acc.setStyle({ color: GQ[q], fillColor: GQ[q], dashArray: q === "bad" ? "4 4" : null });
+    const el = acc.getElement(); if (el) el.classList.toggle("bad", q === "bad");
+  } else if (map.hasLayer(acc)) map.removeLayer(acc);
+  const de = drone.getElement();
+  if (de) { de.classList.toggle("gps-poor", q === "poor"); de.classList.toggle("gps-bad", q === "bad"); }
+  // chip: only when the GPS is not good
+  if (s.gps_q == null || q === "good") { box.style.display = "none"; return; }
+  box.style.display = "block";
+  box.classList.toggle("bad", q === "bad");
+  dot("gq-dot", q === "bad" ? "bad" : "warn");
+  $("gq-title").textContent = q === "bad" ? "GPS BAD" : "GPS POOR";
+  const n = s.sats || 0;
+  box.querySelectorAll(".bars i").forEach((b, i) => b.classList.toggle("on", n >= [1, 4, 6, 8, 10][i]));
+  const facts = [`${n} SATS`];
+  if (s.gps_hacc != null) facts.push(`±${s.gps_hacc < 10 ? s.gps_hacc.toFixed(1) : Math.round(s.gps_hacc)} M`);
+  if (s.gps_hdop != null) facts.push(`HDOP ${s.gps_hdop.toFixed(1)}`);
+  $("gq-facts").textContent = facts.join(" · ");
+  const why = (s.gps_why || []).filter(w => !/sats|^±|HDOP|jump filtered/.test(w));
+  const notes = [];
+  if (s.pos_filtered) notes.push("Map holds the drone: FC position jumps hidden");
+  else if (why.length) notes.push(why.join(" · "));
+  else notes.push(s.armed ? "Position may drift" : "Expect drift indoors and near buildings");
+  $("gq-note").textContent = notes.join(" · ");
+}
 let follow = true, firstFix = true, lastTrail = null;
 
 $("m-follow").onclick = () => { follow = !follow; $("m-follow").classList.toggle("on", follow); };
@@ -385,6 +446,7 @@ function distM(a, b, c, d) {
 }
 
 function updateMap(s) {
+  updateGps(s);
   if (s.lat == null || (s.lat === 0 && s.lon === 0)) return;
   const p = [s.lat, s.lon];
   if (!map.hasLayer(drone)) drone.addTo(map);
@@ -552,8 +614,9 @@ function render(down) {
   dot("d-rc", s.rc_ok ? (s.sd_stop ? "bad" : "ok") : "bad");
   $("t-rc").textContent = s.rc_ok ? (s.sd_stop ? "SD STOP" : `${s.rssi}`) : "NONE";
   const fix = ["none", "none", "2D", "3D", "DGPS", "RTK F", "RTK"][s.gps_fix] || "—";
-  dot("d-gps", s.gps_fix >= 3 && s.sats >= 8 ? "ok" : s.gps_fix >= 2 ? "warn" : "bad");
-  $("t-gps").textContent = s.sats != null ? `${fix} · ${s.sats}` : "—";
+  dot("d-gps", s.gps_q === "good" ? "ok" : s.gps_q === "poor" ? "warn" : s.gps_q === "bad" ? "bad"
+    : s.gps_fix >= 3 && s.sats >= 8 ? "ok" : s.gps_fix >= 2 ? "warn" : "bad");
+  $("t-gps").textContent = s.sats != null ? `${fix} · ${s.sats}` + (s.gps_hacc != null ? ` · ±${Math.round(s.gps_hacc)} m` : "") : "—";
   const cell = s.batt_v ? s.batt_v / 6 : null;
   const pct = s.batt_pct;
   const bcls = pct != null ? (pct <= 20 ? "bad" : pct <= 35 ? "warn" : "ok")

@@ -8,6 +8,8 @@ Keys (earth frame, not drone frame):
 Movement is sent as velocity setpoints in GUIDED mode only, and only while armed
 and in the air. Releasing every key brakes to a hover.
 """
+import os
+os.environ.setdefault("MAVLINK20", "1")   # MAVLink2 message set: GPS h_acc, TUNNEL, other extension fields
 import argparse
 import asyncio
 import json
@@ -24,6 +26,7 @@ from aiohttp import web, WSMsgType
 from pymavlink import mavutil
 
 import autonomy
+from gps_guard import GpsGuard
 
 HERE = Path(__file__).parent
 LOGS = HERE.parent / "logs"
@@ -66,7 +69,12 @@ class Link:
             "home_lat": None, "home_lon": None, "fence_on": None, "fence_r": None,
             "alt_msl": None, "cloud": "off", "sa_on": False, "sa_raw": None,
             "lid": None,    # box camera pose from the Pi over the radio (cam_stream.py radio())
+            # GPS quality and the jump filter (gps_guard.py). lat/lon above are the
+            # filtered position for display; lat_fc/lon_fc are what the FC reports.
+            "lat_fc": None, "lon_fc": None, "gps_q": None, "gps_why": [], "gps_hdop": None,
+            "gps_hacc": None, "pos_filtered": False, "pos_rejected": 0,
         }
+        self.gps = GpsGuard()
         self.lid_parts = {}
         self.sa_ch = 0              # RC channel of the SA switch (0 = not set: backend control off)
         self.hooks = []             # called with every MAVLink message
@@ -118,7 +126,7 @@ class Link:
 
     # ---- receiving -----------------------------------------------------
     def request_streams(self):
-        rates = {30: 10, 33: 5, 74: 5, 1: 2, 24: 2, 65: 2, 147: 1, 42: 2, 242: 0.2}  # ..., MISSION_CURRENT, HOME_POSITION
+        rates = {30: 10, 33: 5, 74: 5, 1: 2, 24: 2, 65: 2, 147: 1, 42: 2, 242: 0.2, 193: 2}  # ..., MISSION_CURRENT, HOME_POSITION
         for msg_id, hz in rates.items():
             self.command(mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL, msg_id, int(1e6 / hz))
         for name in (b"FENCE_ENABLE", b"FENCE_RADIUS", b"BATT_CAPACITY"):
@@ -143,12 +151,15 @@ class Link:
             s["armed"] = bool(msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
         elif t == "GLOBAL_POSITION_INT":
             s["alt"] = msg.relative_alt / 1000
-            s["lat"], s["lon"] = msg.lat / 1e7, msg.lon / 1e7
+            s["lat_fc"], s["lon_fc"] = msg.lat / 1e7, msg.lon / 1e7
+            shown = self.gps.on_position(s["lat_fc"], s["lon_fc"], math.hypot(msg.vx, msg.vy) / 100, s["armed"])
+            s["lat"], s["lon"] = shown if shown else (s["lat_fc"], s["lon_fc"])
+            s.update(self.gps.state())
             s["alt_msl"] = msg.alt / 1000
             s["vn"], s["ve"], s["vz"] = msg.vx / 100, msg.vy / 100, msg.vz / 100
             if msg.hdg != 65535:
                 s["hdg"] = msg.hdg / 100
-            self.track_csv.writerow([f"{time.time():.2f}", s["lat"], s["lon"], msg.alt / 1000, s["alt"],
+            self.track_csv.writerow([f"{time.time():.2f}", s["lat_fc"], s["lon_fc"], msg.alt / 1000, s["alt"],
                                      s["vn"], s["ve"], s["vz"], s["hdg"], s["mode"], int(s["armed"]),
                                      s["batt_v"], s["sats"]])
             for hook in self.pos_hooks:
@@ -156,6 +167,7 @@ class Link:
         elif t == "ATTITUDE":
             s["roll"], s["pitch"] = math.degrees(msg.roll), math.degrees(msg.pitch)
             s["yaw"] = math.degrees(msg.yaw) % 360
+            self.gps.on_attitude(msg)
         elif t == "SYS_STATUS":
             s["batt_v"] = msg.voltage_battery / 1000 if msg.voltage_battery != 65535 else None
             s["batt_a"] = msg.current_battery / 100 if msg.current_battery != -1 else None
@@ -166,6 +178,10 @@ class Link:
             self.estimate_time()
         elif t == "GPS_RAW_INT":
             s["gps_fix"], s["sats"] = msg.fix_type, msg.satellites_visible
+            self.gps.on_gps_raw(msg)
+            s.update(self.gps.state())
+        elif t == "EKF_STATUS_REPORT":
+            self.gps.on_ekf(msg)
         elif t == "RC_CHANNELS":
             s["rc_ok"] = msg.chancount > 0
             s["rssi"] = msg.rssi
@@ -177,6 +193,7 @@ class Link:
         elif t == "DEBUG_VECT" and msg.name.startswith("LID"):
             self.lid_update(msg)
         elif t == "STATUSTEXT":
+            self.gps.on_text(msg.text)
             self.note(msg.text, msg.severity)
         elif t == "HOME_POSITION":
             s["home_lat"], s["home_lon"] = msg.latitude / 1e7, msg.longitude / 1e7
@@ -423,7 +440,8 @@ class CloudPush:
     FIELDS = ("lat", "lon", "vn", "ve", "vz", "hdg", "roll", "pitch", "yaw", "mode", "armed",
               "batt_v", "batt_a", "batt_pct", "batt_mah", "batt_cap", "batt_min", "batt_min_basis",
               "gps_fix", "sats", "home_lat", "home_lon",
-              "rc_ok", "rssi", "sd_stop", "sa_on", "fence_on", "fence_r")
+              "rc_ok", "rssi", "sd_stop", "sa_on", "fence_on", "fence_r",
+              "lat_fc", "lon_fc", "gps_q", "gps_why", "gps_hdop", "gps_hacc", "pos_filtered")
 
     def __init__(self, link, url, drone_id, token, hz, auto=None, pi_url=None, cam_fps=0.0):
         self.link, self.token, self.period, self.auto = link, token, 1.0 / hz, auto

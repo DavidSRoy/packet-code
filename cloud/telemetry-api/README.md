@@ -68,6 +68,18 @@ This has the same fields as `/position`, plus:
 }
 ```
 
+`gps` also has the GPS quality:
+
+| Field | Meaning |
+|---|---|
+| `quality` | `good`, `poor` or `bad`. `bad` is normal indoors and near tall buildings. Do not trust the position to a few metres unless it is `good`. |
+| `reasons` | Why, for example `"6 sats"`, `"±12 m"`, `"FC: GPS glitch"`, `"jump filtered"`. |
+| `accuracy_m` | The GPS horizontal accuracy (1 sigma, m). Draw it as a circle around the drone. |
+| `position_filtered` | `true` when the laptop holds the position because the FC position made a jump that is physically impossible. `position` is then the held, plausible position. |
+| `fc_position` | The FC's own position, not filtered. |
+
+How the laptop filters `position` (ground_control/gps_guard.py): on the ground, when the gyros show the drone does not move, it ignores GPS jumps and keeps a steady position. When the drone is carried, it follows at walking speed at most. In flight, it follows the FC and hides only single jumps larger than the speed allows. With a `good` GPS, it uses the FC position directly.
+
 `attitude` also has `yaw_deg` (the nose direction, 0–360). `battery` also has `capacity_mah` and `time_left_basis` (`flight`, `last flight` or `hover estimate`).
 
 | Block | Meaning |

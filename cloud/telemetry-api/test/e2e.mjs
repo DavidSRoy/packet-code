@@ -14,6 +14,7 @@ const sample = (i) => ({ ts: Date.now(), link: true, lat: 37.7749 + i * 1e-5, lo
   batt_pct: 72, batt_mah: 1820, batt_min: 8.4, gps_fix: 3, sats: 18, home_lat: 37.7749, home_lon: -122.4194,
   yaw: 181.5, batt_cap: 6500, batt_min_basis: "flight", rc_ok: true, rssi: 200, sd_stop: false, sa_on: true,
   fence_on: true, fence_r: 50, camera_live: false,
+  lat_fc: 37.7752, lon_fc: -122.4194, gps_q: "bad", gps_why: ["6 sats", "jump filtered"], gps_hdop: 2.5, gps_hacc: 12.3, pos_filtered: true,
   box_camera: { source: "radio", age_s: 0.3, box: { id: 1, tags: null, ntags: 2, px_per_cell: 28.6,
     drone_m: [0.21, -0.01, 0.27], camera_m: [null, null, 0.24], yaw_deg: 179.8, tilt_deg: 3.5 } },
   messages: [{ ts: T0 + i, sev: 4, text: `msg ${i}` }] });
@@ -62,6 +63,8 @@ check("battery percent, used, time left", j.battery.percent === 72 && j.battery.
 check("new state fields", j.attitude.yaw_deg === 181.5 && j.battery.capacity_mah === 6500
   && j.pilot_radio.rssi === 200 && j.pilot_radio.backend_switch_on === true && j.fence.radius_m === 50
   && j.box_camera.source === "radio" && j.box_camera.box.drone_m[2] === 0.27);
+check("gps quality fields", j.gps.quality === "bad" && j.gps.accuracy_m === 12.3 && j.gps.position_filtered === true
+  && j.gps.fc_position.lat === 37.7752 && j.gps.reasons.length === 2);
 check("camera block is best effort, not live", j.camera.best_effort === true && j.camera.live === false);
 check("state has recent messages", j.messages.length === 3 && j.messages.at(-1).text === "msg 2");
 

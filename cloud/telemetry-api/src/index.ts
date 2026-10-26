@@ -82,6 +82,11 @@ export interface Telemetry {
   sd_stop?: boolean | null;   // SD kill switch on
   sa_on?: boolean | null;     // SA switch: backend control allowed
   fence_on?: boolean | null; fence_r?: number | null;
+  // GPS quality (ground_control/gps_guard.py). lat/lon are filtered for display;
+  // lat_fc/lon_fc are the FC's own position.
+  lat_fc?: number | null; lon_fc?: number | null;
+  gps_q?: "good" | "poor" | "bad" | null; gps_why?: string[];
+  gps_hdop?: number | null; gps_hacc?: number | null; pos_filtered?: boolean;
   box_camera?: BoxCamera | null;
   camera_live?: boolean;      // the laptop forwards camera frames now
   messages?: FcMessage[];
@@ -104,7 +109,7 @@ export interface FcMessage { ts: number; sev: number; text: string }
 
 const NUM_FIELDS = ["ts", "lat", "lon", "alt_msl", "height", "vn", "ve", "vd", "hdg", "roll", "pitch",
   "batt_v", "batt_a", "batt_pct", "batt_mah", "batt_min", "gps_fix", "sats", "home_lat", "home_lon",
-  "yaw", "batt_cap", "rssi", "fence_r"] as const;
+  "yaw", "batt_cap", "rssi", "fence_r", "lat_fc", "lon_fc", "gps_hdop", "gps_hacc"] as const;
 const BOOL_FIELDS = ["rc_ok", "sd_stop", "sa_on", "fence_on"] as const;
 
 function cleanTelemetry(body: unknown): Telemetry | string {
@@ -127,6 +132,9 @@ function cleanTelemetry(body: unknown): Telemetry | string {
   out.link = b.link !== false;
   for (const k of BOOL_FIELDS) out[k] = typeof b[k] === "boolean" ? b[k] : null;
   out.batt_min_basis = str(b.batt_min_basis, 24);
+  out.gps_q = b.gps_q === "good" || b.gps_q === "poor" || b.gps_q === "bad" ? b.gps_q : null;
+  out.gps_why = Array.isArray(b.gps_why) ? b.gps_why.filter(x => typeof x === "string").slice(0, 10).map(x => (x as string).slice(0, 40)) : [];
+  out.pos_filtered = b.pos_filtered === true;
   out.camera_live = b.camera_live === true;
   out.box_camera = cleanBox(b.box_camera);
   out.messages = Array.isArray(b.messages)
@@ -229,7 +237,10 @@ function toState(id: string, s: Stored | null, now: number) {
       time_left_basis: t.batt_min_basis ?? null,
       capacity_mah: t.batt_cap ?? null,
     },
-    gps: { fix_type: t.gps_fix, satellites: t.sats },
+    gps: { fix_type: t.gps_fix, satellites: t.sats,
+           quality: t.gps_q ?? null, reasons: t.gps_why ?? [], hdop: r1(t.gps_hdop, 2), accuracy_m: r1(t.gps_hacc),
+           position_filtered: t.pos_filtered === true,
+           fc_position: t.lat_fc != null && t.lon_fc != null ? { lat: t.lat_fc, lon: t.lon_fc } : null },
     pilot_radio: { link_ok: t.rc_ok ?? null, rssi: t.rssi ?? null,
                    kill_switch_on: t.sd_stop ?? null, backend_switch_on: t.sa_on ?? null },
     fence: { enabled: t.fence_on ?? null, radius_m: t.fence_r ?? null },

@@ -422,19 +422,33 @@ class Pilot:
         finally:
             self.busy = False
 
+    def _on_ground(self, what, mode):
+        """True (and a note) when the drone is disarmed: LAND, RTL and BRAKE do not
+        allow arming in ArduCopter, so on the ground they would only block the next arm."""
+        if self.link.state["armed"]:
+            return False
+        self.link.note(f"Laptop: {what} not sent, the drone is disarmed ({mode} mode would block arming)", 4)
+        return True
+
     def land(self):
         self.takeoff_target = None
+        if self._on_ground("LAND", "LAND"):
+            return
         self.link.set_mode("LAND")
         self.link.note("Laptop: LAND")
 
     def rtl(self):
         self.takeoff_target = None
+        if self._on_ground("RTL", "RTL"):
+            return
         self.link.set_mode("RTL")
         self.link.note("Laptop: RTL")
 
     def hold(self):
         """Stop and hover. Stays in GUIDED if already there; otherwise BRAKE."""
         self.input = {"n": 0, "e": 0, "u": 0, "yaw": 0}
+        if self._on_ground("HOLD", "BRAKE"):
+            return
         if self.link.state["mode"] == "GUIDED":
             self.link.velocity(0, 0, 0, 0)
         else:

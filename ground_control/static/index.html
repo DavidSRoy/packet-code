@@ -50,7 +50,7 @@
   #brand i { font-style: normal; color: var(--dim); font-weight: 500; }
   .stat-row { display: flex; gap: 0; flex: 1; min-width: 0; overflow: hidden; align-self: stretch; }
   /* status cells: flat, hairline dividers, colour only when something is wrong */
-  .st { display: flex; align-items: center; gap: 8px; white-space: nowrap; padding: 0 14px; border-left: 1px solid var(--line);
+  .st { display: flex; align-items: center; gap: 8px; white-space: nowrap; padding: 0 11px; border-left: 1px solid var(--line);
     font-size: 9.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
   .st:last-child { border-right: 1px solid var(--line); }
   .st b { color: var(--text); font-weight: 500; font-size: 11.5px; font-family: var(--mono); letter-spacing: .02em; text-transform: none; }
@@ -63,14 +63,22 @@
   .st:has(.dot.bad) b { color: var(--bad); }
   .st:has(.dot.warn) { box-shadow: inset 0 -2px 0 var(--warn); }
   #clock { font-family: var(--mono); color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .stat-row.tight .opt { display: none; }
+  #top.tight #brand i { display: none; }
+  @media (max-height: 780px) {
+    .tele div { padding: 6px 14px; } .tele b { font-size: 15px; } .card-h { padding: 9px 14px 8px; }
+    #mode { font-size: 17px; } .mode-row { margin-top: 6px; }
+  }
 
   /* left: asset card */
-  #left { position: fixed; z-index: 500; top: 64px; left: 12px; width: 300px; display: flex; flex-direction: column; gap: 8px; }
+  #left { position: fixed; z-index: 500; top: 64px; left: 12px; width: 300px; display: flex; flex-direction: column; gap: 8px;
+    max-height: calc(100vh - 76px); }
+  #asset { flex: none; }
   #left > .panel { position: relative; }
   #pos { padding: 9px 14px; color: var(--muted); font-size: 11px; }
 
   /* vehicle attitude view (SpaceX style) */
-  #att3d { height: 300px; display: flex; flex-direction: column; overflow: hidden;
+  #att3d { flex: 0 1 300px; min-height: 120px; display: flex; flex-direction: column; overflow: hidden;
     background: radial-gradient(120% 90% at 50% 35%, rgba(26,34,44,.92), rgba(6,8,11,.95)); }
   #att3d.big { position: fixed !important; inset: 64px 320px 112px 324px; height: auto; }
   .att-h { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px 0; }
@@ -96,6 +104,8 @@
   #mode { font-family: var(--mono); font-size: 20px; font-weight: 600; letter-spacing: .04em; }
   #armed { font-size: 10px; letter-spacing: .16em; padding: 3px 7px; border: 1px solid var(--line-2); border-radius: 2px; color: var(--muted); }
   #armed.on { color: var(--bad); border-color: var(--bad); background: rgba(255,77,77,.1); }
+  #mode-hint { display: none; margin-top: 6px; font-size: 11px; line-height: 1.4; color: var(--warn); }
+  #mode-hint.on { display: block; }
   .tele { display: grid; grid-template-columns: 1fr 1fr; }
   .battbar { margin: 2px 12px 8px; }
   .battbar .track { height: 6px; background: rgba(255,255,255,.08); border-radius: 3px; overflow: hidden; }
@@ -110,7 +120,7 @@
   #att svg { flex: none; }
 
   /* right: actions + log */
-  #actions { top: 64px; right: 12px; width: 252px; padding: 12px; max-height: calc(100vh - 190px); overflow-y: auto; }
+  #actions { top: 64px; right: 12px; width: 252px; padding: 12px; max-height: calc(100vh - 84px - var(--air-h, 190px)); overflow-y: auto; }
   /* trips (backend pad-to-pad) */
   #trips { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
   .trip-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
@@ -121,7 +131,8 @@
   .row2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 6px; }
   .mini { height: 28px; background: var(--glass-2); border: 1px solid var(--line-2); border-radius: 3px; color: var(--text);
     font: 600 10px var(--sans); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
-  .mini:disabled { opacity: .35; cursor: default; }
+  .mini:disabled, .btn:disabled { opacity: .35; cursor: default; }
+  .btn:disabled:hover { border-color: var(--line-2); }
   .mini.go { color: var(--ok); border-color: rgba(79,214,138,.55); }
   .route { font: 11px var(--mono); padding: 5px 0; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 6px; }
   .route small { color: var(--muted); display: block; }
@@ -145,12 +156,13 @@
   .btn.kill .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: rgba(255,77,77,.35); }
   .btn > span { position: relative; }
   #log { max-height: 190px; overflow-y: auto; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 8px; font: 11px/1.55 var(--mono); }
-  #log div { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #log div { color: var(--muted); overflow-wrap: anywhere; padding: 1px 0; }
   #log div b { color: var(--dim); font-weight: 400; margin-right: 6px; }
   #log .s0, #log .s1, #log .s2, #log .s3 { color: var(--bad); } #log .s4 { color: var(--warn); } #log .s5, #log .s6 { color: var(--text); }
 
   /* bottom: flight controls */
-  #fly { left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 18px; padding: 12px 16px; }
+  #fly { left: 324px; right: var(--rcol, 276px); bottom: 12px; width: fit-content; max-width: calc(100vw - 324px - var(--rcol, 276px));
+    margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px 18px; padding: 12px 16px; }
   .pad { display: grid; grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(2, 46px); gap: 5px; }
   .vpad { display: grid; grid-template-rows: repeat(2, 46px); gap: 5px; }
   .k { width: 46px; height: 46px; border: 1px solid var(--line-2); border-radius: 3px; background: var(--glass-2);
@@ -179,7 +191,7 @@
     font: 700 10px var(--mono); display: flex; align-items: center; justify-content: center; }
   .leaflet-div-icon { background: none; border: 0; }
   /* GPS quality: chip, accuracy circle, dimmed marker */
-  #gpsq { top: 64px; right: 322px; padding: 9px 12px 9px 11px; display: none; min-width: 210px;
+  #gpsq { top: 64px; right: 322px; padding: 9px 12px 9px 11px; display: none; width: 236px;
     border-left: 2px solid var(--warn); transition: border-color .3s; }
   #gpsq.bad { border-left-color: var(--bad); }
   #gpsq .head { display: flex; align-items: center; gap: 8px; }
@@ -200,8 +212,11 @@
   #offline { position: fixed; z-index: 450; left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--dim); font-size: 11px; letter-spacing: .16em; display: none; }
 
   /* box camera (Pi companion) */
-  #cam { top: 64px; left: 324px; width: 400px; overflow: hidden; }
-  #cam.big { inset: 64px 280px 112px 324px; width: auto; display: flex; flex-direction: column; }
+  #cam { top: 64px; left: 324px; width: clamp(240px, calc(100vw - 324px - 322px - 236px), 400px); overflow: hidden auto;
+    max-height: calc(100vh - 88px - var(--fly-h, 130px)); }
+  #cam.min .cam-view, #cam.min .cam-f, #cam.min .cam-url { display: none; }
+  #cam.min .att-h { padding-bottom: 9px; }
+  #cam.big { inset: 64px 280px 112px 324px; width: auto; max-height: none; display: flex; flex-direction: column; }
   #cam .att-h { padding: 9px 12px 7px; }
   .cam-view { position: relative; background: #000; aspect-ratio: 16 / 9; }
   #cam.big .cam-view { flex: 1; aspect-ratio: auto; }
@@ -238,7 +253,8 @@
   .badge.warn { color: #1a1000; background: var(--warn); border-color: var(--warn); }
   .badge.bad { color: #fff; background: var(--bad); border-color: var(--bad); }
   .mini.on { color: var(--friendly); border-color: rgba(90,209,255,.6); }
-  #air-pop { right: 12px; bottom: 178px; width: 300px; max-height: calc(100vh - 260px); overflow-y: auto; padding: 12px; display: none; }
+  #air-pop { right: calc(var(--rcol, 276px) + 46px); bottom: calc(var(--fly-h, 130px) + 24px); width: 300px;
+    max-height: calc(100vh - 88px - var(--fly-h, 130px)); overflow-y: auto; padding: 12px; display: none; }
   #air-pop.open { display: block; }
   #air-pop h4 { margin: 10px 0 6px; font: 600 10px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
   #air-pop h4:first-child { margin-top: 0; }
@@ -261,12 +277,12 @@
   .leaflet-tooltip { background: var(--glass-2); color: var(--text); border: 1px solid var(--line-2); box-shadow: none; }
   .leaflet-tooltip-top:before { border-top-color: var(--line-2); }
   @media (max-width: 1100px) {
-    #cam { width: max(220px, calc(100vw - 324px - 292px)); }
+    :root { --rcol: 244px; }
     #cam.big { inset: 64px 292px 112px 324px; width: auto; }
     .cam-f { grid-template-columns: 1fr; } #cam-top { display: none; }
     .cam-f .tele { grid-template-columns: 1fr 1fr; }
-    #fly { left: 12px; right: 12px; transform: none; flex-wrap: wrap; justify-content: center; }
-    #actions { width: 220px; } #mapctl { right: 244px; }
+    #fly .sep, #keys-state p { display: none; }
+    #actions, #air { width: 220px; } #mapctl { right: 244px; } #gpsq { right: 290px; }
     .stat-row .opt { display: none; }
   }
 </style>
@@ -300,6 +316,7 @@
     </div>
     <div class="asset-sub">X650 · Pixhawk 6X · ArduCopter 4.7.2</div>
     <div class="mode-row"><span id="mode">—</span><span id="armed">SAFE</span></div>
+    <div id="mode-hint"></div>
   </div>
   <div class="tele">
     <div><span class="lbl">Height</span><b id="v-alt">—<small>m</small></b></div>
@@ -318,7 +335,7 @@
   <div id="pos" class="num">—</div>
 </div>
 <div id="att3d" class="panel">
-  <div class="att-h"><span class="lbl">Vehicle attitude · EKF estimate</span>
+  <div class="att-h"><span class="lbl">Attitude · EKF</span>
     <span><button id="att-cam">CHASE</button><button id="att-big">EXPAND</button></span></div>
   <canvas id="att-canvas"></canvas>
   <div class="att-f">
@@ -335,7 +352,7 @@
 
 <div id="cam" class="panel">
   <div class="att-h"><span class="lbl">Box camera</span>
-    <span><span class="lbl" id="cam-rate">—</span><button id="cam-big">EXPAND</button></span></div>
+    <span><span class="lbl" id="cam-rate">—</span><button id="cam-min" title="Hide or show the camera">HIDE</button><button id="cam-big">EXPAND</button></span></div>
   <div class="cam-view"><canvas id="cam-vid"></canvas><img id="cam-snap" alt=""><canvas id="cam-ov"></canvas><div class="none" id="cam-none">NO CAMERA</div>
     <div id="cam-snap-tag"></div></div>
   <div class="cam-f">
@@ -376,9 +393,9 @@
     <div class="stepper"><button id="alt-dn">−</button><span id="alt">1.0 m</span><button id="alt-up">+</button></div>
   </div>
   <button class="btn go" id="b-takeoff"><span>Auto takeoff</span><kbd>GUIDED</kbd></button>
-  <button class="btn land" id="b-land"><span>Auto land</span><kbd>LAND</kbd></button>
-  <button class="btn" id="b-rtl"><span>Return home</span><kbd>RTL</kbd></button>
-  <button class="btn" id="b-hold"><span>Hold</span><kbd>SPACE</kbd></button>
+  <button class="btn land" id="b-land" data-air="1"><span>Auto land</span><kbd>LAND</kbd></button>
+  <button class="btn" id="b-rtl" data-air="1"><span>Return home</span><kbd>RTL</kbd></button>
+  <button class="btn" id="b-hold" data-air="1"><span>Hold</span><kbd>SPACE</kbd></button>
   <button class="btn kill" id="b-kill"><span class="fill" id="kill-fill"></span><span>Kill motors</span><kbd>HOLD 1 S</kbd></button>
   <div id="trips">
     <div class="trip-h"><span class="lbl">Trips · pad to pad</span><span class="badge" id="sa-badge">SA —</span></div>
@@ -522,7 +539,8 @@ function updateGps(s) {
   box.style.display = "block";
   box.classList.toggle("bad", q === "bad");
   dot("gq-dot", q === "bad" ? "bad" : "warn");
-  $("gq-title").textContent = q === "bad" ? "GPS BAD" : "GPS POOR";
+  const gpsOk = (s.gps_why || []).every(w => /^FC: no position|accuracy unknown|jump filtered/.test(w));
+  $("gq-title").textContent = q !== "bad" ? "GPS POOR" : gpsOk && s.gps_fix >= 3 ? "NO POSITION" : "GPS BAD";
   const n = s.sats || 0;
   box.querySelectorAll(".bars i").forEach((b, i) => b.classList.toggle("on", n >= [1, 4, 6, 8, 10][i]));
   const facts = [`${n} SATS`];
@@ -534,6 +552,7 @@ function updateGps(s) {
   if (s.pos_filtered) notes.push("Map holds the drone: FC position jumps hidden");
   else if (why.length) notes.push(why.join(" · "));
   else notes.push(s.armed ? "Position may drift" : "Expect drift indoors and near buildings");
+  if (q === "bad" && gpsOk && s.gps_fix >= 3) notes.unshift("GPS is good; the FC has no position estimate yet");
   $("gq-note").textContent = notes.join(" · ");
 }
 let follow = true, firstFix = true, lastTrail = null;
@@ -666,9 +685,15 @@ function setKey(c, on) {
   send(inputVector());
 }
 function clearKeys() { [...held].forEach(c => setKey(c, false)); }
+// A key in a text field is typing, not flying.
+const typing = e => { const t = e.target;
+  return !!t && (t.isContentEditable || t.tagName === "TEXTAREA" || t.tagName === "SELECT"
+    || (t.tagName === "INPUT" && !["range", "checkbox", "radio", "button"].includes(t.type))); };
 addEventListener("keydown", e => {
+  if (e.key === "Escape") { if (typing(e)) e.target.blur(); else closeAll(); return; }
+  if (typing(e) || e.metaKey || e.ctrlKey || e.altKey) return;
   const c = e.key.toLowerCase();
-  if (c === " ") { e.preventDefault(); clearKeys(); send({ type: "hold" }); return; }
+  if (c === " ") { e.preventDefault(); clearKeys(); if (state.armed) send({ type: "hold" }); return; }
   if (KEYS.includes(c)) { e.preventDefault(); if (!e.repeat) setKey(c, true); }
 });
 addEventListener("keyup", e => setKey(e.key.toLowerCase(), false));
@@ -679,6 +704,8 @@ document.querySelectorAll(".k").forEach(el => {
   el.addEventListener("pointerdown", e => { el.setPointerCapture(e.pointerId); setKey(c, true); });
   ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => el.addEventListener(t, () => setKey(c, false)));
 });
+
+document.addEventListener("click", e => { const b = e.target.closest("button"); if (b) b.blur(); });
 
 /* ---------- speeds + actions ---------- */
 function sendSpeeds() {
@@ -713,7 +740,7 @@ $("b-kill").addEventListener("pointerdown", () => {
 
 /* ---------- render ---------- */
 function dot(id, cls) { $(id).className = "dot " + (cls || ""); }
-const fx = (v, d = 1) => v == null ? "—" : v.toFixed(d);
+const fx = (v, d = 1) => v == null ? "—" : (Math.abs(v) < 0.5 * 10 ** -d ? 0 : v).toFixed(d);   // no "-0.0"
 function setNum(id, txt) { const el = $(id); el.firstChild.nodeValue = txt; }
 
 
@@ -908,7 +935,9 @@ function render(down) {
   dot("d-link", down ? "bad" : s.link ? "ok" : "bad");
   $("t-link").textContent = down ? "SERVER DOWN" : s.link ? "UP" : "LOST";
   dot("d-rc", s.rc_ok ? (s.sd_stop ? "bad" : "ok") : "bad");
-  $("t-rc").textContent = s.rc_ok ? (s.sd_stop ? "SD STOP" : `${s.rssi}`) : "NONE";
+  // RSSI 0..254; 0 and 255 mean "not measured" (the FC has no RSSI source set up)
+  const rssi = s.rssi > 0 && s.rssi < 255 ? `${Math.round(s.rssi * 100 / 254)}%` : "OK";
+  $("t-rc").textContent = s.rc_ok ? (s.sd_stop ? "SD STOP" : rssi) : "NONE";
   const fix = ["none", "none", "2D", "3D", "DGPS", "RTK F", "RTK"][s.gps_fix] || "—";
   dot("d-gps", s.gps_q === "good" ? "ok" : s.gps_q === "poor" ? "warn" : s.gps_q === "bad" ? "bad"
     : s.gps_fix >= 3 && s.sats >= 8 ? "ok" : s.gps_fix >= 2 ? "warn" : "bad");
@@ -928,11 +957,26 @@ function render(down) {
   dot("d-cloud", s.cloud === "ok" ? "ok" : s.cloud === "error" ? "bad" : "");
   $("t-cloud").textContent = (s.cloud || "—").toUpperCase();
 
+  // Commands: on the ground LAND, RTL and BRAKE would block arming (ArduCopter
+  // allows_arming() is false in those modes), so they work only when armed.
+  const air = !down && !!s.armed;
+  document.querySelectorAll("#actions [data-air]").forEach(b => {
+    b.disabled = !air; b.title = air ? "" : "Works when armed. On the ground this mode would block arming.";
+  });
+  $("b-takeoff").disabled = down || !s.link || !!s.armed;
+  $("b-takeoff").title = down || !s.link ? "No link to the drone" : s.armed ? "Already armed" : "";
+  fitTop();
+
   $("mode").textContent = s.mode || "—";
+  // ArduCopter modes whose allows_arming() is false (mode.h, 4.7)
+  const NO_ARM = ["AUTOTUNE", "BRAKE", "CIRCLE", "FLIP", "LAND", "RTL", "SMART_RTL", "SYSTEMID", "AVOID_ADSB", "FOLLOW", "AUTOROTATE"];
+  const blocked = !down && s.link && !s.armed && NO_ARM.includes(s.mode);
+  $("mode-hint").classList.toggle("on", blocked);
+  if (blocked) $("mode-hint").textContent = `${s.mode} does not allow arming. Change the mode on the Boxer. Auto takeoff changes to GUIDED itself.`;
   $("armed").textContent = s.armed ? "ARMED" : "SAFE";
   $("armed").classList.toggle("on", !!s.armed);
   setNum("v-alt", fx(s.alt));
-  setNum("v-vz", s.vz == null ? "—" : (-s.vz).toFixed(1));
+  setNum("v-vz", s.vz == null ? "—" : fx(-s.vz));
   setNum("v-gs", fx(Math.hypot(s.vn || 0, s.ve || 0)));
   setNum("v-hdg", s.hdg == null ? "—" : String(Math.round(s.hdg)).padStart(3, "0"));
   setNum("v-home", s.home_lat != null && s.lat != null ? fx(distM(s.home_lat, s.home_lon, s.lat, s.lon)) : "—");
@@ -962,6 +1006,30 @@ function render(down) {
   $("log").innerHTML = (s.messages || []).slice().reverse().map(m =>
     `<div class="s${m.sev}"><b>${new Date(m.t * 1000).toLocaleTimeString([], { hour12: false })}</b>${m.text.replace(/</g, "&lt;")}</div>`).join("");
   updateMap(s);
+}
+
+// Panel heights for the CSS layout (command panel above the ceiling panel, camera above the keys).
+// Set on each update and resize (ResizeObserver does not run in a background tab).
+const rootStyle = document.documentElement.style, layoutPx = {};
+function setVar(name, px) { if (layoutPx[name] !== px) { layoutPx[name] = px; rootStyle.setProperty(name, px + "px"); } }
+// Top bar: hide the optional cells (Fence, Rec, Cloud) when the bar does not fit.
+function fitTop() {
+  setVar("--air-h", $("air").offsetHeight);
+  setVar("--fly-h", $("fly").offsetHeight);
+  const r = document.querySelector(".stat-row"), top = $("top");
+  r.classList.remove("tight"); top.classList.remove("tight");
+  if (r.scrollWidth > r.clientWidth + 1) r.classList.add("tight");
+  if (r.scrollWidth > r.clientWidth + 1) top.classList.add("tight");
+}
+addEventListener("resize", fitTop);
+fitTop();
+// Esc: close popups, expanded views and Probe.
+function closeAll() {
+  if (airPopMode) airPop(airPopMode);
+  if (airProbe) $("air-probe").click();
+  if ($("cam").classList.contains("big")) $("cam-big").click();
+  if ($("att3d").classList.contains("big")) $("att-big").click();
+  map.closePopup();
 }
 
 setInterval(() => { $("clock").textContent = new Date().toISOString().slice(11, 19) + " UTC"; }, 1000);
@@ -1182,7 +1250,17 @@ connect();
     if (cam) { g.fillStyle = "#fff"; g.beginPath(); g.arc(kx, ky, 3, 0, 2 * Math.PI); g.fill(); }
   }
 
-  $("cam-big").onclick = () => { const on = $("cam").classList.toggle("big"); $("cam-big").textContent = on ? "CLOSE" : "EXPAND"; };
+  $("cam-big").onclick = () => {
+    const on = $("cam").classList.toggle("big"); $("cam-big").textContent = on ? "CLOSE" : "EXPAND";
+    if (on) setMin(false);
+  };
+  function setMin(on) {
+    $("cam").classList.toggle("min", on); $("cam-min").textContent = on ? "SHOW" : "HIDE";
+    try { localStorage.setItem("camMin", on ? "1" : ""); } catch {}
+  }
+  let camMin = false; try { camMin = localStorage.getItem("camMin") === "1"; } catch {}
+  setMin(camMin);
+  $("cam-min").onclick = () => { if ($("cam").classList.contains("big")) $("cam-big").click(); setMin(!$("cam").classList.contains("min")); };
   addEventListener("resize", () => render());
 })();
 </script>

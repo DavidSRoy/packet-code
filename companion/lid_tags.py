@@ -38,6 +38,12 @@ class LidFinder:
                 self.small[t["id"]] = (b["box"], np.array(t["corners_m"]))
         p = cv2.aruco.DetectorParameters()
         p.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
+        # Threshold offset 5 (OpenCV default 7). With the landing light on, a tag edge
+        # can be less than 7 grey levels darker than its surroundings, and the outline
+        # is lost. Measured 2026-10-26 (11 frames, landing light): both tags in 6 frames
+        # and none lost at 5, against 0 and 6 at 7. Lights off: all frames the same.
+        # Same number of threshold passes, same CPU.
+        p.adaptiveThreshConstant = 5
         # One detector for both dictionaries (OpenCV >= 4.12): the threshold and contour
         # stage runs once on the full frame, then each dictionary decodes the candidates.
         # Same tags and corners as two detectors, half the CPU (measured 2026-10-25 on the

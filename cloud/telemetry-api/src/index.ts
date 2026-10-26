@@ -10,6 +10,10 @@
  *   GET  /v1/drones/:id/state       Bearer READ_TOKEN
  *   GET  /v1/drones/:id/track       Bearer READ_TOKEN   ?since=<ms or ISO>&limit=<n>
  *   GET  /v1/drones/:id/stream      WebSocket, ?token=READ_TOKEN
+ *   GET  /v1/drones/:id/messages    Bearer READ_TOKEN   ?since=<ms or ISO>&limit=<n>  (FC text messages)
+ *   POST /v1/drones/:id/camera      Bearer INGEST_TOKEN, image/jpeg (best effort, see below)
+ *   GET  /v1/drones/:id/camera.jpg  Bearer READ_TOKEN or ?token=   latest frame, 503 when none is recent
+ *   GET  /v1/drones/:id/camera/stream  WebSocket, ?token=READ_TOKEN, binary JPEG frames
  *   POST /v1/drones/:id/commands    Bearer COMMAND_TOKEN  {"action":"goto","pad":"qfc"} | hold | resume | return
  *   GET  /v1/drones/:id/commands    Bearer READ_TOKEN or COMMAND_TOKEN (last 20)
  *   GET  /v1/drones/:id/commands/:c Bearer READ_TOKEN or COMMAND_TOKEN
@@ -18,6 +22,12 @@
  * Commands reach the drone through the laptop: the reply to each telemetry
  * POST carries the next queued command. The laptop answers in a later POST
  * (acks), and the trip progress comes in the "autonomy" block.
+ *
+ * Reliability: the telemetry (everything in /state, /track, /messages) comes
+ * over the telemetry radio and is meant to be reliable. The camera is BEST
+ * EFFORT: the laptop forwards it only while it reaches the Pi over Wi-Fi, so
+ * it drops out often (range, Wi-Fi, laptop upload). Nothing may depend on it.
+ * The box pose (box_camera) is telemetry: it also comes over the radio.
  */
 import { DurableObject } from "cloudflare:workers";
 
@@ -44,6 +54,8 @@ export interface Autonomy {
 
 interface Ack { id: string; status: "accepted" | "rejected"; reason: string | null }
 
+const CAMERA_LIVE_S = 5;               // a frame older than this = camera not live
+const CAMERA_MAX_BYTES = 1_000_000;
 const ONLINE_S = 5;                    // no update for this long = offline
 const TRACK_KEEP_MS = 24 * 3600_000;   // keep 24 h of track
 const DRONE_ID = /^[a-z0-9-]{1,32}$/;
@@ -56,13 +68,23 @@ export interface Telemetry {
   alt_msl?: number | null;    // m
   height?: number | null;     // m above home
   vn?: number; ve?: number; vd?: number;  // m/s, NED
-  hdg?: number | null;        // deg
+  hdg?: number | null;        // deg, GPS course
   roll?: number; pitch?: number;          // deg
+  yaw?: number | null;        // deg, nose direction (compass)
   mode?: string; armed?: boolean;
   batt_v?: number | null; batt_a?: number | null;
   batt_pct?: number | null;   // % charge left, from the Pixhawk (mAh used vs BATT_CAPACITY)
   batt_mah?: number | null;   // mAh used since power-up
   batt_min?: number | null;   // estimated flight minutes left to the 20% reserve
+  batt_min_basis?: string | null;   // "flight", "last flight" or "hover estimate"
+  batt_cap?: number | null;   // mAh, BATT_CAPACITY
+  rc_ok?: boolean | null; rssi?: number | null;   // pilot radio
+  sd_stop?: boolean | null;   // SD kill switch on
+  sa_on?: boolean | null;     // SA switch: backend control allowed
+  fence_on?: boolean | null; fence_r?: number | null;
+  box_camera?: BoxCamera | null;
+  camera_live?: boolean;      // the laptop forwards camera frames now
+  messages?: FcMessage[];
   gps_fix?: number; sats?: number;
   home_lat?: number | null; home_lon?: number | null;
   autonomy?: Autonomy | null;
@@ -71,8 +93,19 @@ export interface Telemetry {
 
 interface Stored { t: Telemetry; received_at: number }
 
+/** Lid pose from the Pi's box camera (lid frame: x long side, y short side, z up, m). */
+export interface BoxCamera {
+  source: "wifi" | "radio";
+  age_s: number | null;
+  box: null | { id: number; tags: string[] | null; ntags: number; px_per_cell: number | null;
+                drone_m: number[]; camera_m: (number | null)[]; yaw_deg: number; tilt_deg: number };
+}
+export interface FcMessage { ts: number; sev: number; text: string }
+
 const NUM_FIELDS = ["ts", "lat", "lon", "alt_msl", "height", "vn", "ve", "vd", "hdg", "roll", "pitch",
-  "batt_v", "batt_a", "batt_pct", "batt_mah", "batt_min", "gps_fix", "sats", "home_lat", "home_lon"] as const;
+  "batt_v", "batt_a", "batt_pct", "batt_mah", "batt_min", "gps_fix", "sats", "home_lat", "home_lon",
+  "yaw", "batt_cap", "rssi", "fence_r"] as const;
+const BOOL_FIELDS = ["rc_ok", "sd_stop", "sa_on", "fence_on"] as const;
 
 function cleanTelemetry(body: unknown): Telemetry | string {
   if (!body || typeof body !== "object") return "body must be a JSON object";
@@ -92,6 +125,15 @@ function cleanTelemetry(body: unknown): Telemetry | string {
   out.mode = typeof b.mode === "string" ? b.mode.slice(0, 24) : null;
   out.armed = b.armed === true;
   out.link = b.link !== false;
+  for (const k of BOOL_FIELDS) out[k] = typeof b[k] === "boolean" ? b[k] : null;
+  out.batt_min_basis = str(b.batt_min_basis, 24);
+  out.camera_live = b.camera_live === true;
+  out.box_camera = cleanBox(b.box_camera);
+  out.messages = Array.isArray(b.messages)
+    ? b.messages.filter((m): m is FcMessage => !!m && typeof m === "object" && typeof (m as FcMessage).ts === "number"
+                                               && typeof (m as FcMessage).text === "string")
+        .slice(-20).map(m => ({ ts: m.ts, sev: typeof m.sev === "number" ? m.sev : 6, text: m.text.slice(0, 200) }))
+    : [];
   out.autonomy = cleanAutonomy(b.autonomy);
   out.acks = Array.isArray(b.acks)
     ? b.acks.filter((a): a is Ack => !!a && typeof a === "object" && typeof (a as Ack).id === "string")
@@ -102,6 +144,25 @@ function cleanTelemetry(body: unknown): Telemetry | string {
 }
 
 const str = (v: unknown, n = 64) => (typeof v === "string" ? v.slice(0, n) : null);
+const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+const nums = (v: unknown, n: number) => (Array.isArray(v) ? v.slice(0, n).map(num) : Array(n).fill(null));
+
+function cleanBox(v: unknown): BoxCamera | null {
+  if (!v || typeof v !== "object") return null;
+  const c = v as Record<string, unknown>;
+  const b = c.box as Record<string, unknown> | null;
+  return {
+    source: c.source === "wifi" ? "wifi" : "radio",
+    age_s: num(c.age_s),
+    box: !b || typeof b !== "object" || num(b.id) == null ? null : {
+      id: b.id as number,
+      tags: Array.isArray(b.tags) ? b.tags.filter(x => typeof x === "string").slice(0, 20) as string[] : null,
+      ntags: num(b.ntags) ?? 0, px_per_cell: num(b.px_per_cell),
+      drone_m: nums(b.drone_m, 3) as number[], camera_m: nums(b.camera_m, 3),
+      yaw_deg: num(b.yaw_deg) ?? 0, tilt_deg: num(b.tilt_deg) ?? 0,
+    },
+  };
+}
 const PAD_ID = /^[a-z0-9-]{1,32}$/;
 
 function cleanAutonomy(v: unknown): Autonomy | null {
@@ -159,15 +220,36 @@ function toState(id: string, s: Stored | null, now: number) {
     ...p,
     mode: t.mode,
     armed: t.armed,
-    attitude: { roll_deg: r1(t.roll), pitch_deg: r1(t.pitch) },
+    attitude: { roll_deg: r1(t.roll), pitch_deg: r1(t.pitch), yaw_deg: r1(t.yaw) },
     battery: {
       percent: t.batt_pct ?? null,
       voltage_v: r1(t.batt_v, 2), current_a: r1(t.batt_a), cell_v: t.batt_v == null ? null : r1(t.batt_v / 6, 2),
       used_mah: t.batt_mah ?? null,
       time_left_min: r1(t.batt_min),
+      time_left_basis: t.batt_min_basis ?? null,
+      capacity_mah: t.batt_cap ?? null,
     },
     gps: { fix_type: t.gps_fix, satellites: t.sats },
+    pilot_radio: { link_ok: t.rc_ok ?? null, rssi: t.rssi ?? null,
+                   kill_switch_on: t.sd_stop ?? null, backend_switch_on: t.sa_on ?? null },
+    fence: { enabled: t.fence_on ?? null, radius_m: t.fence_r ?? null },
+    box_camera: t.box_camera ?? null,
     autonomy: toAutonomy(t.autonomy),
+  };
+}
+
+/** Camera status. Best effort: it is often down, and nothing may depend on it. */
+function toCamera(id: string, frameAt: number | null, laptopLive: boolean, now: number) {
+  const age = frameAt == null ? null : (now - frameAt) / 1000;
+  return {
+    best_effort: true,
+    live: age != null && age < CAMERA_LIVE_S,
+    laptop_forwarding: laptopLive,
+    last_frame_at: frameAt == null ? null : new Date(frameAt).toISOString(),
+    frame_age_s: r1(age),
+    frame_url: `/v1/drones/${id}/camera.jpg`,
+    stream_url: `/v1/drones/${id}/camera/stream`,
+    note: "Best effort: frames come only while the laptop reaches the drone's Pi over Wi-Fi. Expect gaps. Use box_camera (radio) for the box pose.",
   };
 }
 
@@ -212,6 +294,8 @@ function commandOut(c: CommandRow) {
 export class DroneState extends DurableObject<Env> {
   private latest: Stored | null = null;
   private inserts = 0;
+  private frame: ArrayBuffer | null = null;   // latest camera frame, memory only (best effort)
+  private frameAt: number | null = null;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -220,6 +304,8 @@ export class DroneState extends DurableObject<Env> {
       ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS track (
         received_at INTEGER PRIMARY KEY, lat REAL, lon REAL, alt_msl REAL, height REAL,
         vn REAL, ve REAL, vd REAL, hdg REAL, mode TEXT, armed INTEGER, batt_v REAL)`);
+      ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS messages (
+        ts INTEGER NOT NULL, sev INTEGER NOT NULL, text TEXT NOT NULL, PRIMARY KEY (ts, text))`);
       ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS commands (
         id TEXT PRIMARY KEY, action TEXT NOT NULL, pad TEXT, status TEXT NOT NULL, reason TEXT,
         created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`);
@@ -280,6 +366,10 @@ export class DroneState extends DurableObject<Env> {
     const now = Date.now();
     const next = this.exchange(t, now);
     delete t.acks;
+    const sql0 = this.ctx.storage.sql;
+    for (const m of t.messages ?? []) sql0.exec("INSERT OR IGNORE INTO messages VALUES (?,?,?)", m.ts, m.sev, m.text);
+    if ((t.messages ?? []).length) sql0.exec("DELETE FROM messages WHERE ts < ?", now - TRACK_KEEP_MS);
+    delete t.messages;
     const s: Stored = { t, received_at: now };
     const sql = this.ctx.storage.sql;
     // persist first, then cache
@@ -291,15 +381,48 @@ export class DroneState extends DurableObject<Env> {
       if (++this.inserts % 60 === 0) sql.exec("DELETE FROM track WHERE received_at < ?", now - TRACK_KEEP_MS);
     }
     this.latest = s;
-    const msg = JSON.stringify({ type: "state", data: toState(id, s, now) });
-    for (const ws of this.ctx.getWebSockets()) {
+    const msg = JSON.stringify({ type: "state", data: this.stateOf(id, now) });
+    for (const ws of this.ctx.getWebSockets("state")) {
       try { ws.send(msg); } catch { /* socket closing */ }
     }
     return next;
   }
 
+  private recentMessages(n: number) {
+    return this.ctx.storage.sql.exec<{ ts: number; sev: number; text: string }>("SELECT * FROM messages ORDER BY ts DESC LIMIT ?", n).toArray()
+      .reverse().map(m => ({ time: new Date(m.ts).toISOString(), severity: m.sev, text: m.text }));
+  }
+
+  private stateOf(id: string, now: number) {
+    const st = toState(id, this.latest, now) as Record<string, unknown>;
+    if (!this.latest) return st;
+    return { ...st, camera: toCamera(id, this.frameAt, this.latest.t.camera_live === true, now),
+             messages: this.recentMessages(10) };
+  }
+
   async position(id: string) { return toPosition(id, this.latest, Date.now()); }
-  async state(id: string) { return toState(id, this.latest, Date.now()); }
+  async state(id: string) { return this.stateOf(id, Date.now()); }
+
+  async messages(id: string, since: number, limit: number) {
+    const rows = this.ctx.storage.sql.exec<{ ts: number; sev: number; text: string }>(
+      "SELECT * FROM (SELECT * FROM messages WHERE ts >= ? ORDER BY ts DESC LIMIT ?) ORDER BY ts", since, limit).toArray();
+    return { drone_id: id, count: rows.length,
+             messages: rows.map(m => ({ time: new Date(m.ts).toISOString(), severity: m.sev, text: m.text })) };
+  }
+
+  /** Camera frame from the laptop: keep the latest in memory, send it to camera stream clients. */
+  async putFrame(jpg: ArrayBuffer) {
+    this.frame = jpg;
+    this.frameAt = Date.now();
+    for (const ws of this.ctx.getWebSockets("camera")) {
+      try { ws.send(jpg); } catch { /* socket closing */ }
+    }
+  }
+
+  async getFrame(): Promise<{ jpg: ArrayBuffer; at: number } | null> {
+    if (!this.frame || this.frameAt == null || Date.now() - this.frameAt > CAMERA_LIVE_S * 1000) return null;
+    return { jpg: this.frame, at: this.frameAt };
+  }
 
   async track(id: string, since: number, limit: number) {
     const rows = this.ctx.storage.sql.exec<Record<string, number | string | null>>(
@@ -319,10 +442,17 @@ export class DroneState extends DurableObject<Env> {
 
   /** WebSocket stream (hibernation API): sends the current state, then each update. */
   async fetch(request: Request): Promise<Response> {
-    const id = new URL(request.url).searchParams.get("drone") ?? "";
+    const u = new URL(request.url);
+    const id = u.searchParams.get("drone") ?? "";
     const pair = new WebSocketPair();
-    this.ctx.acceptWebSocket(pair[1], [id]);
-    pair[1].send(JSON.stringify({ type: "state", data: toState(id, this.latest, Date.now()) }));
+    if (u.pathname === "/camera") {
+      this.ctx.acceptWebSocket(pair[1], ["camera"]);
+      const f = await this.getFrame();
+      if (f) pair[1].send(f.jpg);
+    } else {
+      this.ctx.acceptWebSocket(pair[1], ["state"]);
+      pair[1].send(JSON.stringify({ type: "state", data: this.stateOf(id, Date.now()) }));
+    }
     return new Response(null, { status: 101, webSocket: pair[0] });
   }
 
@@ -341,6 +471,7 @@ const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Authorization, Content-Type",
+  "Access-Control-Expose-Headers": "X-Frame-Time",
   "Access-Control-Max-Age": "86400",
 };
 
@@ -381,6 +512,31 @@ export default {
     const [, , id, what] = parts;
     if (!DRONE_ID.test(id)) return error(400, "drone id must be 1-32 chars of a-z, 0-9 or -");
     const stub = env.DRONE.getByName(id);
+
+    // Camera: best effort (see the top of this file).
+    if (what === "camera" && parts.length === 4) {
+      if (request.method !== "POST") return error(405, "use POST");
+      if (!(await safeEqual(bearer(request), env.INGEST_TOKEN))) return error(401, "bad ingest token");
+      const jpg = await request.arrayBuffer();
+      if (jpg.byteLength < 4 || jpg.byteLength > CAMERA_MAX_BYTES) return error(400, "send one JPEG, up to 1 MB");
+      const h = new Uint8Array(jpg, 0, 2);
+      if (h[0] !== 0xff || h[1] !== 0xd8) return error(400, "not a JPEG");
+      await stub.putFrame(jpg);
+      return json({ ok: true });
+    }
+    if (what === "camera.jpg" || (what === "camera" && parts[4] === "stream")) {
+      if (request.method !== "GET") return error(405, "use GET");
+      const tok = bearer(request) || (url.searchParams.get("token") ?? "");
+      if (!(await safeEqual(tok, env.READ_TOKEN))) return error(401, "bad read token");
+      if (what === "camera") {
+        if (request.headers.get("Upgrade") !== "websocket") return error(426, "WebSocket upgrade required");
+        return stub.fetch(new Request(`https://do/camera?drone=${id}`, request));
+      }
+      const f = await stub.getFrame();
+      if (!f) return error(503, "camera not live (best effort: it is often down)");
+      return new Response(f.jpg, { headers: { "Content-Type": "image/jpeg", "Cache-Control": "no-store",
+        "X-Frame-Time": new Date(f.at).toISOString(), ...CORS } });
+    }
 
     if (what === "telemetry") {
       if (request.method !== "POST") return error(405, "use POST");
@@ -429,6 +585,12 @@ export default {
     if (!(await safeEqual(bearer(request), env.READ_TOKEN))) return error(401, "bad read token");
     if (what === "position") return json(await stub.position(id));
     if (what === "state") return json(await stub.state(id));
+    if (what === "messages") {
+      const since = parseSince(url.searchParams.get("since"));
+      if (!Number.isFinite(since)) return error(400, "since must be ms since epoch or an ISO time");
+      const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 200) || 200, 1), 2000);
+      return json(await stub.messages(id, since, limit));
+    }
     if (what === "track") {
       const since = parseSince(url.searchParams.get("since"));
       if (!Number.isFinite(since)) return error(400, "since must be ms since epoch or an ISO time");

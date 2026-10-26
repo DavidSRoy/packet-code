@@ -6,6 +6,16 @@ Cloudflare Worker with one Durable Object per drone. The laptop ground control s
 drone ──radio──> laptop ground_control/server.py ──HTTPS POST 1 Hz──> Worker ──> app
 ```
 
+## Reliability: read this first
+
+| Data | Path | Reliable? |
+|---|---|---|
+| Everything in `/position`, `/state`, `/track`, `/messages`, the `/stream` WebSocket, and commands | Drone → telemetry radio → laptop → API | **Yes.** This is the data to build on. |
+| `box_camera` (box pose from the drone's camera) | Pi → FC → telemetry radio → laptop → API | **Yes**, while the camera sees the box tags. |
+| Camera frames: `/camera.jpg`, `/camera/stream` | Pi → **Wi-Fi** → laptop → API | **No. Best effort only.** |
+
+The camera frames come only while the laptop reaches the drone's Pi over Wi-Fi. They drop out often: Wi-Fi range, a laptop off the network, a slow upload. The API marks this in the `camera` block (`best_effort: true`, `live`). Never make a flight decision, a trip step or an alarm depend on the camera frames. Show them as a "when available" view only. For the box position, use `box_camera`.
+
 ## For the app team
 
 Base URL: `https://packet-telemetry.<account>.workers.dev` (set after the first deploy).
@@ -41,9 +51,32 @@ This has the same fields as `/position`, plus:
   "attitude": { "roll_deg": 0.5, "pitch_deg": -0.2 },
   "battery": { "percent": 72, "voltage_v": 24.6, "current_a": 18.2, "cell_v": 4.1,
                "used_mah": 1820, "time_left_min": 8.4 },
-  "gps": { "fix_type": 3, "satellites": 18 }
+  "gps": { "fix_type": 3, "satellites": 18 },
+  "pilot_radio": { "link_ok": true, "rssi": 200, "kill_switch_on": false, "backend_switch_on": true },
+  "fence": { "enabled": true, "radius_m": 50 },
+  "box_camera": {
+    "source": "radio", "age_s": 0.4,
+    "box": { "id": 1, "tags": null, "ntags": 2, "px_per_cell": 28.7,
+             "drone_m": [0.224, -0.011, 0.267], "camera_m": [null, null, 0.241],
+             "yaw_deg": 178.9, "tilt_deg": 3.5 }
+  },
+  "camera": { "best_effort": true, "live": false, "laptop_forwarding": false,
+              "last_frame_at": "2026-10-26T04:23:58.119Z", "frame_age_s": 13.9,
+              "frame_url": "/v1/drones/packet-v0/camera.jpg", "stream_url": "/v1/drones/packet-v0/camera/stream",
+              "note": "Best effort: ..." },
+  "messages": [ { "time": "2026-10-26T04:23:46.590Z", "severity": 2, "text": "PreArm: Radio failsafe on" } ]
 }
 ```
+
+`attitude` also has `yaw_deg` (the nose direction, 0–360). `battery` also has `capacity_mah` and `time_left_basis` (`flight`, `last flight` or `hover estimate`).
+
+| Block | Meaning |
+|---|---|
+| `pilot_radio` | The pilot's RC link. `kill_switch_on` is the SD switch (motor stop). `backend_switch_on` is the SA switch (backend trips allowed). |
+| `fence` | The FC geofence: on or off, and the circle radius. |
+| `box_camera` | The drone position relative to the box lid, from the drone's camera. `null` when the Pi sends nothing. `box` is `null` when no box tag is in view. Lid frame: origin at the lid centre, x along the long side, y along the short side, z up, in m. `drone_m` is the drone centre. `yaw_deg` is the drone nose direction from the lid +x axis, counter-clockwise. `source` is `wifi` (all fields) or `radio` (no tag names and no camera x/y). |
+| `camera` | Status of the best-effort camera frames. See below. |
+| `messages` | The last 10 FC text messages (pre-arm checks, fence, failsafes). Severity: 0 emergency … 2 critical … 4 warning … 6 info. |
 
 Battery fields:
 
@@ -68,6 +101,22 @@ Any battery field can be `null` when the drone does not send it.
   { "time": "2026-10-22T17:12:29.9Z", "lat": 37.77491, "lon": -122.41930, "alt_msl_m": 21.7, "height_m": 1.2,
     "ground_speed_ms": 0.1, "heading_deg": 317, "mode": "GUIDED", "armed": true } ] }
 ```
+
+### `GET /v1/drones/packet-v0/messages?since=<ms or ISO time>&limit=<n>`
+
+The FC text messages, kept for 24 h. The default is the last hour. `limit` is 1–2000, default 200.
+
+```json
+{ "drone_id": "packet-v0", "count": 1, "messages": [
+  { "time": "2026-10-26T04:23:46.590Z", "severity": 2, "text": "PreArm: Vehicle breaching Circle fence" } ] }
+```
+
+### Camera (best effort, not reliable)
+
+- `GET /v1/drones/packet-v0/camera.jpg`: the latest frame (JPEG, 1280×720). Auth: Bearer `READ_TOKEN`, or `?token=READ_TOKEN` for an `<img>` tag. The `X-Frame-Time` header gives the capture time. It gives `503` when no frame came in the last 5 s. Expect `503` often.
+- `wss://<base>/v1/drones/packet-v0/camera/stream?token=<READ_TOKEN>`: binary messages, one JPEG each, about 2 frames per second while live. Nothing comes while the camera is down. The socket stays open.
+- The `camera` block in `/state` says if frames come now (`live`) and the age of the last frame.
+- The API keeps only the latest frame, in memory. There is no recording.
 
 ### Live stream: `wss://<base>/v1/drones/packet-v0/stream?token=<READ_TOKEN>`
 
@@ -201,3 +250,5 @@ export PACKET_INGEST_TOKEN=<INGEST_TOKEN>
 ```
 
 The top bar of the ground control page shows `Cloud OK` when the pushes succeed. If the push fails, flight control is not affected.
+
+The server also forwards the Pi camera when it reaches the Pi over Wi-Fi: `--pi-url` (default `http://packet-cv.local:8080`, `none` to turn off) and `--cloud-cam-fps` (default 2, 0 to turn off). At 2 fps this is about 150 KB/s of upload. The camera has its own thread, so a lost camera does not delay the telemetry.

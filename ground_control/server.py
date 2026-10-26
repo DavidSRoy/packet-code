@@ -420,25 +420,56 @@ class CloudPush:
     Runs in its own thread with short timeouts, so a slow or lost internet link
     never delays flight control. Token: env PACKET_INGEST_TOKEN."""
 
-    FIELDS = ("lat", "lon", "vn", "ve", "vz", "hdg", "roll", "pitch", "mode", "armed",
-              "batt_v", "batt_a", "batt_pct", "batt_mah", "batt_min", "gps_fix", "sats", "home_lat", "home_lon")
+    FIELDS = ("lat", "lon", "vn", "ve", "vz", "hdg", "roll", "pitch", "yaw", "mode", "armed",
+              "batt_v", "batt_a", "batt_pct", "batt_mah", "batt_cap", "batt_min", "batt_min_basis",
+              "gps_fix", "sats", "home_lat", "home_lon",
+              "rc_ok", "rssi", "sd_stop", "sa_on", "fence_on", "fence_r")
 
-    def __init__(self, link, url, drone_id, token, hz, auto=None):
+    def __init__(self, link, url, drone_id, token, hz, auto=None, pi_url=None, cam_fps=0.0):
         self.link, self.token, self.period, self.auto = link, token, 1.0 / hz, auto
         self.acks = []
-        self.url = f"{url.rstrip('/')}/v1/drones/{drone_id}/telemetry"
+        self.base = f"{url.rstrip('/')}/v1/drones/{drone_id}"
+        self.url = f"{self.base}/telemetry"
         self.last_error_note = 0.0
+        self.msg_sent_t = time.time() - 60   # FC messages newer than this are not sent yet
+        self.pi_url = pi_url.rstrip("/") if pi_url else None
+        self.cam_period = 1.0 / cam_fps if cam_fps > 0 else 0.0
+        self.wifi_lid = None                 # full box pose from the Pi over Wi-Fi (/lid.json)
         link.state["cloud"] = "starting"
+        link.state["cloud_cam"] = "off" if not (self.pi_url and self.cam_period) else "starting"
+
+    def box_pose(self):
+        """Box camera pose: Wi-Fi (/lid.json, full detail) when fresh, else the radio pose."""
+        w = self.wifi_lid
+        if w and time.time() - w["rx"] < 2.0:
+            b = w["boxes"][0] if w["boxes"] else None
+            return {"source": "wifi", "age_s": round(time.time() - w["rx"], 1),
+                    "box": None if b is None else {
+                        "id": b["box"], "tags": b["tags"], "ntags": len(b["tags"]), "px_per_cell": b["px_per_cell"],
+                        "drone_m": b["drone_m"], "camera_m": b["camera_m"],
+                        "yaw_deg": b["yaw_deg"], "tilt_deg": b["tilt_deg"]}}
+        r = self.link.state.get("lid")
+        if r and time.time() - r["rx"] < 3.0:
+            return {"source": "radio", "age_s": round(time.time() - r["rx"], 1),
+                    "box": None if r["box"] is None else {
+                        "id": r["box"], "tags": None, "ntags": r["ntags"], "px_per_cell": round(r["px_per_cell"], 1),
+                        "drone_m": [round(v, 4) for v in r["drone_m"]], "camera_m": [None, None, round(r["camera_z"], 4)],
+                        "yaw_deg": round(r["yaw_deg"], 1), "tilt_deg": round(r["tilt_deg"], 1)}}
+        return None
 
     def payload(self):
         s = self.link.state
         d = {k: s.get(k) for k in self.FIELDS}
         d["vd"] = d.pop("vz")
         d.update(ts=int(time.time() * 1000), link=bool(s["link"]), height=s.get("alt"), alt_msl=s.get("alt_msl"))
+        d["box_camera"] = self.box_pose()
+        d["camera_live"] = s.get("cloud_cam") == "ok"
+        new = [m for m in self.link.messages if m[0] > self.msg_sent_t][-20:]
+        d["messages"] = [{"ts": int(t * 1000), "sev": sev, "text": txt[:200]} for t, sev, txt in new]
         if self.auto:
             d["autonomy"] = self.auto.cloud_summary()
             d["acks"], self.acks = self.acks, []
-        return json.dumps(d).encode()
+        return json.dumps(d).encode(), (new[-1][0] if new else None)
 
     def take_command(self, body):
         """The ingest reply can carry one backend command for the drone."""
@@ -453,10 +484,13 @@ class CloudPush:
         while self.link.running:
             t0 = time.time()
             try:
-                req = urllib.request.Request(self.url, data=self.payload(), method="POST", headers={
+                body, last_msg_t = self.payload()
+                req = urllib.request.Request(self.url, data=body, method="POST", headers={
                     "Authorization": f"Bearer {self.token}", "Content-Type": "application/json"})
                 with urllib.request.urlopen(req, timeout=2) as r:
                     self.take_command(r.read())
+                if last_msg_t:
+                    self.msg_sent_t = last_msg_t
                 self.link.state["cloud"] = "ok"
             except Exception as exc:
                 self.link.state["cloud"] = "error"
@@ -464,6 +498,36 @@ class CloudPush:
                     self.last_error_note = time.time()
                     self.link.note(f"Laptop: cloud push failed ({exc})", 4)
             time.sleep(max(0.0, self.period - (time.time() - t0)))
+
+
+    def camera_loop(self):
+        """Forward the Pi camera to the API while the laptop reaches the Pi over Wi-Fi.
+
+        Gets /frame.jpg and /lid.json from the Pi (companion/cam_stream.py) and POSTs
+        the frame to {base}/camera. Own thread: a slow Pi or upload never delays the
+        telemetry push or flight control."""
+        hdr = {"Authorization": f"Bearer {self.token}", "Content-Type": "image/jpeg"}
+        while self.link.running:
+            t0 = time.time()
+            try:
+                with urllib.request.urlopen(f"{self.pi_url}/lid.json", timeout=1) as r:
+                    lid = json.loads(r.read())
+                if lid.get("now", 0) - lid.get("t", 0) < 1.5:
+                    self.wifi_lid = dict(lid, rx=time.time())
+                with urllib.request.urlopen(f"{self.pi_url}/frame.jpg", timeout=1) as r:
+                    jpg = r.read()
+            except Exception:
+                self.link.state["cloud_cam"] = "no camera"   # the Pi is not reachable over Wi-Fi
+                time.sleep(2.0)
+                continue
+            try:
+                req = urllib.request.Request(f"{self.base}/camera", data=jpg, method="POST", headers=hdr)
+                urllib.request.urlopen(req, timeout=3).read()
+                self.link.state["cloud_cam"] = "ok"
+            except Exception:
+                self.link.state["cloud_cam"] = "error"
+                time.sleep(1.0)
+            time.sleep(max(0.0, self.cam_period - (time.time() - t0)))
 
 
 def build_app(link, pilot, auto):
@@ -544,6 +608,9 @@ def main():
                     help="Packet telemetry API base URL (or env PACKET_API_URL); token in env PACKET_INGEST_TOKEN")
     ap.add_argument("--drone-id", default="packet-v0")
     ap.add_argument("--cloud-hz", type=float, default=1.0)
+    ap.add_argument("--pi-url", default="http://packet-cv.local:8080",
+                    help="the Pi camera (companion/cam_stream.py), sent to the API when reachable; 'none' to turn off")
+    ap.add_argument("--cloud-cam-fps", type=float, default=2.0, help="camera frames per second to the API; 0 = off")
     ap.add_argument("--sa-ch", type=int, default=int(os.environ.get("PACKET_SA_CH", 5)),
                     help="RC channel of the SA switch, CH5 on the Boxer (backend control allowed when high). 0 = backend control off")
     ap.add_argument("--routes", default=str(autonomy.ROUTES), help="folder for pads.json and routes")
@@ -559,9 +626,14 @@ def main():
         token = os.environ.get("PACKET_INGEST_TOKEN")
         if not token:
             raise SystemExit("--cloud-url needs the env PACKET_INGEST_TOKEN")
-        push = CloudPush(link, args.cloud_url, args.drone_id, token, max(0.2, min(5.0, args.cloud_hz)), auto)
+        pi_url = None if args.pi_url == "none" else args.pi_url
+        push = CloudPush(link, args.cloud_url, args.drone_id, token, max(0.2, min(5.0, args.cloud_hz)), auto,
+                         pi_url, max(0.0, min(10.0, args.cloud_cam_fps)))
         threading.Thread(target=push.loop, daemon=True).start()
         print(f"Pushing telemetry to {push.url} at {args.cloud_hz:g} Hz")
+        if push.pi_url and push.cam_period:
+            threading.Thread(target=push.camera_loop, daemon=True).start()
+            print(f"Forwarding the Pi camera ({push.pi_url}) at {args.cloud_cam_fps:g} fps when reachable")
     print(f"Packet ground control on http://localhost:{args.http}  (radio {args.port} @ {args.baud})")
     if not args.sa_ch:
         print("SA channel not set (--sa-ch): backend trips are refused")

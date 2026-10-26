@@ -126,7 +126,7 @@ class Link:
                   mavutil.mavlink.MAV_FRAME_LOCAL_NED, VEL_YAWRATE_MASK,
                   0, 0, 0, vn, ve, vd, 0, 0, 0, 0, yaw_rate_rad)
 
-    LIGHTS_PWM = {"status": 1000, "aviation": 1500, "off": 2000}   # lua/lights.lua: SB top / middle / bottom
+    LIGHTS_PWM = {"status": 1000, "aviation": 1500, "landing": 900, "off": 2000}   # lua/lights.lua: SB top / middle / bottom; landing 900 = laptop only, below the Boxer's 988..2012
 
     def lights(self, mode, ch=6, gcs_sysid=255):
         """Set the arm lights with an RC override of the SB channel (LIT_CH).
@@ -740,7 +740,7 @@ def build_app(link, pilot, auto, air, ceil):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--port", default="/dev/cu.usbserial-DU0E540E", help="telemetry radio serial port")
-    ap.add_argument("--baud", type=int, default=57600)
+    ap.add_argument("--baud", type=int, default=115200, help="radio serial speed; FC SERIAL1_BAUD and both SiK radios SERIAL_SPEED are 115 (2026-10-25)")
     ap.add_argument("--http", type=int, default=8650)
     ap.add_argument("--qgc", default="udpout:127.0.0.1:14550", help="forward to QGC; 'none' to turn off")
     ap.add_argument("--tunnel", default="udpout:127.0.0.1:14560",

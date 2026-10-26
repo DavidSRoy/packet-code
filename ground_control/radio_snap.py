@@ -5,16 +5,17 @@ autopilot logic need; a snapshot is extra. So:
 
 - Snapshots run only while the laptop cannot reach the Pi over Wi-Fi (with
   Wi-Fi, the page shows the real video).
-- Each cycle (0.5 s), it checks the telemetry: ATTITUDE and
-  GLOBAL_POSITION_INT must arrive at 85% or more of their requested rates
-  over the last 2 s, and the drone heartbeat must be fresh. Only then does it
-  ask the Pi for picture pieces.
-- The number of pieces per cycle grows by 1 while the telemetry stays at full
-  rate, and halves (with a 2 s pause) when it drops. ArduPilot lowers its own
-  telemetry rates when the radio buffer fills, so a drop in the received
-  telemetry is the signal that the snapshots use too much of the link.
+- Every CYCLE it checks the telemetry: ATTITUDE and GLOBAL_POSITION_INT must
+  arrive at 85% or more of their requested rates over the last 2 s, and the
+  drone heartbeat must be fresh. Only then does it send CTRL (and the Pi
+  sends pieces only while CTRL keeps coming).
+- The Pi sends the pieces evenly spaced at RATE pieces/s. Each second the rate
+  goes up by RATE_STEP while the telemetry is at full rate and the piece loss
+  (gaps in the sequence numbers) is low. It goes down by RATE_CUT when the
+  loss is high, and the Pi stops (2 s pause, rate halved) when the telemetry
+  drops. ArduPilot lowers its own telemetry rates when the radio buffer fills,
+  so a telemetry drop means the snapshots use too much of the link.
 """
-import os
 import sys
 import threading
 import time
@@ -24,15 +25,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "companion"))
 import snap_proto as sp                    # noqa: E402
 
-CYCLE = 0.5             # s
+CYCLE = 0.1             # s between CTRL messages (ground to drone: no telemetry bandwidth; a fast
+                        # "complete" lets the Pi start the next picture with little idle time)
 HEALTH_WINDOW = 2.0     # s
 HEALTH_MIN = 0.85       # of the requested rate
 EXPECT = {"ATTITUDE": 10.0, "GLOBAL_POSITION_INT": 5.0}   # Hz, as requested in Link.request_streams
-W_START, W_MAX = 2, 16  # pieces per cycle
-MIN_GAP = 1.0           # s between pictures
-FRAME_TIMEOUT = 10.0    # s to finish one picture
-PIECE_TIMEOUT = 1.5     # s before a piece is asked for again
-WIDTH, QUALITY = 320, 20     # WebP q20: about 1.2 KB for 320x180 grey
+RATE_START, RATE_MIN, RATE_MAX = 8.0, 2.0, 80.0           # pieces/s (one piece: about 145 B on the radio)
+RATE_STEP = 2.0         # pieces/s added each second while healthy and the loss is low
+RATE_CUT = 0.75         # rate factor each second while the loss is high
+LOSS_HIGH, LOSS_LOW = 0.05, 0.02
+WIDTH, QUALITY = 320, 20     # colour WebP q20: about 2.1 KB for 320x180
 
 
 class RadioSnap:
@@ -40,21 +42,23 @@ class RadioSnap:
         self.link = link
         self.pi_url_fn = pi_url_fn          # returns the Pi URL or None
         self.seen = {k: deque() for k in EXPECT}
-        self.w = W_START
+        self.rate = RATE_START
         self.pause_until = 0.0
-        self.frame = 0                      # frame being received
+        self.frame = 0                      # frame being received (0 = none yet)
         self.parts = {}
         self.nchunks = 0
-        self.started = 0.0
-        self.asked = {}                     # piece -> time asked, for the current picture
-        self.n_asked = self.n_got = 0       # pieces asked / received (all pictures)
-        self.jpg = None                     # last complete picture
+        self.done_frame = 0                 # last complete frame: tell the Pi (CTRL complete flag)
+        self.jpg = None                     # last complete picture (WebP)
         self.jpg_t = 0.0
         self.jpg_frame = 0
         self.period = None                  # smoothed seconds between complete pictures
         self.wifi_ok = False
         self.wifi_checked = 0.0
-        self.sent_bytes = deque()           # (t, bytes) of received pieces
+        self.rx = deque()                   # (t, seq, bytes) of received pieces, last 5 s
+        self.last_seq = None
+        self.lost = deque()                 # (t, n) pieces lost (sequence gaps), last 5 s
+        self.next_rate_t = 0.0
+        self.lock = threading.Lock()
         link.hooks.append(self.on_msg)
         link.state["radio_snap"] = None
 
@@ -67,24 +71,29 @@ class RadioSnap:
             r = sp.unpack(bytes(msg.payload[:msg.payload_length]))
             if not r or r[0] != "data":
                 return
-            _, frame, chunk, nchunks, data = r
-            self.sent_bytes.append((time.time(), len(data) + 12 + 128))
-            if frame != self.frame:
-                if self.frame != -1:
-                    return                          # a late piece of an old picture
-                self.frame, self.parts, self.nchunks = frame, {}, nchunks
-            self.parts[chunk] = data
-            self.n_got += 1
-            if len(self.parts) == self.nchunks:
-                self.jpg = b"".join(self.parts[i] for i in range(self.nchunks))
-                if self.jpg_t:
-                    gap = time.time() - self.jpg_t
-                    self.period = gap if self.period is None else self.period + 0.3 * (gap - self.period)
-                self.jpg_t, self.jpg_frame = time.time(), frame
-                self.parts, self.nchunks, self.asked = {}, 0, {}
-                self.w = min(W_MAX, self.w + 1)         # finished while healthy: allow more next time
+            _, seq, frame, chunk, nchunks, data = r
+            now = time.time()
+            with self.lock:
+                if self.last_seq is not None:
+                    gap = (seq - self.last_seq) & 0xFFFF
+                    if 1 < gap < 1000:
+                        self.lost.append((now, gap - 1))
+                self.last_seq = seq
+                self.rx.append((now, seq, 12 + 133))       # one TUNNEL message on the radio: MAVLink2 header + payload
+                if frame == self.done_frame:
+                    return                          # a resent piece of a finished picture
+                if frame != self.frame:
+                    self.frame, self.parts, self.nchunks = frame, {}, nchunks   # the Pi moved on
+                self.parts[chunk] = data
+                if len(self.parts) == self.nchunks:
+                    self.jpg = b"".join(self.parts[i] for i in range(self.nchunks))
+                    if self.jpg_t:
+                        gap_t = now - self.jpg_t
+                        self.period = gap_t if self.period is None else self.period + 0.3 * (gap_t - self.period)
+                    self.jpg_t, self.jpg_frame, self.done_frame = now, frame, frame
+                    self.parts, self.nchunks = {}, 0
 
-    # ---- decide and ask (own thread) ----
+    # ---- decide and send CTRL (own thread) ----
     def healthy(self, now):
         if not self.link.state.get("link"):
             return False
@@ -111,46 +120,22 @@ class RadioSnap:
             self.wifi_ok = ok
         return self.wifi_ok
 
-    def ask(self, frame, first, count):
+    def loss(self, now, window=2.0):
+        got = sum(1 for t, _, _ in self.rx if now - t <= window)
+        lost = sum(n for t, n in self.lost if now - t <= window)
+        return lost / (got + lost) if got + lost >= 8 else 0.0
+
+    def send_ctrl(self):
         L = self.link
         if L.sysid is None:
             return
-        payload = sp.pack_req(frame, first, count, QUALITY, WIDTH)
+        with self.lock:
+            if self.frame and self.frame != self.done_frame:
+                payload = sp.pack_ctrl(self.frame, False, self.rate, QUALITY, WIDTH, set(self.parts), self.nchunks)
+            else:
+                payload = sp.pack_ctrl(self.done_frame, True, self.rate, QUALITY, WIDTH, set(), 0)
         L.send(L.m.mav.tunnel_send, 1, 191, sp.PAYLOAD_TYPE, len(payload),
                list(payload) + [0] * (128 - len(payload)))
-
-    def request(self, now):
-        """Ask for up to w pieces: the rest of this picture, or a new picture."""
-        busy = self.frame == -1 or self.parts or self.nchunks
-        if busy and now - self.started > FRAME_TIMEOUT:
-            busy = False                                    # give up on this picture
-        if not busy:
-            if now - self.jpg_t < MIN_GAP:
-                return
-            self.frame, self.parts, self.nchunks, self.started = -1, {}, 0, now
-            self.asked = {i: now for i in range(self.w)}
-            self.n_asked += self.w
-            self.ask(0, 0, self.w)
-            return
-        if self.frame == -1:                                # no piece yet
-            if now - self.started > 2:
-                self.started = now
-                self.asked = {i: now for i in range(self.w)}
-                self.ask(0, 0, self.w)
-            return
-        todo = [i for i in range(self.nchunks)
-                if i not in self.parts and now - self.asked.get(i, 0) > PIECE_TIMEOUT]
-        in_flight = sum(1 for i, t in self.asked.items() if i not in self.parts and now - t <= PIECE_TIMEOUT)
-        room = self.w - in_flight
-        if not todo or room <= 0:
-            return
-        first, n = todo[0], 1
-        while n < room and first + n in todo:
-            n += 1
-        for i in range(first, first + n):
-            self.asked[i] = now
-        self.n_asked += n
-        self.ask(self.frame, first, n)
 
     def loop(self):
         while self.link.running:
@@ -160,30 +145,43 @@ class RadioSnap:
             for q in self.seen.values():                  # keep only the last HEALTH_WINDOW
                 while q and now - q[0] > HEALTH_WINDOW:
                     q.popleft()
+            with self.lock:
+                while self.rx and now - self.rx[0][0] > 5:
+                    self.rx.popleft()
+                while self.lost and now - self.lost[0][0] > 5:
+                    self.lost.popleft()
+            loss = self.loss(now)
             state = "wifi" if self.wifi(now) else None
             if state is None:
                 if not self.healthy(now):
-                    if self.w > 1 or now >= self.pause_until:
-                        self.w = max(1, self.w // 2)
+                    if now >= self.pause_until:
+                        self.rate = max(RATE_MIN, self.rate / 2)
                         self.pause_until = now + 2.0
-                    state = "telemetry first"
+                    state = "telemetry first"                 # no CTRL: the Pi stops within 1.5 s
                 elif now < self.pause_until:
                     state = "telemetry first"
                 else:
                     state = "on"
-                    self.request(now)
-                    self.w = min(W_MAX, self.w + 1)     # telemetry at full rate: allow one more piece
-            while self.sent_bytes and now - self.sent_bytes[0][0] > 5:
-                self.sent_bytes.popleft()
+                    if now >= self.next_rate_t:               # rate step once each second
+                        self.next_rate_t = now + 1.0
+                        if loss > LOSS_HIGH:
+                            self.rate = max(RATE_MIN, self.rate * RATE_CUT)
+                        elif loss < LOSS_LOW:
+                            # grow, but stay near what arrives: a rate far above the link
+                            # only fills the radio buffer, then the loss and the telemetry drop
+                            got = sum(1 for t, _, _ in self.rx if now - t <= 2.0) / 2.0
+                            cap = max(RATE_START, 1.25 * got)
+                            self.rate = min(RATE_MAX, cap, self.rate + RATE_STEP)
+                    self.send_ctrl()
             s["radio_snap"] = {
                 "state": state,                      # wifi | on | telemetry first
                 "frame": self.jpg_frame if self.jpg else None,
                 "age_s": round(now - self.jpg_t, 1) if self.jpg else None,
                 "bytes": len(self.jpg) if self.jpg else None,
-                "pieces_per_cycle": self.w,
+                "rate_pps": round(self.rate, 1),
+                "loss_pct": round(loss * 100, 1),
                 "period_s": round(self.period, 2) if self.period else None,
-                "rx_bps": round(sum(b for _, b in self.sent_bytes) / 5),
+                "rx_bps": round(sum(b for _, _, b in self.rx) / 5),
                 "receiving": f"{len(self.parts)}/{self.nchunks}" if self.parts else None,
-                "asked_got": [self.n_asked, self.n_got],
                 "telemetry_hz": {k: round(len(q) / HEALTH_WINDOW, 1) for k, q in self.seen.items()},
             }

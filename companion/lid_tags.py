@@ -44,9 +44,12 @@ class LidFinder:
             cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_36h11), p)
 
     def find(self, gray, K, dist=None):
-        """Return [{box, tags, range_m, xyz_m, yaw_deg, px_per_cell}] for each box seen."""
+        """Return [{box, tags, range_m, xyz_m, yaw_deg, px_per_cell, R, outlines}] for each box seen.
+
+        xyz_m and R map lid points into the camera frame: X_cam = R @ X_lid + xyz_m.
+        outlines has the image corners of each tag that was found."""
         dist = np.zeros(5) if dist is None else dist
-        pts = defaultdict(lambda: ([], [], [], []))  # box -> obj, img, tag names, cell px
+        pts = defaultdict(lambda: ([], [], [], [], []))  # box -> obj, img, tag names, cell px, outlines
         for det, table, cells, kind in ((self.det_big, self.big, 6, "A"),
                                         (self.det_small, self.small, 8, "T")):
             corners, ids, _ = det.detectMarkers(gray)
@@ -58,10 +61,11 @@ class LidFinder:
                 box, obj = table[int(i)]
                 img = c.reshape(4, 2).astype(np.float64)
                 side = np.mean(np.linalg.norm(img - np.roll(img, 1, axis=0), axis=1))
-                o, m, n, s = pts[box]
+                o, m, n, s, ol = pts[box]
                 o.extend(obj); m.extend(img); n.append(f"{kind}{int(i)}"); s.append(side / cells)
+                ol.append({"tag": f"{kind}{int(i)}", "px": img.round(1).tolist()})
         out = []
-        for box, (o, m, names, cell_px) in sorted(pts.items()):
+        for box, (o, m, names, cell_px, outlines) in sorted(pts.items()):
             o, m = np.array(o), np.array(m)
             flag = cv2.SOLVEPNP_IPPE if len(o) == 4 else cv2.SOLVEPNP_ITERATIVE
             if len(o) > 4:  # seed with IPPE on the first tag, then refine on all points
@@ -76,7 +80,8 @@ class LidFinder:
             yaw = math.degrees(math.atan2(R[1, 0], R[0, 0]))
             out.append({"box": box, "tags": names, "range_m": float(np.linalg.norm(tv)),
                         "xyz_m": tv.flatten().tolist(), "yaw_deg": yaw,
-                        "px_per_cell": float(min(cell_px))})
+                        "px_per_cell": float(min(cell_px)),
+                        "R": R.tolist(), "outlines": outlines})
         return out
 
 

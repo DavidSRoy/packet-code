@@ -7,17 +7,31 @@ Pi Zero 2 W uses very little CPU. Only one program can use the camera at a time.
 /            page that loads /frame.jpg in a loop (works in Safari)
 /frame.jpg   the latest frame
 /stream      multipart MJPEG (works in Chrome, VLC, OpenCV)
+/lid.json    the latest lid detection: box ID, tags, and where the camera and the
+             drone are relative to the box (see lid_pose below)
 
 Example:
   python3 cam_stream.py --width 1280 --height 800 --fps 15
+
+Mount (drone body frame, metres): the camera is --mount-fwd ahead of the drone
+centre (the bottom-plate underside), --mount-right to the right and --mount-down
+below it. It looks straight down with the top of the image toward the drone nose;
+--mount-rot turns the camera counter-clockwise (seen from above) from that.
 """
 import argparse
+import json
+import math
 import os
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import cv2
+import numpy as np
+
+from lid_tags import LidFinder, camera_matrix
+
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--dev", default="/dev/video0")
@@ -25,9 +39,21 @@ ap.add_argument("--width", type=int, default=1280)
 ap.add_argument("--height", type=int, default=800)
 ap.add_argument("--fps", type=int, default=15)
 ap.add_argument("--port", type=int, default=8080)
+ap.add_argument("--hfov", type=float, default=None,
+                help="horizontal FOV, deg. Default: 48.8 for a Logitech C270, else 70 (OV9281)")
+ap.add_argument("--layout", default=os.path.join(HERE, "lid_layout.json"))
+ap.add_argument("--detect-hz", type=float, default=5.0)
+ap.add_argument("--mount-fwd", type=float, default=0.134, help="m, under the GPS mast")
+ap.add_argument("--mount-right", type=float, default=0.0)
+ap.add_argument("--mount-down", type=float, default=0.02)
+ap.add_argument("--mount-rot", type=float, default=0.0, help="deg")
+ap.add_argument("--mav", default="udpout:127.0.0.1:14650",
+                help="FC link for the pose over the radio (mav_tunnel.py bridge); 'none' to turn off")
+ap.add_argument("--mav-hz", type=float, default=2.0)
 a = ap.parse_args()
 
 latest = {"jpg": None, "n": 0}
+lid = {"t": 0.0, "frame": -1, "boxes": [], "hz": 0.0, "w": 0, "h": 0, "error": None}
 
 
 def _std_dht():
@@ -87,6 +113,62 @@ def grab():
             cond.notify_all()
 
 
+NAME = camera_name(a.dev)
+HFOV = a.hfov if a.hfov else (48.8 if "C270" in NAME.upper() else 70.0)
+
+
+def lid_pose(r):
+    """Camera and drone pose in the lid frame from one LidFinder result.
+
+    Lid frame: origin at the sticker centre, +x along the long side (sticker
+    right), +y along the short side (sticker top), +z up out of the lid.
+    Camera frame: x image right, y image down, z out of the lens.
+    """
+    R = np.array(r["R"]); t = np.array(r["xyz_m"])
+    Rt = R.T                                  # camera frame -> lid frame
+    cam = -Rt @ t                             # camera position in the lid frame
+    # Drone body axes in the camera frame (camera looks down, image top = nose),
+    # then turned by the mount rotation about the down axis.
+    c, s = math.cos(math.radians(a.mount_rot)), math.sin(math.radians(a.mount_rot))
+    fwd_c = np.array([s, -c, 0.0])
+    right_c = np.array([c, s, 0.0])
+    down_c = np.array([0.0, 0.0, 1.0])
+    to_centre_c = -(a.mount_fwd * fwd_c + a.mount_right * right_c + a.mount_down * down_c)
+    centre = cam + Rt @ to_centre_c
+    fwd_l = Rt @ fwd_c
+    yaw = math.degrees(math.atan2(fwd_l[1], fwd_l[0]))   # nose direction from lid +x, CCW
+    down_l = Rt @ down_c
+    tilt = math.degrees(math.acos(max(-1.0, min(1.0, -down_l[2]))))
+    return {"box": r["box"], "tags": r["tags"], "px_per_cell": round(r["px_per_cell"], 1),
+            "camera_m": [round(v, 4) for v in cam], "drone_m": [round(v, 4) for v in centre],
+            "yaw_deg": round(yaw, 1), "tilt_deg": round(tilt, 1),
+            "range_m": round(r["range_m"], 3), "outlines": r["outlines"]}
+
+
+def detect():
+    finder = LidFinder(a.layout)
+    seen, n, t0 = -1, 0, time.time()
+    while True:
+        with cond:
+            cond.wait_for(lambda: latest["n"] != seen, timeout=2)
+            jpg, seen = latest["jpg"], latest["n"]
+        if jpg is None:
+            continue
+        start = time.time()
+        try:
+            gray = cv2.imdecode(np.frombuffer(jpg, np.uint8), cv2.IMREAD_GRAYSCALE)
+            K = camera_matrix(gray.shape[1], gray.shape[0], HFOV)
+            boxes = [lid_pose(r) for r in finder.find(gray, K)]
+            err = None
+        except Exception as e:                  # keep the stream running if one frame fails
+            boxes, err = [], f"{type(e).__name__}: {e}"
+        n += 1
+        if time.time() - t0 > 2:
+            lid["hz"], n, t0 = round(n / (time.time() - t0), 1), 0, time.time()
+        lid.update(t=time.time(), frame=seen, boxes=boxes, w=gray.shape[1], h=gray.shape[0], error=err)
+        time.sleep(max(0.0, 1.0 / a.detect_hz - (time.time() - start)))
+
+
 PAGE = """<!doctype html><html><head><meta name=viewport content="width=device-width">
 <title>Packet camera</title><style>body{margin:0;background:#000;color:#ccc;font:14px system-ui}
 img{display:block;width:100vw;height:calc(100vh - 28px);object-fit:contain}p{margin:6px 10px}</style></head>
@@ -107,7 +189,23 @@ class H(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
+    def end_headers(self):
+        # The ground-control page on the laptop reads these from another origin.
+        self.send_header("Access-Control-Allow-Origin", "*")
+        super().end_headers()
+
     def do_GET(self):
+        if self.path.startswith("/lid.json"):
+            body = json.dumps(dict(lid, camera=NAME, hfov_deg=HFOV, now=time.time(),
+                                   mount={"fwd": a.mount_fwd, "right": a.mount_right,
+                                          "down": a.mount_down, "rot": a.mount_rot})).encode()
+            self.send_response(200)
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if self.path == "/":
             self.send_response(200)
             self.send_header("Content-Type", "text/html")
@@ -149,6 +247,40 @@ class H(BaseHTTPRequestHandler):
             pass
 
 
+def radio():
+    """Send the pose to the ground station over the radio, without Wi-Fi.
+
+    Three DEBUG_VECT messages with no target, so the FC forwards them to the
+    radio (about 250 B/s at 2 Hz):
+      LIDATT  x = box id (-1 = no box in view), y = yaw deg, z = tilt deg
+      LIDPOS  x, y, z = drone centre in the lid frame, m
+      LIDCAM  x = camera height m, y = px per tag cell, z = number of tags
+    time_usec = the detection time.
+    """
+    os.environ.setdefault("MAVLINK20", "1")
+    from pymavlink import mavutil
+    m = mavutil.mavlink_connection(a.mav, source_system=1, source_component=191)
+    while True:
+        time.sleep(1.0 / a.mav_hz)
+        if time.time() - lid["t"] > 1.5:        # detection stopped: send nothing
+            continue
+        us = int(lid["t"] * 1e6)
+        b = lid["boxes"][0] if lid["boxes"] else None
+        try:
+            if b is None:
+                m.mav.debug_vect_send(b"LIDATT", us, -1.0, 0.0, 0.0)
+                continue
+            m.mav.debug_vect_send(b"LIDATT", us, float(b["box"]), b["yaw_deg"], b["tilt_deg"])
+            m.mav.debug_vect_send(b"LIDPOS", us, *map(float, b["drone_m"]))
+            m.mav.debug_vect_send(b"LIDCAM", us, float(b["camera_m"][2]), float(b["px_per_cell"]),
+                                  float(len(b["tags"])))
+        except OSError:
+            time.sleep(1)
+
+
 threading.Thread(target=grab, daemon=True).start()
-print(f"streaming on http://0.0.0.0:{a.port}/", flush=True)
+if a.mav != "none":
+    threading.Thread(target=radio, daemon=True).start()
+threading.Thread(target=detect, daemon=True).start()
+print(f"streaming on http://0.0.0.0:{a.port}/  camera {NAME}, HFOV {HFOV} deg", flush=True)
 ThreadingHTTPServer(("", a.port), H).serve_forever()

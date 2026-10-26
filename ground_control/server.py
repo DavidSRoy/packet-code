@@ -47,9 +47,11 @@ BATT_RESERVE_PCT = 20    # time left counts down to this charge, the landing res
 class Link:
     """Serial link to the drone plus the shared telemetry state."""
 
-    def __init__(self, port, baud, qgc):
+    def __init__(self, port, baud, qgc, tunnel=None):
         self.m = mavutil.mavlink_connection(port, baud=baud, source_system=254, source_component=190)
         self.qgc = mavutil.mavlink_connection(qgc, source_system=254) if qgc else None
+        # SSH to the Pi over the radio (tools/mav_ssh.py): TUNNEL + HEARTBEAT out, anything back in
+        self.tunnel = mavutil.mavlink_connection(tunnel, source_system=254) if tunnel else None
         self.lock = threading.Lock()
         self.sysid = None
         self.compid = 1
@@ -63,7 +65,9 @@ class Link:
             "lat": None, "lon": None, "log_file": None,
             "home_lat": None, "home_lon": None, "fence_on": None, "fence_r": None,
             "alt_msl": None, "cloud": "off", "sa_on": False, "sa_raw": None,
+            "lid": None,    # box camera pose from the Pi over the radio (cam_stream.py radio())
         }
+        self.lid_parts = {}
         self.sa_ch = 0              # RC channel of the SA switch (0 = not set: backend control off)
         self.hooks = []             # called with every MAVLink message
         self.pos_hooks = []         # called with the state at every GLOBAL_POSITION_INT
@@ -170,6 +174,8 @@ class Link:
                 raw = getattr(msg, f"chan{self.sa_ch}_raw", 0)
                 s["sa_raw"] = raw
                 s["sa_on"] = 1700 < raw < 2200  # SA down/on = backend may fly
+        elif t == "DEBUG_VECT" and msg.name.startswith("LID"):
+            self.lid_update(msg)
         elif t == "STATUSTEXT":
             self.note(msg.text, msg.severity)
         elif t == "HOME_POSITION":
@@ -182,6 +188,25 @@ class Link:
             elif msg.param_id == "BATT_CAPACITY":
                 s["batt_cap"] = msg.param_value
                 self.estimate_time()
+
+    def lid_update(self, msg):
+        """Put the three LID* DEBUG_VECT parts of one detection together."""
+        p = self.lid_parts
+        if p.get("us") != msg.time_usec:
+            p.clear()
+            p["us"] = msg.time_usec
+        p[msg.name] = (msg.x, msg.y, msg.z)
+        att = p.get("LIDATT")
+        if att is None:
+            return
+        lid = {"rx": time.time(), "box": None}
+        if att[0] >= 0:
+            if "LIDPOS" not in p or "LIDCAM" not in p:
+                return
+            cam = p["LIDCAM"]
+            lid.update(box=int(att[0]), yaw_deg=att[1], tilt_deg=att[2], drone_m=list(p["LIDPOS"]),
+                       camera_z=cam[0], px_per_cell=cam[1], ntags=int(cam[2]))
+        self.state["lid"] = lid
 
     def filter_current(self):
         """Average the current while flying (about 20 s), for the time-left estimate."""
@@ -226,6 +251,20 @@ class Link:
                         self.qgc.write(msg.get_msgbuf())
                     except OSError:
                         pass
+            if self.tunnel:
+                if msg is not None and msg.get_msgId() in (0, 385):   # HEARTBEAT, TUNNEL (by id: works in either dialect)
+                    try:
+                        self.tunnel.write(msg.get_msgbuf())
+                    except OSError:
+                        pass
+                try:
+                    q = self.tunnel.recv_msg()
+                except OSError:
+                    q = None
+                if q is not None and q.get_type() != "BAD_DATA":
+                    busy = True
+                    with self.lock:
+                        self.m.write(q.get_msgbuf())
             if self.qgc:
                 q = self.qgc.recv_msg()
                 if q is not None and q.get_type() != "BAD_DATA":
@@ -442,6 +481,8 @@ def build_app(link, pilot, auto):
                 s["speeds"] = pilot.speeds
                 s["messages"] = [{"t": t, "sev": sev, "text": txt} for t, sev, txt in link.messages[-15:]]
                 s["auto"] = auto.summary()
+                if s["lid"]:
+                    s["lid"] = dict(s["lid"], age=time.time() - s["lid"]["rx"])
                 await ws.send_str(json.dumps(s))
                 await asyncio.sleep(0.1)  # 10 Hz, same as the ATTITUDE stream
 
@@ -497,6 +538,8 @@ def main():
     ap.add_argument("--baud", type=int, default=57600)
     ap.add_argument("--http", type=int, default=8650)
     ap.add_argument("--qgc", default="udpout:127.0.0.1:14550", help="forward to QGC; 'none' to turn off")
+    ap.add_argument("--tunnel", default="udpout:127.0.0.1:14560",
+                    help="SSH-over-radio link for tools/mav_ssh.py; 'none' to turn off")
     ap.add_argument("--cloud-url", default=os.environ.get("PACKET_API_URL"),
                     help="Packet telemetry API base URL (or env PACKET_API_URL); token in env PACKET_INGEST_TOKEN")
     ap.add_argument("--drone-id", default="packet-v0")
@@ -506,7 +549,8 @@ def main():
     ap.add_argument("--routes", default=str(autonomy.ROUTES), help="folder for pads.json and routes")
     args = ap.parse_args()
 
-    link = Link(args.port, args.baud, None if args.qgc == "none" else args.qgc)
+    link = Link(args.port, args.baud, None if args.qgc == "none" else args.qgc,
+                None if args.tunnel == "none" else args.tunnel)
     pilot = Pilot(link)
     auto = autonomy.Autonomy(link, args.sa_ch, args.routes)
     threading.Thread(target=link.run, daemon=True).start()

@@ -172,7 +172,30 @@
   .leaflet-div-icon { background: none; border: 0; }
   #offline { position: fixed; z-index: 450; left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--dim); font-size: 11px; letter-spacing: .16em; display: none; }
 
+  /* box camera (Pi companion) */
+  #cam { top: 64px; left: 324px; width: 400px; overflow: hidden; }
+  #cam.big { inset: 64px 280px 112px 324px; width: auto; display: flex; flex-direction: column; }
+  #cam .att-h { padding: 9px 12px 7px; }
+  .cam-view { position: relative; background: #000; aspect-ratio: 16 / 9; }
+  #cam.big .cam-view { flex: 1; aspect-ratio: auto; }
+  .cam-view img, .cam-view canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .cam-view .none { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--dim); font-size: 11px; letter-spacing: .16em; }
+  .cam-f { display: grid; grid-template-columns: 1fr 116px; gap: 10px; padding: 9px 12px 10px; }
+  .cam-f .tele { grid-template-columns: 1fr 1fr 1fr; }
+  .cam-box { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .cam-box b { font: 700 18px var(--mono); color: var(--friendly); }
+  .cam-box span { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+  #cam-top { width: 116px; height: 116px; border: 1px solid var(--line); border-radius: 2px; }
+  .cam-url { display: flex; gap: 6px; align-items: center; padding: 0 12px 10px; }
+  .cam-url input { flex: 1; min-width: 0; background: rgba(0,0,0,.35); border: 1px solid var(--line-2); color: var(--text);
+    font: 11px var(--mono); padding: 4px 6px; border-radius: 2px; user-select: text; }
+
   @media (max-width: 1100px) {
+    #cam { width: max(220px, calc(100vw - 324px - 292px)); }
+    #cam.big { inset: 64px 292px 112px 324px; width: auto; }
+    .cam-f { grid-template-columns: 1fr; } #cam-top { display: none; }
+    .cam-f .tele { grid-template-columns: 1fr 1fr; }
     #fly { left: 12px; right: 12px; transform: none; flex-wrap: wrap; justify-content: center; }
     #actions { width: 220px; } #mapctl { right: 244px; }
     .stat-row .opt { display: none; }
@@ -238,6 +261,27 @@
     <div class="gauge" id="g-alt"></div>
   </div>
 </div>
+</div>
+
+<div id="cam" class="panel">
+  <div class="att-h"><span class="lbl">Box camera</span>
+    <span><span class="lbl" id="cam-rate">—</span><button id="cam-big">EXPAND</button></span></div>
+  <div class="cam-view"><img id="cam-img" alt=""><canvas id="cam-ov"></canvas><div class="none" id="cam-none">NO CAMERA</div></div>
+  <div class="cam-f">
+    <div>
+      <div class="cam-box"><span class="lbl">Box</span><b id="cam-id">—</b><span id="cam-tags"></span></div>
+      <div class="tele">
+        <div><span class="lbl">Along box</span><b id="cam-x">—<small>m</small></b></div>
+        <div><span class="lbl">Across</span><b id="cam-y">—<small>m</small></b></div>
+        <div><span class="lbl">Above lid</span><b id="cam-z">—<small>m</small></b></div>
+        <div><span class="lbl">Yaw to box</span><b id="cam-yaw">—<small>°</small></b></div>
+        <div><span class="lbl">Cam height</span><b id="cam-ch">—<small>m</small></b></div>
+        <div><span class="lbl">Tilt</span><b id="cam-tilt">—<small>°</small></b></div>
+      </div>
+    </div>
+    <canvas id="cam-top" width="232" height="232" title="Top view: lid (grey), drone centre and nose (blue), camera (white)"></canvas>
+  </div>
+  <div class="cam-url"><span class="lbl">Pi</span><input id="cam-url" spellcheck="false"></div>
 </div>
 
 <div id="mapctl" class="panel">
@@ -542,6 +586,7 @@ function render(down) {
   $("b-basis").textContent = s.batt_min_basis ? `to 20% · ${s.batt_min_basis}` : "to 20% reserve";
   $("pos").textContent = s.lat != null ? `${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}` : "NO POSITION";
   window.attitudeUpdate && window.attitudeUpdate(s);
+  window.radioLid = s.lid;
   renderTrips(s.auto);
 
   const big = $("keys-big"), p = $("keys-p");
@@ -557,6 +602,119 @@ function render(down) {
 
 setInterval(() => { $("clock").textContent = new Date().toISOString().slice(11, 19) + " UTC"; }, 1000);
 connect();
+</script>
+<script>
+/* ---------- box camera: frames and lid pose from the Pi (companion/cam_stream.py) ----------
+   Positions are in the lid frame: origin at the sticker centre, x along the long side,
+   y along the short side, z up out of the lid. "Drone" is the drone centre
+   (bottom-plate underside); the Pi converts from the camera with its mount offset. */
+(() => {
+  const $ = id => document.getElementById(id);
+  const LID_W = 0.3076, LID_H = 0.2112;            // BX-006 lid top face, m
+  const STK_W = 0.300, STK_H = 0.200;              // sticker
+  const url = $("cam-url"), img = $("cam-img"), ov = $("cam-ov"), top = $("cam-top");
+  url.value = new URLSearchParams(location.search).get("pi")
+    || (() => { try { return localStorage.getItem("piUrl"); } catch { return null; } })()
+    || "http://packet-cv.local:8080";
+  url.onchange = () => { try { localStorage.setItem("piUrl", url.value.trim()); } catch {} };
+  url.onkeydown = e => e.stopPropagation();       // typing here must not fly the drone
+  const base = () => url.value.trim().replace(/\/+$/, "");
+
+  let frames = 0, fpsT = performance.now(), lid = null, lidAge = Infinity, ok = false;
+  function next() { img.src = `${base()}/frame.jpg?${Date.now()}`; }
+  img.onload = () => { ok = true; frames++; $("cam-none").style.display = "none"; next(); };
+  img.onerror = () => { ok = false; $("cam-none").style.display = "flex"; $("cam-none").textContent = "NO CAMERA"; setTimeout(next, 1000); };
+  next();
+
+  async function poll() {
+    try {
+      const r = await fetch(`${base()}/lid.json`, { cache: "no-store", signal: AbortSignal.timeout(800) });
+      lid = await r.json(); lidAge = lid.now - lid.t;
+    } catch { lid = null; }
+    setTimeout(poll, lid ? 200 : 1000);
+  }
+  poll();
+  setInterval(render, 200);         // also runs when the Pi is not reachable over Wi-Fi
+
+  const f2 = v => v == null ? "—" : (v >= 0 ? "+" : "") + v.toFixed(2);
+  function setV(id, v) { const el = $(id); el.firstChild.nodeValue = v; }
+
+  // Pose source: Wi-Fi (/lid.json, full detail) when fresh, else the radio
+  // (server.py "lid": DEBUG_VECT from the Pi through the FC, about 2 Hz).
+  function pose() {
+    if (lid && lidAge < 1.5) {
+      const b = lid.boxes && lid.boxes.length ? lid.boxes[0] : null;
+      return { src: "WI-FI", b, tags: b ? `${b.tags.join(" ")} · ${b.px_per_cell} px/cell` : "no tags in view" };
+    }
+    const r = window.radioLid;
+    if (r && r.age < 2.5) {
+      const b = r.box == null ? null : { box: r.box, drone_m: r.drone_m, yaw_deg: r.yaw_deg, tilt_deg: r.tilt_deg,
+                                          camera_m: [null, null, r.camera_z] };
+      return { src: "RADIO", b, tags: b ? `${r.ntags} tags · ${r.px_per_cell.toFixed(1)} px/cell` : "no tags in view" };
+    }
+    return { src: null, b: null, tags: lid ? "pose stale" : "no pose (Wi-Fi or radio)" };
+  }
+
+  function render() {
+    const dt = (performance.now() - fpsT) / 1000;
+    const p = pose(), b = p.b;
+    if (dt > 1) {
+      const parts = [];
+      if (ok) parts.push(`${(frames / dt).toFixed(0)} FPS`);
+      if (p.src === "WI-FI") parts.push(`${lid.hz} HZ POSE`);
+      if (p.src) parts.unshift(p.src);
+      $("cam-rate").textContent = parts.length ? parts.join(" · ") : "—";
+      frames = 0; fpsT = performance.now();
+    }
+    if (!ok) $("cam-none").textContent = p.src === "RADIO" ? "NO VIDEO · POSE OVER RADIO" : "NO CAMERA";
+    $("cam-id").textContent = b ? String(b.box) : "—";
+    $("cam-tags").textContent = p.tags;
+    setV("cam-x", b ? f2(b.drone_m[0]) : "—");
+    setV("cam-y", b ? f2(b.drone_m[1]) : "—");
+    setV("cam-z", b ? b.drone_m[2].toFixed(2) : "—");
+    setV("cam-yaw", b ? (b.yaw_deg >= 0 ? "+" : "") + b.yaw_deg.toFixed(0) : "—");
+    setV("cam-ch", b ? b.camera_m[2].toFixed(3) : "—");
+    setV("cam-tilt", b ? b.tilt_deg.toFixed(1) : "—");
+    drawOverlay(b && p.src === "WI-FI" ? lid.boxes : [], lid);
+    drawTop(b);
+  }
+
+  function drawOverlay(boxes, l) {
+    const w = ov.clientWidth, h = ov.clientHeight, dpr = devicePixelRatio || 1;
+    if (ov.width !== w * dpr) { ov.width = w * dpr; ov.height = h * dpr; }
+    const g = ov.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    if (!l || !l.w) return;
+    const s = Math.min(w / l.w, h / l.h), ox = (w - l.w * s) / 2, oy = (h - l.h * s) / 2;   // object-fit: contain
+    g.lineWidth = 2; g.font = "600 11px ui-monospace, Menlo, monospace";
+    for (const b of boxes) for (const o of b.outlines) {
+      g.strokeStyle = o.tag[0] === "A" ? "#5ad1ff" : "#4fd68a";
+      g.beginPath(); o.px.forEach(([x, y], i) => g[i ? "lineTo" : "moveTo"](ox + x * s, oy + y * s)); g.closePath(); g.stroke();
+      const [x0, y0] = o.px[0]; g.fillStyle = g.strokeStyle; g.fillText(o.tag, ox + x0 * s + 3, oy + y0 * s - 4);
+    }
+  }
+
+  function drawTop(b) {
+    const g = top.getContext("2d"), W = top.width, H = top.height;
+    g.clearRect(0, 0, W, H);
+    const sc = (W - 24) / 0.62, cx = W / 2, cy = H / 2;           // 0.62 m wide view, lid frame +y up
+    const P = (x, y) => [cx + x * sc, cy - y * sc];
+    g.fillStyle = "rgba(255,255,255,.06)"; g.strokeStyle = "rgba(255,255,255,.35)"; g.lineWidth = 1;
+    let [x, y] = P(-LID_W / 2, LID_H / 2); g.fillRect(x, y, LID_W * sc, LID_H * sc); g.strokeRect(x, y, LID_W * sc, LID_H * sc);
+    g.strokeStyle = "rgba(255,255,255,.15)"; [x, y] = P(-STK_W / 2, STK_H / 2); g.strokeRect(x, y, STK_W * sc, STK_H * sc);
+    g.strokeStyle = "rgba(255,255,255,.12)"; g.beginPath(); g.moveTo(cx, 8); g.lineTo(cx, H - 8); g.moveTo(8, cy); g.lineTo(W - 8, cy); g.stroke();
+    if (!b) return;
+    const [dx, dy] = P(b.drone_m[0], b.drone_m[1]);
+    const cam = b.camera_m[0] != null, [kx, ky] = cam ? P(b.camera_m[0], b.camera_m[1]) : [dx, dy];
+    const a = b.yaw_deg * Math.PI / 180, L = 22;
+    g.strokeStyle = "rgba(90,209,255,.5)"; g.beginPath(); g.moveTo(dx, dy); g.lineTo(kx, ky); g.stroke();
+    g.fillStyle = "#5ad1ff"; g.beginPath(); g.arc(dx, dy, 5, 0, 2 * Math.PI); g.fill();
+    g.strokeStyle = "#5ad1ff"; g.lineWidth = 2; g.beginPath(); g.moveTo(dx, dy); g.lineTo(dx + L * Math.cos(a), dy - L * Math.sin(a)); g.stroke();
+    if (cam) { g.fillStyle = "#fff"; g.beginPath(); g.arc(kx, ky, 3, 0, 2 * Math.PI); g.fill(); }
+  }
+
+  $("cam-big").onclick = () => { const on = $("cam").classList.toggle("big"); $("cam-big").textContent = on ? "CLOSE" : "EXPAND"; };
+  addEventListener("resize", () => render());
+})();
 </script>
 <script type="module">
 import { AttitudeView, ringGauge } from "/static/attitude.js";

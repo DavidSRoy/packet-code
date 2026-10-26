@@ -1,0 +1,13 @@
+[Unit]
+Description=Packet: SSH over the telemetry radio (MAVLink TUNNEL on /dev/serial0)
+After=network.target ssh.service
+
+[Service]
+User=packet
+WorkingDirectory=/home/packet/companion
+ExecStart=/home/packet/companion/.venv/bin/python -u mav_tunnel.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

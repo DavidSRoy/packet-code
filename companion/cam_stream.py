@@ -273,6 +273,51 @@ def wifi_ip():
         return None
 
 
+def snapshots(m, send_lock):
+    """Answer snapshot requests from ground control (snap_proto.py).
+
+    Sends only the pieces that ground control asked for; ground control asks
+    only while the telemetry arrives at its full rate (telemetry first)."""
+    import snap_proto as sp
+    frame_id, chunks, queue = 0, [], []
+    while True:
+        try:
+            msg = m.recv_match(type="TUNNEL", blocking=True, timeout=0.05)
+        except OSError:
+            msg = None
+        if msg is not None and msg.target_system == 1 and msg.target_component == 191 \
+                and msg.payload_type == sp.PAYLOAD_TYPE:
+            r = sp.unpack(bytes(msg.payload[:msg.payload_length]))
+            if r and r[0] == "req":
+                _, frame, first, count, quality, width = r
+                peer = (msg.get_srcSystem(), msg.get_srcComponent())
+                if frame == 0 or frame != frame_id or not chunks:
+                    jpg = latest["jpg"]
+                    if jpg is None or time.time() - latest.get("at", 0) > 2:
+                        continue                          # no fresh camera frame: say nothing
+                    gray = cv2.imdecode(np.frombuffer(jpg, np.uint8), cv2.IMREAD_GRAYSCALE)
+                    w = max(64, min(width or 320, 640))
+                    h = int(round(gray.shape[0] * w / gray.shape[1]))
+                    ok, enc = cv2.imencode(".jpg", cv2.resize(gray, (w, h), interpolation=cv2.INTER_AREA),
+                                           [cv2.IMWRITE_JPEG_QUALITY, max(10, min(quality or 30, 90))])
+                    data = enc.tobytes()
+                    frame_id = frame_id % 65535 + 1
+                    chunks = [data[i:i + sp.CHUNK] for i in range(0, len(data), sp.CHUNK)]
+                    first = 0
+                queue = [(peer, i) for i in range(first, min(first + count, len(chunks)))]
+        # send the asked pieces, spaced so the FC can mix in its telemetry
+        if queue:
+            peer, i = queue.pop(0)
+            payload = sp.pack_data(frame_id, i, len(chunks), chunks[i])
+            try:
+                with send_lock:
+                    m.mav.tunnel_send(peer[0], peer[1], sp.PAYLOAD_TYPE, len(payload),
+                                      list(payload) + [0] * (128 - len(payload)))
+            except OSError:
+                pass
+            time.sleep(0.02)
+
+
 def radio():
     """Send the pose to the ground station over the radio, without Wi-Fi.
 
@@ -289,6 +334,8 @@ def radio():
     os.environ.setdefault("MAVLINK20", "1")
     from pymavlink import mavutil
     m = mavutil.mavlink_connection(a.mav, source_system=1, source_component=191)
+    send_lock = threading.Lock()
+    threading.Thread(target=snapshots, args=(m, send_lock), daemon=True).start()
     next_ip = 0.0
     while True:
         time.sleep(1.0 / a.mav_hz)
@@ -298,6 +345,7 @@ def radio():
             if ip:
                 o = [int(v) for v in ip.split(".")]
                 try:
+                  with send_lock:
                     m.mav.debug_vect_send(b"PIIP", int(time.time() * 1e6), float(o[0] * 256 + o[1]),
                                           float(o[2] * 256 + o[3]), float(a.port))
                 except OSError:
@@ -307,6 +355,7 @@ def radio():
         us = int(lid["t"] * 1e6)
         b = lid["boxes"][0] if lid["boxes"] else None
         try:
+          with send_lock:
             if b is None:
                 m.mav.debug_vect_send(b"LIDATT", us, -1.0, 0.0, 0.0)
                 continue

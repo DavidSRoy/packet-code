@@ -198,6 +198,9 @@
   .cam-view { position: relative; background: #000; aspect-ratio: 16 / 9; }
   #cam.big .cam-view { flex: 1; aspect-ratio: auto; }
   .cam-view img, .cam-view canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  #cam-snap { display: none; image-rendering: auto; filter: contrast(1.05); }
+  #cam-snap-tag { position: absolute; left: 8px; bottom: 8px; display: none; padding: 3px 7px; border-radius: 3px;
+    background: rgba(0,0,0,.65); border: 1px solid var(--line-2); font: 600 10px var(--mono); letter-spacing: .1em; color: var(--warn); }
   .cam-view .none { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     color: var(--dim); font-size: 11px; letter-spacing: .16em; }
   .cam-f { display: grid; grid-template-columns: 1fr 116px; gap: 10px; padding: 9px 12px 10px; }
@@ -325,7 +328,8 @@
 <div id="cam" class="panel">
   <div class="att-h"><span class="lbl">Box camera</span>
     <span><span class="lbl" id="cam-rate">—</span><button id="cam-big">EXPAND</button></span></div>
-  <div class="cam-view"><img id="cam-img" alt=""><canvas id="cam-ov"></canvas><div class="none" id="cam-none">NO CAMERA</div></div>
+  <div class="cam-view"><img id="cam-img" alt=""><img id="cam-snap" alt=""><canvas id="cam-ov"></canvas><div class="none" id="cam-none">NO CAMERA</div>
+    <div id="cam-snap-tag"></div></div>
   <div class="cam-f">
     <div>
       <div class="cam-box"><span class="lbl">Box</span><b id="cam-id">—</b><span id="cam-tags"></span></div>
@@ -902,6 +906,7 @@ function render(down) {
   window.attitudeUpdate && window.attitudeUpdate(s);
   window.radioLid = s.lid;
   window.radioPiUrl = s.pi_url;
+  window.radioSnap = s.radio_snap;
   renderTrips(s.auto);
   renderAir(s.ceil, down);
 
@@ -991,6 +996,17 @@ connect();
       frames = 0; fpsT = performance.now();
     }
     if (!ok) $("cam-none").textContent = p.src === "RADIO" ? "NO VIDEO · POSE OVER RADIO" : "NO CAMERA";
+    // snapshot over the radio when there is no Wi-Fi video (ground_control/radio_snap.py)
+    const rs = window.radioSnap, snap = $("cam-snap"), tag = $("cam-snap-tag");
+    const showSnap = !ok && rs && rs.frame != null && rs.age_s < 30;
+    if (showSnap && snap.dataset.frame !== String(rs.frame)) { snap.src = `/radio_snap.jpg?f=${rs.frame}`; snap.dataset.frame = String(rs.frame); }
+    snap.style.display = showSnap ? "block" : "none";
+    img.style.visibility = ok ? "visible" : "hidden";      // no broken-image icon
+    $("cam-none").style.display = ok || showSnap ? "none" : "flex";
+    tag.style.display = !ok && rs && rs.state ? "block" : "none";
+    if (!ok && rs) tag.textContent = rs.state === "telemetry first" ? "RADIO SNAPSHOT · PAUSED: TELEMETRY FIRST"
+      : showSnap ? `RADIO SNAPSHOT · ${rs.age_s.toFixed(0)} S OLD · ${(rs.bytes / 1024).toFixed(1)} KB` + (rs.receiving ? ` · NEXT ${rs.receiving}` : "")
+      : `RADIO SNAPSHOT · WAITING${rs.receiving ? " " + rs.receiving : ""}`;
     $("cam-id").textContent = b ? String(b.box) : "—";
     $("cam-tags").textContent = p.tags;
     setV("cam-x", b ? f2(b.drone_m[0]) : "—");

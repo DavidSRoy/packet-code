@@ -29,6 +29,7 @@ from pymavlink import mavutil
 import autonomy
 import ceiling
 from gps_guard import GpsGuard
+from radio_snap import RadioSnap
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent))
@@ -686,6 +687,8 @@ def main():
     ap.add_argument("--pi-url", default="auto",
                     help="the Pi camera (companion/cam_stream.py), sent to the API when reachable. "
                          "'auto' = the IP the Pi sends over the radio; 'none' to turn off")
+    ap.add_argument("--radio-snap", type=int, default=1,
+                    help="1 = box camera snapshots over the radio when the Pi is not on Wi-Fi (telemetry first); 0 = off")
     ap.add_argument("--cloud-cam-fps", type=float, default=2.0, help="camera frames per second to the API; 0 = off")
     ap.add_argument("--sa-ch", type=int, default=int(os.environ.get("PACKET_SA_CH", 5)),
                     help="RC channel of the SA switch, CH5 on the Boxer (backend control allowed when high). 0 = backend control off")
@@ -710,6 +713,12 @@ def main():
     ceil.start()
     threading.Thread(target=link.run, daemon=True).start()
     threading.Thread(target=pilot.loop, daemon=True).start()
+    snap = None
+    if args.radio_snap:
+        pi_fn = (lambda: link.state.get("pi_url")) if args.pi_url == "auto" else \
+                (lambda: None if args.pi_url == "none" else args.pi_url)
+        snap = RadioSnap(link, pi_fn)
+        threading.Thread(target=snap.loop, daemon=True).start()
     if args.cloud_url:
         token = os.environ.get("PACKET_INGEST_TOKEN")
         if not token:
@@ -726,7 +735,15 @@ def main():
     if not args.sa_ch:
         print("SA channel not set (--sa-ch): backend trips are refused")
     print(f"Legal ceiling: {args.ceiling} (the map loads in the background)")
-    web.run_app(build_app(link, pilot, auto, air, ceil), host="127.0.0.1", port=args.http, print=None)
+    app = build_app(link, pilot, auto, air, ceil)
+
+    async def radio_snap_jpg(_):
+        """The last box camera snapshot that came over the radio (radio_snap.py)."""
+        if not snap or not snap.jpg:
+            return web.Response(status=404, text="no radio snapshot yet")
+        return web.Response(body=snap.jpg, content_type="image/jpeg", headers={"Cache-Control": "no-store"})
+    app.router.add_get("/radio_snap.jpg", radio_snap_jpg)
+    web.run_app(app, host="127.0.0.1", port=args.http, print=None)
 
 
 if __name__ == "__main__":

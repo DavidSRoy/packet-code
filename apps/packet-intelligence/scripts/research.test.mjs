@@ -11,6 +11,8 @@ function runtime() {
   vm.createContext(context);
   vm.runInContext(read('research-data.js'), context);
   vm.runInContext(read('canvas.js').replace(/\nshell\(\);\s*$/, ''), context);
+  vm.runInContext(read('seattle-data.js'), context);
+  vm.runInContext(read('ontology.js').replace(/\nshell\(\);\s*$/, ''), context);
   return expression => vm.runInContext(expression, context);
 }
 test('research records have unique IDs and safe source links', () => {
@@ -44,4 +46,14 @@ test('unsafe URLs and financial assets stay outside the active application',()=>
  assert.equal(run(`safeUrl('javascript:alert(1)')`),'');
  assert.equal(run(`safeUrl('https://www.faa.gov/uas')`),'https://www.faa.gov/uas');
  assert.doesNotMatch(read('index.html'),/packet-model|dashboard\.js|app\.js/);
+});
+
+test('ontology links resolve and preserve government evidence boundaries',()=>{
+ const run=runtime();
+ assert.equal(run(`researchData.permits.length`),500);
+ assert.equal(run(`objectLinks.every(l=>[l.from,l.to].every(k=>{const i=k.indexOf(':');return researchData[k.slice(0,i)]?.some(r=>r.id===k.slice(i+1))}))`),true);
+ assert.equal(run(`researchData.properties.every(p=>p.restaurant_count===null)`),true);
+ assert.equal(run(`researchData.properties.filter(p=>p.category==='Permit-linked site').reduce((n,p)=>n+p.permit_count,0)`),500);
+ assert.equal(run(`researchData.permits.every(p=>linkedObjects('permits',p.id).some(l=>l.ds==='properties'))`),true);
+ assert.equal(run(`researchData.sources.find(s=>s.id==='src-food').status.includes('blocked')`),true);
 });

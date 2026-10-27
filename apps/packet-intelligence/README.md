@@ -33,3 +33,11 @@ The canvas supports configurable widgets, saved layouts, themes, collapsible nav
 `public/research-data.js` contains the October 25, 2026 research snapshot. It distinguishes reviewed summaries, metadata-indexed pages, linked documents and extraction limitations. Company capabilities and plans are distinct from regulator evidence. IBISWorld figures concern the general US food-delivery industry. The financial workbook and complete licensed PDF are excluded.
 
 Retain source URLs, dates, page references and review status when updating research. Never put credentials or personal notes in the public bundle. This repository and a normal Vercel production deployment are public unless separate access controls are configured.
+
+## Object platform
+
+The Ontology view separates source collections, typed objects and the analytical layer. Explicit, evidence-labeled links support object traversal and creating a linked object set for charting. `ontology.js` defines object properties, transformations and relationship resolution. Unknown ownership or tenant counts stay null / unverified.
+
+Seattle's official SDCI snapshot contains the latest 500 permit descriptions matching RESTAURANT. Permits link to normalized site addresses; a permit is not proof of a current restaurant. Company-page portfolio prospects remain separately labeled. King County parcel ownership is not yet joined and its food-establishment API required authentication when checked. This is a browser-local object model, not a server ingestion service or a Palantir deployment.
+
+Refresh the public Seattle snapshot explicitly with `node scripts/refresh-seattle.mjs`, review source dates and changes, then run tests/build. Original URL: https://data.seattle.gov/Built-Environment/Building-Permits/76t5-zqzr

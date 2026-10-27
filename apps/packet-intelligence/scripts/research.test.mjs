@@ -59,7 +59,7 @@ test('ontology links resolve and preserve government evidence boundaries',()=>{
 });
 test('market-share charts keep revenue and spending measures separate',()=>{
  const run=runtime();
- assert.equal(run(`researchData.appshares.reduce((s,r)=>s+r.share,0)`),100);
+ assert.ok(Math.abs(run(`researchData.appshares.reduce((s,r)=>s+r.share,0)`)-100)<1e-9);
  assert.equal(run(`researchData.appshares.find(r=>r.name==='DoorDash').period`),'End of 2024');
  assert.equal(run(`researchData.segments.find(r=>r.name==='DoorDash').share`),33.2);
  assert.equal(run(`S.layouts.overview.filter(w=>w.id.startsWith('marketshare-')).length`),2);

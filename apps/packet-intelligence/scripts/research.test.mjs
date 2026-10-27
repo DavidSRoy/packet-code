@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import vm from 'node:vm';
 const read = file => readFileSync(new URL('../public/' + file, import.meta.url), 'utf8');
 function runtime() {
@@ -15,6 +15,8 @@ function runtime() {
   vm.runInContext(read('restore-canvas.js'), context);
   vm.runInContext(read('ontology.js').replace(/\nshell\(\);\s*$/, ''), context);
   vm.runInContext(read('aircraft-comparison.js').replace(/\nshell\(\);\s*$/, ''), context);
+  vm.runInContext(read('aircraft-images.js'), context);
+  vm.runInContext(read('aircraft-compare-view.js').replace(/\nshell\(\);\s*$/, ''), context);
   return expression => vm.runInContext(expression, context);
 }
 test('research records have unique IDs and safe source links', () => {
@@ -76,4 +78,14 @@ test('aircraft comparison preserves payload configurations and range semantics',
  assert.equal(run(`researchData.aircraftComparison.find(r=>r.id==='wing-5').distance_miles`),12);
  assert.equal(run(`researchData.aircraftComparison.find(r=>r.id==='x650-52ah').endurance_min`),null);
  assert.equal(run(`S.layouts.aircraft.length`),3);
+});
+
+test('aircraft objects carry source-attributed local images and comparison selections',()=>{
+ const run=runtime();
+ const paths=JSON.parse(run(`JSON.stringify(aircraftComparison.map(r=>r.image_path))`));
+ assert.ok(paths.every(p=>/^images\/aircraft\/[a-z0-9.-]+$/.test(p)&&existsSync(new URL('../public/'+p,import.meta.url))));
+ assert.equal(run(`aircraftComparison.every(r=>r.image_source_url.startsWith('https://'))`),true);
+ assert.equal(run(`aircraftComparison.find(r=>r.id==='packet-stated').image_kind`),'Representative platform image');
+ assert.equal(run(`S.aircraftCompareIds.length`),3);
+ assert.equal(run(`S.aircraftCompareMode`),'compare');
 });

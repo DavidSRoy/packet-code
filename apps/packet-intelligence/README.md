@@ -4,10 +4,11 @@ Standalone browser-based drone-delivery research app. Independent of `packet.con
 
 ## Run
 
-Node.js 22 or newer. No runtime or build dependencies.
+Node.js 22 or newer. Run `npm ci` to install the Vercel middleware helper.
 
 ```sh
 cd apps/packet-intelligence
+npm ci
 npm test
 npm run build
 npm run dev
@@ -22,17 +23,17 @@ Development: `http://127.0.0.1:4173`. Build output: `dist/`.
 - Framework: Other
 - Build Command: `node scripts/build.mjs`
 - Output Directory: `dist`
-- Install Command: empty; no dependencies
+- Install Command: `npm ci`
 
 App-local `vercel.json` defines build settings and response headers. Deploy with a separate Vercel project; do not reconfigure another app's project.
 
 ## Research and storage
 
-The canvas supports configurable widgets, saved layouts, themes, collapsible navigation, CSV/JSON imports, article cards, and source drilldowns. User-created layouts, imports, notes, and task reviews save in browser storage. Export analysis to back up or move them between browsers/domains. There is no server-side account, shared database, or automatic website/PDF ingestion.
+The canvas supports configurable widgets, saved layouts, themes, collapsible navigation, CSV/JSON imports, article cards, and source drilldowns. User-created layouts, imports, notes, and task reviews save in browser storage. Export analysis to back up or move them between browsers/domains. A shared server-enforced test login protects access; research edits remain browser-local. There is no shared database or automatic website/PDF ingestion.
 
-`public/research-data.js` contains the October 25, 2026 research snapshot. It distinguishes reviewed summaries, metadata-indexed pages, linked documents and extraction limitations. Company capabilities and plans are distinct from regulator evidence. IBISWorld figures concern the general US food-delivery industry. The financial workbook and complete licensed PDF are excluded.
+`public/research-data.js` contains the October 25, 2026 research snapshot. It distinguishes reviewed summaries, metadata-indexed pages, linked documents and extraction limitations. Company capabilities and plans are distinct from regulator evidence. IBISWorld figures concern the general US food-delivery industry. The financial workbook is excluded. The original IBISWorld PDF is included under `public/documents/` with the user’s explicit authorization.
 
-Retain source URLs, dates, page references and review status when updating research. Never put credentials or personal notes in the public bundle. This repository and a normal Vercel production deployment are public unless separate access controls are configured.
+Retain source URLs, dates, page references and review status when updating research. Never put credentials or personal notes in the public bundle. The GitHub fork is public. Vercel production is protected by the test-login middleware.
 
 ## Object platform
 

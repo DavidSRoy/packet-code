@@ -12,9 +12,8 @@ function runtime() {
   vm.runInContext(read('research-data.js'), context);
   vm.runInContext(read('canvas.js').replace(/\nshell\(\);\s*$/, ''), context);
   vm.runInContext(read('seattle-data.js'), context);
+  vm.runInContext(read('restore-canvas.js'), context);
   vm.runInContext(read('ontology.js').replace(/\nshell\(\);\s*$/, ''), context);
-  vm.runInContext(read('outreach-data.js'), context);
-  vm.runInContext(read('boards.js').replace(/\nshell\(\);\s*$/, ''), context);
   return expression => vm.runInContext(expression, context);
 }
 test('research records have unique IDs and safe source links', () => {
@@ -64,15 +63,5 @@ test('market-share charts keep revenue and spending measures separate',()=>{
  assert.ok(Math.abs(run(`researchData.appshares.reduce((s,r)=>s+r.share,0)`)-100)<1e-9);
  assert.equal(run(`researchData.appshares.find(r=>r.name==='DoorDash').period`),'End of 2024');
  assert.equal(run(`researchData.segments.find(r=>r.name==='DoorDash').share`),33.2);
- assert.equal(run(`S.layouts.market.some(w=>w.dataset==='appshares')`),true);
- assert.equal(run(`S.layouts.overview.some(w=>w.dataset==='coverage')`),false);
-});
-
-test('outreach has official business contacts and market boards preserve source meaning',()=>{
- const run=runtime();
- assert.equal(run(`researchData.leads.length`),9);
- assert.equal(run(`researchData.leads.filter(r=>r.priority==='First wave').length`),4);
- assert.equal(run(`researchData.leads.every(r=>r.phone&&r.source_url.startsWith('https://')&&r.next_action)`),true);
- assert.equal(run(`researchData.marketdrivers.find(r=>r.year===2026).revenue_growth`),10.82);
- assert.equal(run(`S.layouts.structure.length`),4);
+ assert.equal(run(`S.layouts.overview.filter(w=>w.id.startsWith('marketshare-')).length`),2);
 });

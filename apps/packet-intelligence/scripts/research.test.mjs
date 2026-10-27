@@ -14,6 +14,7 @@ function runtime() {
   vm.runInContext(read('seattle-data.js'), context);
   vm.runInContext(read('restore-canvas.js'), context);
   vm.runInContext(read('ontology.js').replace(/\nshell\(\);\s*$/, ''), context);
+  vm.runInContext(read('aircraft-comparison.js').replace(/\nshell\(\);\s*$/, ''), context);
   return expression => vm.runInContext(expression, context);
 }
 test('research records have unique IDs and safe source links', () => {
@@ -64,4 +65,15 @@ test('market-share charts keep revenue and spending measures separate',()=>{
  assert.equal(run(`researchData.appshares.find(r=>r.name==='DoorDash').period`),'End of 2024');
  assert.equal(run(`researchData.segments.find(r=>r.name==='DoorDash').share`),33.2);
  assert.equal(run(`S.layouts.overview.filter(w=>w.id.startsWith('marketshare-')).length`),2);
+});
+
+test('aircraft comparison preserves payload configurations and range semantics',()=>{
+ const run=runtime();
+ assert.equal(run(`researchData.aircraftComparison.find(r=>r.id==='packet-stated').payload_lb`),10);
+ assert.ok(Math.abs(run(`researchData.aircraftComparison.find(r=>r.id==='x650-10ah').payload_lb`)-6.8343)<.001);
+ assert.equal(run(`researchData.aircraftComparison.find(r=>r.id==='x650-10ah').endurance_min`),30);
+ assert.equal(run(`researchData.aircraftComparison.find(r=>r.id==='wing-5').radius_miles`),null);
+ assert.equal(run(`researchData.aircraftComparison.find(r=>r.id==='wing-5').distance_miles`),12);
+ assert.equal(run(`researchData.aircraftComparison.find(r=>r.id==='x650-52ah').endurance_min`),null);
+ assert.equal(run(`S.layouts.aircraft.length`),3);
 });

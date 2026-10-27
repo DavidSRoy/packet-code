@@ -4,3 +4,14 @@
 .object-analysis-banner{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--chrome);color:var(--muted);font-size:12px}.object-analysis-banner span{display:flex;gap:9px;align-items:center}.object-analysis-banner .button{font-size:11px;padding:5px 8px}.type-list button:hover,.ontology-flow button:hover{background:var(--accent-soft,rgba(100,130,200,.12))}
 
 .pdf-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}#pdf-viewer{width:min(1400px,96vw);height:94vh;max-width:96vw;max-height:96vh;padding:0;background:var(--panel);color:var(--ink);border:1px solid var(--border);border-radius:5px}#pdf-viewer[open]{display:flex;flex-direction:column}#pdf-viewer::backdrop{background:rgba(0,0,0,.65)}#pdf-viewer .modal-head{flex:none}#pdf-viewer iframe{width:100%;flex:1;min-height:0;border:0;background:#525659}.pdf-fallback{padding:10px 20px;font-size:12px;color:var(--muted)}
+/* Fill holes between the existing cards without introducing separate boards. */
+#canvas{grid-auto-flow:row dense;grid-auto-rows:8px;align-items:start;gap:12px}
+#canvas .widget-body{min-height:0;max-height:390px;padding:10px 12px}
+#canvas .widget-note{margin-top:8px}
+#canvas .widget[data-type="stat"] .widget-body{min-height:110px}
+#canvas .widget[data-type="donut"] .widget-body{min-height:215px}
+#canvas .chart-svg{height:215px}
+#canvas .custom-cta{grid-column:1/-1;grid-row-end:span 5;min-height:88px}
+#canvas .bar-row{grid-template-columns:minmax(100px,28%) minmax(0,1fr) 46px}
+#canvas .widget[data-type="timeline"] .bar-row{grid-template-columns:minmax(130px,32%) minmax(0,1fr) 46px}
+@media(max-width:800px){#canvas .widget{grid-column:1/-1}}

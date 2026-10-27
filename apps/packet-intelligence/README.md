@@ -41,3 +41,9 @@ The Ontology view separates source collections, typed objects and the analytical
 Seattle's official SDCI snapshot contains the latest 500 permit descriptions matching RESTAURANT. Permits link to normalized site addresses; a permit is not proof of a current restaurant. Company-page portfolio prospects remain separately labeled. King County parcel ownership is not yet joined and its food-establishment API required authentication when checked. This is a browser-local object model, not a server ingestion service or a Palantir deployment.
 
 Refresh the public Seattle snapshot explicitly with `node scripts/refresh-seattle.mjs`, review source dates and changes, then run tests/build. Original URL: https://data.seattle.gov/Built-Environment/Building-Permits/76t5-zqzr
+
+## Test login
+
+Vercel middleware protects every route, including static research datasets and PDFs. Required sensitive environment variables: `PACKET_TEST_USER`, `PACKET_TEST_PASSWORD_HASH` (`salt:PBKDF2-SHA256 hex`, 150,000 iterations), and `PACKET_SESSION_SECRET` (at least 32 random characters). No password or signing secret is bundled in the browser. Sessions use signed eight-hour Secure/HttpOnly/SameSite cookies; logout deletes the session cookie. Rotate the signing secret to invalidate all sessions. Login attempts have a best-effort per-instance limit, not a distributed account lockout.
+
+Run `npm test` for research and auth checks. The Python static preview intentionally does not run server authentication; use Vercel for the protected application. This shared demo account is temporary, not a replacement for individual-user identity management. Files previously published to the public GitHub fork remain publicly available there; this login protects the Vercel site only.

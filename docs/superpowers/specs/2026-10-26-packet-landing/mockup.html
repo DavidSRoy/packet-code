@@ -1,0 +1,813 @@
+<title>Packet Hero Studies</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;700&family=Barlow+Condensed:wght@600;700&family=Libre+Franklin:wght@400;600&display=swap">
+<style>
+/* Layout: landing skeleton, round 5. The hero is a sign-up: ZIP check, then email. One left edge at the margin. Single light look on purpose (rule 0.6). */
+:root{
+  --white:#ffffff; --black:#111111; --red:#B4432F; --mustard:#D3A13F;
+  --display:'Libre Franklin',system-ui,sans-serif;
+  --body:'Atkinson Hyperlegible Next',system-ui,sans-serif;
+  --label:'Barlow Condensed','Arial Narrow',sans-serif;
+  --margin:clamp(20px,6.5vw,96px);
+  --control-h:44px; --control-font:16px; --field-label:12px;
+  color-scheme:light;
+}
+[hidden]{display:none!important}
+body{background:var(--white);color:var(--black);font-family:var(--body);font-size:17px;line-height:1.45}
+.lbl{font-family:var(--label);font-weight:600;text-transform:uppercase;letter-spacing:.1em;font-size:14px}
+a{color:var(--black);text-underline-offset:3px}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--black);outline-offset:3px}
+p{margin:0;max-width:60ch}
+h2{font-family:var(--display);font-weight:600;font-size:clamp(30px,3.4vw,44px);line-height:1.12;margin:0;text-wrap:balance;max-width:20ch}
+.pad{padding-left:max(var(--margin),env(safe-area-inset-left,0px));padding-right:max(var(--margin),env(safe-area-inset-right,0px))}
+.small{font-size:14px;line-height:20px}
+
+.band{height:8px;background:var(--black)}
+nav{display:flex;align-items:center;gap:32px;height:56px}
+nav .home{font-family:var(--display);font-weight:600;font-size:20px;text-decoration:none;margin-right:auto}
+nav .spacer{margin-right:auto}
+.navlink{white-space:nowrap;font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:0;text-decoration:none;padding:12px 0}
+nav a[aria-current="page"]{text-decoration:underline;text-underline-offset:6px;text-decoration-thickness:2px}
+
+/* station-sign button: band across the top, arrow module first, label flush left */
+.sign{display:inline-flex;align-self:flex-start;align-items:stretch;height:var(--control-h);background:var(--black);color:var(--white);text-decoration:none;border:0;border-radius:4px;position:relative;padding:0 16px 0 0;font:inherit;cursor:pointer}
+.sign::before{content:"";position:absolute;left:6px;right:6px;top:5px;height:1.5px;background:var(--white)}
+.sign:hover{color:var(--white);background:#000}
+.sign .arrow{width:36px;display:grid;place-items:center;border-right:1.5px solid var(--white);margin:11px 0 5px}
+.sign .arrow svg{width:14px;height:14px}
+.sign .txt{padding-left:12px;padding-top:3px;display:flex;align-items:center;font-weight:700;font-size:var(--control-font)}
+
+.field{display:flex;flex-direction:column;gap:8px}
+.field input{height:var(--control-h);border:0;border-bottom:1.5px solid var(--black);font:inherit;font-size:var(--control-font);padding:0;background:transparent;color:var(--black);width:100%}
+.row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px}
+.row .field{flex:1 1 200px}
+.textbtn{align-self:flex-start;border:0;background:none;padding:0;font:inherit;font-size:15px;font-weight:700;color:var(--black);text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:1.5px;cursor:pointer;height:var(--control-h)}
+.msg{min-height:24px}
+.msg b{font-weight:700}
+
+/* hero */
+.hero{position:relative;min-height:clamp(620px,86vh,880px);overflow:hidden}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero-copy{position:relative;z-index:1;max-width:440px;display:flex;flex-direction:column;gap:24px;padding-block:clamp(40px,9vh,112px) 64px}
+.hero h1{font-family:var(--display);font-weight:600;font-size:clamp(64px,9vw,136px);line-height:1;letter-spacing:-.02em;margin:0}
+.hero .ask{font-weight:700;font-size:18px;line-height:1.35}
+.hero form{display:flex;flex-direction:column;gap:16px}
+
+section{padding-block:clamp(72px,10vw,120px)}
+.lines{display:flex;flex-direction:column;gap:4px;margin-top:32px;margin-right:calc(-1 * max(var(--margin),env(safe-area-inset-right,0px)))}
+.lines span{display:block;height:8px}
+.trip{position:relative;height:200px;margin-top:48px}
+.trip canvas,.cta-art canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px 48px}
+.steps li{display:flex;flex-direction:column;gap:8px;min-width:0}
+.bullet{width:32px;height:32px;box-sizing:border-box;border-radius:50%;border:1.5px solid var(--black);display:grid;place-items:center;font-weight:700;font-size:15px;margin-bottom:8px;transition:background .3s,color .3s}
+.bullet.on{background:var(--black);color:var(--white)}
+.steps b{font-size:19px;line-height:1.3}
+
+.cta{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);align-items:stretch;padding-block:0;min-height:560px}
+.cta-copy{display:flex;flex-direction:column;justify-content:center;gap:24px;padding-block:96px}
+.cta-art{position:relative;min-height:420px;margin-right:calc(-1 * max(var(--margin),env(safe-area-inset-right,0px)))}
+
+.mission{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:48px;align-items:center}
+.mission-copy{display:flex;flex-direction:column;gap:24px}
+.mission .lead{font-size:20px;line-height:1.45}
+.drawing svg{width:100%;height:auto;display:block;overflow:visible}
+.drawing .ln{fill:none;stroke:var(--black);stroke-width:1.5}
+.drawing svg :is(path,circle,rect){filter:url(#pen1)}
+.drawing .pass2{filter:url(#pen2);stroke-opacity:.45;transform:translate(.8px,.6px)}
+.drawing .thin{fill:none;stroke:var(--black);stroke-width:.75}
+.drawing .hid{fill:none;stroke:var(--black);stroke-width:.75;stroke-dasharray:4 3}
+.drawing .ctr{fill:none;stroke:var(--black);stroke-width:.5;stroke-dasharray:12 3 2 3}
+.drawing text{font-family:var(--body);font-size:12px;fill:var(--black)}
+.drawing .dim{font-family:var(--label);font-weight:600;letter-spacing:.08em;font-size:12px;text-transform:uppercase}
+.drawing .num{font-family:var(--body);font-weight:700;font-size:11px;text-anchor:middle;dominant-baseline:central}
+.drawing [pathLength]{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 1.6s cubic-bezier(.3,.6,.2,1)}
+.drawing.on [pathLength]{stroke-dashoffset:0}
+.drawing .late{opacity:0;transition:opacity .6s 1.2s}
+.drawing.on .late{opacity:1}
+@media (prefers-reduced-motion:reduce){.drawing [pathLength]{stroke-dashoffset:0;transition:none}.drawing .late{opacity:1;transition:none}}
+.legend{list-style:none;margin:24px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 32px;font-size:15px}
+.legend li{display:flex;gap:12px;align-items:baseline}
+.legend b{font-variant-numeric:tabular-nums}
+
+/* product showcase: one product at a time, set like a hero; the next one shows barely, in the corner */
+.car{margin-top:48px}
+.stage{position:relative;display:grid;overflow:hidden;margin-right:calc(-1 * max(var(--margin),env(safe-area-inset-right,0px)));min-height:clamp(400px,38vw,540px)}
+.slide{grid-area:1 / 1;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);visibility:hidden}
+.slide.on{visibility:visible}
+.slide-copy{display:flex;flex-direction:column;gap:16px;align-self:center;padding-right:32px;opacity:0;transition:opacity .5s}
+.slide.on .slide-copy{opacity:1;transition-delay:.15s}
+.slide .no{font-family:var(--label);font-weight:600;letter-spacing:.1em;font-size:14px}
+.slide h3{font-family:var(--display);font-weight:600;font-size:clamp(40px,5vw,72px);line-height:1.02;letter-spacing:-.02em;margin:0}
+.slide a{font-weight:700;font-size:15px;text-underline-offset:5px;text-decoration-thickness:1.5px;align-self:flex-start;padding:4px 0}
+.slide-art{display:grid;place-items:center;padding:24px 18% 24px 0;min-height:0;opacity:0;transform:translate(14%,10%) scale(.7);transition:opacity .6s,transform .8s cubic-bezier(.2,.7,.2,1)}
+.slide.on .slide-art{opacity:1;transform:none}
+.slide-art svg{width:100%;height:100%;max-height:380px}
+.slide-art svg :is(path,circle,rect),.peek svg :is(path,circle,rect){filter:url(#pen3)}
+.slide .ln,.peek .ln{fill:none;stroke:var(--black);stroke-width:1}
+.slide .thin,.peek .thin{fill:none;stroke:var(--black);stroke-width:.5}
+.peek{position:absolute;right:0;bottom:0;width:clamp(180px,22vw,300px);transform:translate(45%,0);opacity:.5;pointer-events:none;transition:opacity .4s}
+.peek svg{width:100%;height:auto;display:block}
+.next{position:absolute;right:max(var(--margin),env(safe-area-inset-right,0px));bottom:24px;z-index:1;display:flex;align-items:center;gap:16px;border:0;background:none;padding:0;font:inherit;color:var(--black);cursor:pointer;text-align:right}
+.next-txt{display:flex;flex-direction:column;gap:2px;font-weight:700;font-size:15px}
+.next-txt .lbl{font-size:12px}
+.next-arrow{width:56px;height:56px;border:1.5px solid var(--black);border-radius:50%;display:grid;place-items:center;background:var(--white);transition:transform .2s}
+.next:hover .next-arrow{transform:translateX(4px)}
+.car-ctl{display:flex;align-items:center;gap:16px;margin-top:24px}
+.tabs{display:flex;gap:8px}
+.tab{width:44px;height:44px;border:0;background:none;padding:0;cursor:pointer;display:grid;align-items:center}
+.tab i{display:block;height:4px;background:#d9d9d9;position:relative;overflow:hidden}
+.tab i::after{content:"";position:absolute;inset:0;background:var(--black);transform:scaleX(0);transform-origin:left}
+.tab.done i::after{transform:scaleX(1)}
+.tab.on i::after{animation:fill var(--dur,7s) linear forwards}
+.car.paused .tab.on i::after,.car.still .tab.on i::after{animation:none;transform:scaleX(1)}
+@keyframes fill{to{transform:scaleX(1)}}
+.pp{width:44px;height:44px;border:1.5px solid var(--black);border-radius:50%;background:none;display:grid;place-items:center;cursor:pointer}
+.pp svg{fill:var(--black)}
+.pp .i-play,.car.paused .pp .i-pause{display:none}
+.car.paused .pp .i-play{display:inline}
+@media (prefers-reduced-motion:reduce){.slide-art,.slide-copy{transition:none}}
+
+footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:24px;padding-block:72px 48px}
+.emblem{position:relative;display:inline-block;align-self:flex-start;margin:16px;font-size:28px}
+.emblem span{display:block;font-family:var(--display);font-weight:600;line-height:1;text-box:trim-both cap alphabetic;padding:.37em}
+.emblem i{position:absolute;background:var(--black)}
+
+/* placeholder pages */
+.page{padding-block:72px 120px;display:flex;flex-direction:column;gap:48px}
+.page h1{font-family:var(--display);font-weight:600;font-size:clamp(40px,5vw,64px);line-height:1.05;margin:0}
+.list{border-top:1px solid var(--black);max-width:960px}
+.item{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:8px 32px;padding:20px 0;border-bottom:1px solid var(--black);align-items:baseline}
+.item b{font-size:19px}
+.ph{font-family:var(--label);font-weight:600;letter-spacing:.06em}
+
+.prod-head{display:flex;flex-direction:column;gap:16px;max-width:640px}
+.page .lead{font-size:20px;line-height:1.45}
+.prod{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:48px;align-items:center;border-top:1.5px solid var(--black);padding-top:40px;scroll-margin-top:24px}
+.prod.flip .prod-copy{order:2}
+.prod-copy{display:flex;flex-direction:column;gap:16px}
+.prod .no{font-family:var(--label);font-weight:600;letter-spacing:.1em;font-size:14px}
+.prod h2{font-size:clamp(36px,4.4vw,60px);line-height:1.04;letter-spacing:-.02em}
+.prod-art svg{width:100%;height:auto;max-height:360px;display:block}
+.prod-art svg :is(path,circle,rect),.item-card svg :is(path,circle,rect){filter:url(#pen3)}
+.prod .ln,.item-card .ln{fill:none;stroke:var(--black);stroke-width:1}
+.prod .thin,.item-card .thin{fill:none;stroke:var(--black);stroke-width:.5}
+.spec{margin:8px 0 0;border-top:1px solid var(--black)}
+.spec div{display:grid;grid-template-columns:minmax(0,160px) minmax(0,1fr);gap:16px;padding:10px 0;border-bottom:1px solid var(--black)}
+.spec dt{font-family:var(--label);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:13px;padding-top:2px}
+.spec dd{margin:0;font-size:15px}
+.store{display:flex;flex-direction:column;gap:32px;border-top:8px solid var(--black);padding-top:40px}
+.store-head{display:flex;flex-direction:column;gap:16px;max-width:640px}
+.tag{align-self:flex-start;background:var(--mustard);font-weight:700;padding:4px 8px;line-height:16px;font-size:13px}
+.items{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:32px}
+.item-card{display:flex;flex-direction:column;gap:4px;border-top:1.5px solid var(--black);padding-top:12px}
+.item-card svg{width:100%;height:auto;margin-bottom:8px}
+.item-card b{font-size:17px}
+.price{font-weight:700;font-size:15px;margin-top:4px}
+
+.man{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,11fr);gap:24px;border-top:1.5px solid var(--black);padding-block:24px 16px}
+.man .sec{font-size:15px;padding-top:10px}
+.man-body{display:flex;flex-direction:column;gap:24px;max-width:960px}
+.news{list-style:none;margin:0;padding:0;border-top:1px solid var(--black)}
+.news li{display:grid;grid-template-columns:minmax(0,160px) minmax(0,1fr);gap:16px;padding:16px 0;border-bottom:1px solid var(--black)}
+.news .lbl{font-size:13px;padding-top:3px}
+.news b{font-size:19px;line-height:1.3}
+.news p{margin-top:6px;font-size:15px}
+.plates2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.plate2{margin:0;display:flex;flex-direction:column;gap:12px}
+.plate2-art{border:1px solid var(--black);height:200px;display:grid;place-items:center}
+.plate2-art.type{display:flex;justify-content:center;align-items:center;gap:40px}
+.plate2 figcaption{display:flex;flex-direction:column;gap:4px}
+.emblem.big{font-size:48px;margin:0;align-self:center}
+.inks{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px}
+.inks li{display:flex;flex-direction:column;gap:4px}
+.chip{display:block;height:72px;border:1px solid var(--black);margin-bottom:8px}
+
+details{border-top:1px solid var(--black);padding-block:24px 64px}
+summary{cursor:pointer;padding:8px 0}
+details ul{margin:16px 0 0;padding-left:20px;max-width:70ch;display:flex;flex-direction:column;gap:8px}
+
+@media (max-width:760px){
+  nav{gap:16px}
+  .hero{display:flex;flex-direction:column;min-height:0}
+  .hero canvas{position:relative;inset:auto;height:300px;order:-1}
+  .hero-copy{padding-block:16px 56px;max-width:none}
+  .steps{grid-template-columns:minmax(0,1fr)}
+  .trip{height:160px}
+  .cta,.mission{grid-template-columns:minmax(0,1fr);min-height:0}
+  .legend{grid-template-columns:minmax(0,1fr)}
+  .stage{min-height:0}
+  .slide{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 220px}
+  .slide-copy{padding:0 max(var(--margin),env(safe-area-inset-right,0px)) 0 0}
+  .slide-art{padding:8px 24% 8px 0}
+  .peek{bottom:0;width:150px;transform:translate(62%,0)}
+  .next{bottom:16px}
+  .next-txt{display:none}
+  .cta-art{order:-1;min-height:300px;margin-left:calc(-1 * max(var(--margin),env(safe-area-inset-left,0px)))}
+  .cta-copy{padding-block:24px 72px}
+  .item{grid-template-columns:minmax(0,1fr)}
+  .prod{grid-template-columns:minmax(0,1fr);gap:24px}
+  .prod.flip .prod-copy{order:0}
+  .prod-art{order:-1}
+  .spec div{grid-template-columns:minmax(0,120px) minmax(0,1fr)}
+  .items{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 16px}
+  .man{grid-template-columns:minmax(0,1fr);gap:8px}
+  .man .sec{padding-top:0}
+  .news li{grid-template-columns:minmax(0,1fr);gap:4px}
+  .plates2{grid-template-columns:minmax(0,1fr)}
+  .inks{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+</style>
+
+<div class="band"></div>
+<nav class="pad" aria-label="Main">
+  <a class="home" href="#top" hidden>Packet</a><span class="spacer"></span>
+  <a class="navlink" href="#products">Products</a>
+  <a class="navlink" href="#press">Press</a>
+  <a class="navlink" href="#updates">Get updates</a>
+</nav>
+
+<main id="view-home">
+  <header class="hero" id="top">
+    <canvas id="cv-hero" role="img" aria-label="Dotted street grid around University Village on a slowly turning globe"></canvas>
+    <div class="hero-copy pad" id="hero-copy">
+      <h1>Packet</h1>
+      <form id="updates" novalidate>
+        <p class="ask" id="ask">Is Packet coming to your street?</p>
+
+        <div id="step-zip" class="row">
+          <label class="field" for="zip"><span class="lbl" style="font-size:var(--field-label)">ZIP code</span>
+            <input id="zip" name="zip" inputmode="numeric" autocomplete="postal-code" maxlength="5" placeholder="98105"></label>
+          <button class="sign" type="submit" id="btn-check"><span class="arrow" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 10h15M11 4l6 6-6 6"/></svg></span><span class="txt">Check</span></button>
+        </div>
+
+        <div id="step-email" class="row" hidden>
+          <label class="field" for="email"><span class="lbl" style="font-size:var(--field-label)">Email</span>
+            <input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com"></label>
+          <button class="sign" type="submit"><span class="arrow" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 10h15M11 4l6 6-6 6"/></svg></span><span class="txt">Get updates</span></button>
+        </div>
+
+        <!-- attribution seam: filled from the link's utm_* parameters and the referrer, sent with the sign-up -->
+        <input type="hidden" name="utm_source" id="utm_source">
+        <input type="hidden" name="utm_medium" id="utm_medium">
+        <input type="hidden" name="utm_campaign" id="utm_campaign">
+        <input type="hidden" name="referrer" id="referrer">
+
+        <p class="msg" id="msg" role="status" aria-live="polite"></p>
+        <button class="textbtn" type="button" id="restart" hidden>Check another ZIP code</button>
+      </form>
+      <p class="small">Packet for iPhone is coming to the App Store [LAUNCH DATE].</p>
+    </div>
+  </header>
+
+  <section class="pad" aria-labelledby="what">
+    <h2 id="what">Delivery from U Village shops to homes nearby.</h2>
+    <div class="lines" aria-hidden="true"><span style="background:var(--red)"></span><span style="background:var(--mustard)"></span><span style="background:var(--black)"></span></div>
+    <p style="margin-top:32px">Order in the Packet app, follow it as it comes, and find it at your front door. Packet will start with homes within [RADIUS] of University Village, Seattle.</p>
+  </section>
+
+  <section class="pad" aria-labelledby="how">
+    <h2 id="how">Three steps, all in the app.</h2>
+    <div class="trip"><canvas id="cv-trip" role="img" aria-label="The Packet icon travels along a dotted route past the three steps"></canvas></div>
+    <ol class="steps">
+      <li><span class="bullet on">1</span><b>Order</b><span>Pick from [VENDOR]'s menu at U Village and pay in the app.</span></li>
+      <li><span class="bullet">2</span><b>Follow it</b><span>See each step as it happens, with the time it will arrive.</span></li>
+      <li><span class="bullet">3</span><b>At your door</b><span>It's left at your front door. Bring it in when you're ready.</span></li>
+    </ol>
+  </section>
+
+  <section class="pad mission" aria-labelledby="mission-h">
+    <div class="mission-copy">
+      <h2 id="mission-h">Autonomous delivery, built around the way you live.</h2>
+      <p class="lead">From point A to point B faster than the road allows, and lighter on the streets you share.</p>
+      <p>Vehicle 01 is the first: a four-rotor aircraft that flies an order from U Village to your door.</p>
+    </div>
+    <figure class="drawing" id="drawing" style="margin:0">
+      <svg viewBox="0 0 660 380" role="img" aria-labelledby="dwg-t">
+        <defs>
+          <filter id="pen1" filterUnits="userSpaceOnUse" x="-20" y="-20" width="700" height="420"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="4"/></filter>
+          <filter id="pen2" filterUnits="userSpaceOnUse" x="-20" y="-20" width="700" height="420"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="11"/><feDisplacementMap in="SourceGraphic" scale="5"/></filter>
+          <filter id="pen3" filterUnits="userSpaceOnUse" x="-20" y="-20" width="700" height="420"><feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="1.8"/></filter>
+        </defs>
+        <title id="dwg-t">Technical drawing of Vehicle 01, a four-rotor aircraft, in plan and side view, carrying a red package under its body</title>
+        <!-- plan view, centre (170,190) -->
+        <path class="ctr" d="M20 190H320M170 40V340" pathLength="1"/>
+        <g class="hid">
+          <circle cx="90" cy="110" r="56" pathLength="1"/><circle cx="250" cy="110" r="56" pathLength="1"/>
+          <circle cx="90" cy="270" r="56" pathLength="1"/><circle cx="250" cy="270" r="56" pathLength="1"/>
+        </g>
+        <path class="ln" d="M145 165L90 110M195 165L250 110M145 215L90 270M195 215L250 270" pathLength="1"/>
+        <rect class="ln" x="140" y="160" width="60" height="60" rx="6" pathLength="1"/>
+        <g class="ln"><circle cx="90" cy="110" r="9" pathLength="1"/><circle cx="250" cy="110" r="9" pathLength="1"/><circle cx="90" cy="270" r="9" pathLength="1"/><circle cx="250" cy="270" r="9" pathLength="1"/></g>
+        <rect class="late" x="158" y="178" width="24" height="24" fill="var(--red)"/>
+        <!-- span dimension -->
+        <g class="late">
+          <path class="thin" d="M34 30V48M306 30V48M34 38H306"/><path d="M34 38l8-3v6zM306 38l-8-3v6z"/>
+          <rect x="128" y="30" width="84" height="16" fill="var(--white)"/><text class="dim" x="170" y="42" text-anchor="middle">Span [TBD]</text>
+          <text class="dim" x="170" y="368" text-anchor="middle">Plan</text>
+        </g>
+        <!-- side view, centre x 500, ground y 300 -->
+        <path class="ctr" d="M500 120V320" pathLength="1"/>
+        <path class="ln" d="M380 300H620" pathLength="1"/>
+        <path class="ln" d="M465 218H535M420 212H580M444 196H396M556 196H604" pathLength="1"/>
+        <rect class="ln" x="465" y="204" width="70" height="26" rx="4" pathLength="1"/>
+        <rect class="ln" x="414" y="200" width="12" height="14" pathLength="1"/><rect class="ln" x="574" y="200" width="12" height="14" pathLength="1"/>
+        <path class="ln" d="M420 200V196M580 200V196M476 230L452 298M524 230L548 298M444 298H460M540 298H556" pathLength="1"/>
+        <g class="late">
+          <path class="thin" d="M486 230V244M514 230V244"/>
+          <rect x="482" y="244" width="36" height="30" fill="var(--red)"/>
+          <!-- height dimension -->
+          <path class="thin" d="M612 196H640M612 300H640M630 196V300"/><path d="M630 196l-3 8h6zM630 300l-3-8h6z"/>
+          <text class="dim" transform="translate(648 248) rotate(90)" text-anchor="middle">Height [TBD]</text>
+          <text class="dim" x="500" y="368" text-anchor="middle">Side</text>
+          <!-- callouts -->
+          <path class="thin" d="M50 310L30 334"/><circle cx="24" cy="342" r="10" fill="var(--white)" stroke="var(--black)"/><text class="num" x="24" y="342">1</text>
+          <path class="thin" d="M182 160V130"/><circle cx="182" cy="120" r="10" fill="var(--white)" stroke="var(--black)"/><text class="num" x="182" y="120">2</text>
+          <path class="thin" d="M518 262H580"/><circle cx="590" cy="262" r="10" fill="var(--white)" stroke="var(--black)"/><text class="num" x="590" y="262">3</text>
+          <path class="thin" d="M456 286L412 266"/><circle cx="402" cy="262" r="10" fill="var(--white)" stroke="var(--black)"/><text class="num" x="402" y="262">4</text>
+        </g>
+      </svg>
+      <figcaption>
+        <ol class="legend">
+          <li><b>1</b><span>Rotor, one of four</span></li>
+          <li><b>2</b><span>Body: battery and flight computer</span></li>
+          <li><b>3</b><span>Payload: one order, up to [TBD]</span></li>
+          <li><b>4</b><span>Landing legs</span></li>
+        </ol>
+        <p class="small" style="margin-top:16px">Vehicle 01. Not to scale. Dimensions to follow.</p>
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="pad" aria-labelledby="system-h">
+    <h2 id="system-h">One system, from the shop to your door.</h2>
+    <div class="car" aria-roledescription="carousel" aria-label="Packet products">
+      <div class="stage" id="car-track">
+        <article class="slide" id="slide-0" role="group" aria-roledescription="slide" aria-label="1 of 3: Vehicle 01">
+          <div class="slide-copy"><span class="no">01</span><h3>Vehicle 01</h3><p>The four-rotor aircraft that carries each order. Payload [TBD].</p><a href="#products-vehicle">About Vehicle 01</a></div>
+          <div class="slide-art"><svg viewBox="20 0 260 150" aria-hidden="true"><path class="thin" d="M40 120H260"/><path class="ln" d="M120 82H180M80 76H220M104 66H56M196 66H244"/><rect class="ln" x="120" y="70" width="60" height="22" rx="4"/><rect class="ln" x="74" y="68" width="12" height="10"/><rect class="ln" x="214" y="68" width="12" height="10"/><path class="ln" d="M130 92L112 118M170 92L188 118"/><rect x="134" y="96" width="32" height="22" fill="var(--red)"/></svg></div>
+        </article>
+        <article class="slide" id="slide-1" role="group" aria-roledescription="slide" aria-label="2 of 3: Packet for iPhone">
+          <div class="slide-copy"><span class="no">02</span><h3>Packet for iPhone</h3><p>Order from U Village shops and follow each step to your door.</p><a href="#products-app">About the app</a></div>
+          <div class="slide-art"><svg viewBox="20 0 260 150" aria-hidden="true"><rect class="ln" x="112" y="4" width="76" height="142" rx="12"/><path class="thin" d="M124 30H176M124 40H160"/><path d="M130 118H144V97H158V80" fill="none" stroke="var(--mustard)" stroke-width="5" stroke-dasharray="0.1 7" stroke-linecap="round"/><rect x="152" y="66" width="12" height="12" fill="var(--red)"/></svg></div>
+        </article>
+        <article class="slide" id="slide-2" role="group" aria-roledescription="slide" aria-label="3 of 3: Dispatch">
+          <div class="slide-copy"><span class="no">03</span><h3>Dispatch</h3><p>Plans each flight and follows it from pickup to drop-off.</p><a href="#products-dispatch">About dispatch</a></div>
+          <div class="slide-art"><svg viewBox="20 0 260 150" aria-hidden="true"><path d="M30 30H270M30 75H270M30 120H270M70 10V140M150 10V140M230 10V140" fill="none" stroke="var(--black)" stroke-width="2" stroke-dasharray="0.1 6" stroke-linecap="round"/><path d="M70 120H150V75H230V30" fill="none" stroke="var(--mustard)" stroke-width="5" stroke-dasharray="0.1 7" stroke-linecap="round"/><rect x="62" y="112" width="16" height="16" fill="var(--black)"/><rect x="222" y="22" width="16" height="16" fill="var(--red)"/></svg></div>
+        </article>
+        <button class="next" id="car-next" type="button"><span class="next-txt"><span class="lbl">Next</span><span id="car-next-name">Packet for iPhone</span></span><span class="next-arrow" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 10h15M11 4l6 6-6 6"/></svg></span></button>
+        <div class="peek" id="car-peek" aria-hidden="true"></div>
+      </div>
+      <div class="car-ctl">
+        <div class="tabs"><button class="tab" type="button" aria-controls="slide-0" aria-label="Show Vehicle 01"><i></i></button><button class="tab" type="button" aria-controls="slide-1" aria-label="Show Packet for iPhone"><i></i></button><button class="tab" type="button" aria-controls="slide-2" aria-label="Show Dispatch"><i></i></button></div>
+        <button class="pp" id="car-pp" type="button" aria-label="Pause"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path class="i-pause" d="M3 2h3v10H3zM8 2h3v10H8z"/><path class="i-play" d="M3 1.5l9 5.5-9 5.5z"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="pad cta" aria-labelledby="cta-h">
+    <div class="cta-copy">
+      <h2 id="cta-h">Hear when Packet reaches your street.</h2>
+      <form id="updates-2" class="row" novalidate>
+        <label class="field" for="email-2"><span class="lbl" style="font-size:var(--field-label)">Email</span>
+          <input id="email-2" name="email" type="email" autocomplete="email" placeholder="you@example.com"></label>
+        <button class="sign" type="submit"><span class="arrow" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 10h15M11 4l6 6-6 6"/></svg></span><span class="txt">Get updates</span></button>
+      </form>
+      <p class="msg small" id="msg-2" role="status" aria-live="polite"></p>
+      <p class="small">Packet for iPhone is coming to the App Store [LAUNCH DATE].</p>
+    </div>
+    <div class="cta-art"><canvas id="cv-cta" role="img" aria-label="Dotted corner marks rush toward a vanishing point"></canvas></div>
+  </section>
+</main>
+
+<main id="view-products" class="pad page" hidden aria-labelledby="products-h">
+  <header class="prod-head">
+    <h1 id="products-h">Products</h1>
+    <p class="lead">Three parts that take an order from a U Village shop to your door.</p>
+  </header>
+  <section class="prod" id="products-vehicle" aria-labelledby="products-vehicle-h">
+    <div class="prod-copy"><span class="no">01</span><h2 id="products-vehicle-h">Vehicle 01</h2><p>The aircraft that carries each order. It lifts off at the shop, flies above the street grid along a planned route, and sets the order down at your door.</p><dl class="spec"><div><dt>Rotors</dt><dd>4</dd></div><div><dt>Payload</dt><dd>[TBD]</dd></div><div><dt>Range</dt><dd>[TBD]</dd></div><div><dt>Cruise speed</dt><dd>[TBD]</dd></div><div><dt>Flight altitude</dt><dd>[TBD]</dd></div><div><dt>Weather limits</dt><dd>[TBD]</dd></div></dl></div>
+    <div class="prod-art"><svg viewBox="20 0 260 150" aria-hidden="true"><path class="thin" d="M40 120H260"/><path class="ln" d="M120 82H180M80 76H220M104 66H56M196 66H244"/><rect class="ln" x="120" y="70" width="60" height="22" rx="4"/><rect class="ln" x="74" y="68" width="12" height="10"/><rect class="ln" x="214" y="68" width="12" height="10"/><path class="ln" d="M130 92L112 118M170 92L188 118"/><rect x="134" y="96" width="32" height="22" fill="var(--red)"/></svg></div>
+  </section>
+  <section class="prod flip" id="products-app" aria-labelledby="products-app-h">
+    <div class="prod-copy"><span class="no">02</span><h2 id="products-app-h">Packet for iPhone</h2><p>Where you order and follow it. Choose from U Village shops, pay, and see each step from pickup to your door, with the time it will arrive.</p><dl class="spec"><div><dt>Platform</dt><dd>iPhone</dd></div><div><dt>Availability</dt><dd>App Store, [LAUNCH DATE]</dd></div><div><dt>Order from</dt><dd>U Village shops</dd></div><div><dt>Delivery area</dt><dd>Within [RADIUS] of U Village</dd></div><div><dt>Payment</dt><dd>[TBD]</dd></div></dl></div>
+    <div class="prod-art"><svg viewBox="20 0 260 150" aria-hidden="true"><rect class="ln" x="112" y="4" width="76" height="142" rx="12"/><path class="thin" d="M124 30H176M124 40H160"/><path d="M130 118H144V97H158V80" fill="none" stroke="var(--mustard)" stroke-width="5" stroke-dasharray="0.1 7" stroke-linecap="round"/><rect x="152" y="66" width="12" height="12" fill="var(--red)"/></svg></div>
+  </section>
+  <section class="prod" id="products-dispatch" aria-labelledby="products-dispatch-h">
+    <div class="prod-copy"><span class="no">03</span><h2 id="products-dispatch-h">Dispatch</h2><p>The system behind each flight. It assigns an aircraft to every order, plans the route and altitude, and follows the flight until the order is delivered.</p><dl class="spec"><div><dt>Assigns</dt><dd>One aircraft per order</dd></div><div><dt>Plans</dt><dd>Route and altitude for each flight</dd></div><div><dt>Follows</dt><dd>Each flight from pickup to drop-off</dd></div><div><dt>Hours</dt><dd>[TBD]</dd></div></dl></div>
+    <div class="prod-art"><svg viewBox="20 0 260 150" aria-hidden="true"><path d="M30 30H270M30 75H270M30 120H270M70 10V140M150 10V140M230 10V140" fill="none" stroke="var(--black)" stroke-width="2" stroke-dasharray="0.1 6" stroke-linecap="round"/><path d="M70 120H150V75H230V30" fill="none" stroke="var(--mustard)" stroke-width="5" stroke-dasharray="0.1 7" stroke-linecap="round"/><rect x="62" y="112" width="16" height="16" fill="var(--black)"/><rect x="222" y="22" width="16" height="16" fill="var(--red)"/></svg></div>
+  </section>
+  <section class="store" aria-labelledby="store-h">
+    <div class="store-head"><span class="tag lbl">Preview</span><h2 id="store-h">From U Village shops</h2>
+      <p>Some of what Packet will deliver at launch. Shops, items and prices to follow. Orders open in the app.</p></div>
+    <ul class="items">
+      <li class="item-card"><svg viewBox="0 0 200 150" aria-hidden="true"><path class="ln" d="M40 70H160Q156 120 100 124Q44 120 40 70Z"/><path class="thin" d="M52 70Q70 52 92 62Q112 48 132 60Q150 56 150 70"/><path class="ln" d="M80 124V134H120V124"/></svg><b>U Village Bowl</b><span class="small">[SHOP]</span><span class="price">[PRICE]</span></li>
+      <li class="item-card"><svg viewBox="0 0 200 150" aria-hidden="true"><path class="ln" d="M60 120L120 40Q140 30 152 44Q162 58 150 72L90 136Q74 146 64 136Q54 128 60 120Z"/><path class="thin" d="M120 40L150 72M108 56L136 86"/><path class="thin" d="M70 112L84 126"/></svg><b>Drumstick Wrap</b><span class="small">[SHOP]</span><span class="price">[PRICE]</span></li>
+      <li class="item-card"><svg viewBox="0 0 200 150" aria-hidden="true"><path class="ln" d="M64 50H136L126 134H74Z"/><path class="ln" d="M58 50H142V40H58Z"/><path class="ln" d="M106 40L118 10"/><path class="thin" d="M70 84H130"/></svg><b>Cold Brew</b><span class="small">[SHOP]</span><span class="price">[PRICE]</span></li>
+      <li class="item-card"><svg viewBox="0 0 200 150" aria-hidden="true"><rect class="ln" x="54" y="54" width="92" height="72"/><path class="thin" d="M54 54L74 36H166L146 54M146 126L166 108V36"/></svg><b>[ITEM]</b><span class="small">[SHOP]</span><span class="price">[PRICE]</span></li>
+    </ul>
+    <a class="small" href="#updates">Get updates when ordering opens</a>
+  </section>
+</main>
+
+<main id="view-press" class="pad page" hidden aria-labelledby="press-h">
+  <header class="prod-head">
+    <h1 id="press-h">Press</h1>
+    <p class="lead">Facts, news and brand files for writing about Packet.</p>
+  </header>
+
+  <section class="man" aria-labelledby="facts-h">
+    <span class="sec lbl">1.0</span>
+    <div class="man-body"><h2 id="facts-h">Fact sheet</h2>
+      <dl class="spec"><div><dt>Company</dt><dd>Packet</dd></div><div><dt>Founded</dt><dd>[YEAR]</dd></div><div><dt>Based in</dt><dd>Seattle, Washington</dd></div><div><dt>Service area</dt><dd>University Village and homes within [RADIUS]</dd></div><div><dt>First product</dt><dd>Vehicle 01, a four-rotor delivery aircraft</dd></div><div><dt>Deliveries begin</dt><dd>[LAUNCH DATE]</dd></div><div><dt>Leadership</dt><dd>[NAME], [TITLE] · [NAME], [TITLE]</dd></div></dl></div>
+  </section>
+
+  <section class="man" aria-labelledby="news-h">
+    <span class="sec lbl">2.0</span>
+    <div class="man-body"><h2 id="news-h">News</h2>
+      <ol class="news">
+        <li><span class="lbl">[DATE]</span><div><b>Packet plans autonomous delivery for University Village</b><p>Packet will deliver orders from U Village shops to nearby homes by aircraft, starting within [RADIUS] of the shopping center.</p></div></li>
+        <li><span class="lbl">[DATE]</span><div><b>Packet for iPhone opens sign-ups</b><p>People near U Village can check their ZIP code and get an email when Packet reaches their street.</p></div></li>
+      </ol></div>
+  </section>
+
+  <section class="man" aria-labelledby="brand-h">
+    <span class="sec lbl">3.0</span>
+    <div class="man-body"><h2 id="brand-h">Brand</h2>
+      <div class="plates2">
+        <figure class="plate2"><div class="plate2-art"><span class="emblem big" aria-label="Packet"><span>Packet</span>
+          <i style="top:0;left:-.407em;width:.296em;height:.046em"></i><i style="left:0;top:-.407em;width:.046em;height:.296em"></i>
+          <i style="top:0;right:-.407em;width:.296em;height:.046em"></i><i style="right:0;top:-.407em;width:.046em;height:.296em"></i>
+          <i style="bottom:0;left:-.407em;width:.296em;height:.046em"></i><i style="left:0;bottom:-.407em;width:.046em;height:.296em"></i>
+          <i style="bottom:0;right:-.407em;width:.296em;height:.046em"></i><i style="right:0;bottom:-.407em;width:.046em;height:.296em"></i>
+        </span></div>
+          <figcaption><b>3.1 Emblem</b><span class="small">The wordmark inside four crop marks. Keep the marks; leave clear space of half the cap height on every side. Never stretch, recolor or add effects.</span></figcaption></figure>
+        <figure class="plate2"><div class="plate2-art type">
+            <span style="font-family:var(--display);font-weight:600;font-size:40px;line-height:1">Aa</span>
+            <span style="font-family:var(--body);font-size:40px;line-height:1">Aa</span>
+            <span style="font-family:var(--label);font-weight:600;font-size:40px;line-height:1;text-transform:uppercase">Aa</span></div>
+          <figcaption><b>3.2 Typefaces</b><span class="small">Libre Franklin for the name and headlines. Atkinson Hyperlegible Next for text and buttons. Barlow Condensed for short capital labels.</span></figcaption></figure>
+      </div>
+      <ul class="inks"><li><span class="chip" style="background:var(--red)"></span><b>Packet Red</b><span class="small">#B4432F</span><span class="small">The block, and nowhere else large.</span></li><li><span class="chip" style="background:var(--black)"></span><b>Black</b><span class="small">#111111</span><span class="small">Type, rules and the station-sign button.</span></li><li><span class="chip" style="background:var(--mustard)"></span><b>Mustard</b><span class="small">#D3A13F</span><span class="small">Routes and one tag per page.</span></li><li><span class="chip" style="background:var(--white)"></span><b>White</b><span class="small">#FFFFFF</span><span class="small">Every page.</span></li></ul>
+      <p class="small">Emblem and drawings as SVG and PNG: [DOWNLOAD LINK]</p></div>
+  </section>
+
+  <section class="man" aria-labelledby="contact-h">
+    <span class="sec lbl">4.0</span>
+    <div class="man-body"><h2 id="contact-h">Contact</h2>
+      <dl class="spec"><div><dt>Press</dt><dd>[NAME], [EMAIL]</dd></div><div><dt>Photos and interviews</dt><dd>[EMAIL]</dd></div></dl></div>
+  </section>
+</main>
+
+<footer class="pad">
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <span class="emblem" aria-label="Packet"><span>Packet</span>
+      <i style="top:0;left:-.407em;width:.296em;height:.046em"></i><i style="left:0;top:-.407em;width:.046em;height:.296em"></i>
+      <i style="top:0;right:-.407em;width:.296em;height:.046em"></i><i style="right:0;top:-.407em;width:.046em;height:.296em"></i>
+      <i style="bottom:0;left:-.407em;width:.296em;height:.046em"></i><i style="left:0;bottom:-.407em;width:.046em;height:.296em"></i>
+      <i style="bottom:0;right:-.407em;width:.296em;height:.046em"></i><i style="right:0;bottom:-.407em;width:.046em;height:.296em"></i>
+    </span>
+    <span class="small">&copy; [YEAR] Packet. Seattle, Washington.</span>
+  </div>
+  <div style="display:flex;gap:24px"><a class="navlink" href="#products">Products</a><a class="navlink" href="#press">Press</a><a class="navlink" href="#">Privacy</a></div>
+</footer>
+
+<details class="pad">
+  <summary class="lbl">Working notes · round 6</summary>
+  <ul>
+    <li>Primary action is now Get updates. The hero is a two-step sign-up in one slot: ZIP check, then email. The globe turns to the ZIP and closes the corner marks on it.</li>
+    <li>Skeleton only: nothing is sent. The ZIP lookup is a stand-in table, and both forms stop at a stub where the store will plug in.</li>
+    <li>Attribution seam: hidden fields carry utm_source, utm_medium, utm_campaign and the referrer, so each flyer QR code, ad and post can get its own tagged link.</li>
+    <li>Products and Press are placeholder pages (nav, or #products and #press).</li>
+    <li>Open: whether ad-platform pixels are wanted later. They would need a consent banner and a matching privacy policy.</li>
+    <li>Known polish for the build: eyebrow labels trimmed, wrapping and small spacing to tune.</li>
+  </ul>
+</details>
+
+<script>
+(() => {
+  const INK = { red: '#B4432F', mus: '#D3A13F', blk: '#111111' };
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const clamp01 = (x) => Math.max(0, Math.min(1, x));
+  const ease = (x) => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  const lerp = (a, b, x) => a + (b - a) * x;
+
+  // Sets up a canvas: sizes it, paints on resize, and runs a loop while visible when animate is true.
+  function mount(cv, draw, animate) {
+    const ctx = cv.getContext('2d');
+    let w = 0, h = 0, visible = false, last = 0;
+    const api = { t: 0, paint() { ctx.clearRect(0, 0, w, h); draw(ctx, w, h, api.t); } };
+    function resize() {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const r = cv.getBoundingClientRect();
+      if (!r.width) return;
+      w = r.width; h = r.height;
+      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      api.paint();
+    }
+    function loop(now) {
+      if (!visible) return;
+      const dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
+      last = now; api.t += still ? 0 : dt; api.paint();
+      requestAnimationFrame(loop);
+    }
+    new ResizeObserver(resize).observe(cv);
+    if (animate) new IntersectionObserver(([e]) => {
+      visible = e.isIntersecting; last = 0;
+      if (visible) requestAnimationFrame(loop);
+    }).observe(cv);
+    return api;
+  }
+
+  // Halftone sphere. sample(lon, lat) returns {v: 0..1, c: ink} or null. Cells inside ex are skipped.
+  function sphere(ctx, w, h, o, ex) {
+    const { cx, cy, R, step } = o;
+    const [ay, ax] = o.rot, cg = Math.cos(o.roll || 0), sg = Math.sin(o.roll || 0);
+    const cY = Math.cos(ay), sY = Math.sin(ay), cX = Math.cos(ax), sX = Math.sin(ax);
+    for (let py = step / 2; py < h; py += step) {
+      for (let px = step / 2; px < w; px += step) {
+        if (px < ex.x && py > ex.y) continue;
+        const x = (px - cx) / R, y = (py - cy) / R, d2 = x * x + y * y;
+        if (d2 >= 1) continue;
+        const z = Math.sqrt(1 - d2);
+        // roll the view so the grid runs at an angle
+        const xr = x * cg + y * sg, yr = -x * sg + y * cg;
+        const y1 = yr * cX - z * sX, z1 = yr * sX + z * cX;
+        const x2 = xr * cY + z1 * sY, z2 = -xr * sY + z1 * cY;
+        const s = o.sample(Math.atan2(x2, z2), Math.asin(Math.max(-1, Math.min(1, y1))));
+        if (!s) continue;
+        const r = s.v * step * 0.48;
+        ctx.globalAlpha = 0.35 + 0.65 * z;
+        ctx.fillStyle = s.c;
+        ctx.beginPath();
+        // radial axis foreshortened by depth: dots stretch along the rim
+        ctx.ellipse(px, py, Math.max(0.6, r * Math.max(0.22, z)), r, Math.atan2(y, x), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  // texture point -> screen, the inverse of sphere()'s rotation; z < 0 is the far side
+  function project(o, lon, lat) {
+    const x2 = Math.cos(lat) * Math.sin(lon), y1 = Math.sin(lat), z2 = Math.cos(lat) * Math.cos(lon);
+    const [ay, ax] = o.rot;
+    const cY = Math.cos(ay), sY = Math.sin(ay), cX = Math.cos(ax), sX = Math.sin(ax);
+    const xr = x2 * cY - z2 * sY, z1 = x2 * sY + z2 * cY, yr = y1 * cX + z1 * sX;
+    const cg = Math.cos(o.roll || 0), sg = Math.sin(o.roll || 0);
+    return [o.cx + (xr * cg - yr * sg) * o.R, o.cy + (xr * sg + yr * cg) * o.R, -y1 * sX + z1 * cX];
+  }
+  // Corner marks around a point, as in the emblem; k spreads them, 1 is as drawn. withBlock adds the red block (the app icon).
+  function marks(ctx, x, y, s, k, lw, withBlock) {
+    if (withBlock) { ctx.fillStyle = INK.red; ctx.fillRect(x - s, y - s, 2 * s, 2 * s); }
+    const B = s * 1.9 * k, off = s * 0.4, len = s * 0.9;
+    ctx.strokeStyle = INK.blk; ctx.lineWidth = lw; ctx.beginPath();
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+      ctx.moveTo(x + sx * (B + off), y + sy * B); ctx.lineTo(x + sx * (B + off + len), y + sy * B);
+      ctx.moveTo(x + sx * B, y + sy * (B + off)); ctx.lineTo(x + sx * B, y + sy * (B + off + len));
+    }
+    ctx.stroke();
+  }
+
+  // Stand-in ZIP table: positions on the street grid relative to U Village (0, 0). Replace with real data in the build.
+  const S = 11;
+  const ZIPS = {
+    '98105': { u: -2.5, v: 1.5, inside: true },
+    '98195': { u: -4, v: 3, inside: true },
+    '98115': { u: -1, v: -4.5, inside: true },
+    '98103': { u: -8, v: -2, inside: false },
+    '98112': { u: -1, v: 6, inside: false }
+  };
+
+  // Hero globe. Drifts slowly; when a ZIP is checked it turns to that spot and closes the corner marks on it.
+  const heroCv = document.getElementById('cv-hero'), heroCopy = document.getElementById('hero-copy');
+  const globe = { target: null, from: [0, 0], t0: 0, rot: [0, 0] };
+  const hero = mount(heroCv, (ctx, w, h, t) => {
+    const r = heroCv.getBoundingClientRect(), c = heroCopy.getBoundingClientRect();
+    const overlaps = c.top < r.bottom && c.bottom > r.top && c.left < r.right;
+    const ex = overlaps ? { x: c.left - r.left + Math.min(c.width, 440) + 40, y: -Infinity } : { x: -1, y: Infinity };
+    const narrow = w < 700;
+    const drift = [t * 0.03, 0.42];
+    let rot = drift;
+    if (globe.target && globe.to) {
+      const k = ease(clamp01((t - globe.t0) / 1.4));
+      rot = [lerp(globe.from[0], globe.to[0], k), lerp(globe.from[1], globe.to[1], k)];
+    }
+    globe.rot = rot;
+    const o = globe.o = {
+      cx: narrow ? w * 0.78 : w * 0.88, cy: narrow ? h * 0.95 : h * 0.86, R: narrow ? w * 0.95 : Math.max(w, h) * 0.6,
+      roll: -0.5, step: Math.max(5, Math.min(8, w / 190)), rot,
+      sample: (lon, lat) => {
+        const u = lon * S, v = lat * S;
+        const du = Math.abs(u - Math.round(u)), dv = Math.abs(v - Math.round(v));
+        if ((Math.round(u) % 4 === 0 && du < 0.08) || (Math.round(v) % 4 === 0 && dv < 0.08)) return { v: 0.75, c: INK.blk };
+        if (du < 0.045 || dv < 0.045) return { v: 0.38, c: INK.blk };
+        return null;
+      }
+    };
+    sphere(ctx, w, h, o, ex);
+    if (globe.target) {
+      const [x, y, z] = project(o, globe.target.u / S, globe.target.v / S);
+      const p = ease(clamp01((t - globe.t0 - 1.0) / 0.8));
+      if (z > 0 && p > 0) {
+        ctx.globalAlpha = p;
+        marks(ctx, x, y, Math.max(8, w / 110), 3 - 2 * p, 2.5, false);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }, true);
+
+  // Pick the rotation that lands a ZIP in the visible upper-left of the globe, by a coarse search.
+  function aim(target) {
+    const o = globe.o, r = heroCv.getBoundingClientRect(), c = heroCopy.getBoundingClientRect();
+    const narrow = r.width < 700;
+    const ax0 = narrow ? r.width * 0.5 : Math.max(c.right - r.left + 120, r.width * 0.55), ay0 = r.height * (narrow ? 0.45 : 0.42);
+    let best = null, bestD = Infinity;
+    for (let i = -30; i <= 30; i++) for (let j = -30; j <= 30; j++) {
+      const rot = [target.u / S + i * 0.04, j * 0.04];
+      const [x, y, z] = project({ ...o, rot }, target.u / S, target.v / S);
+      if (z <= 0.2) continue;
+      const d = Math.hypot(x - ax0, y - ay0);
+      if (d < bestD) { bestD = d; best = rot; }
+    }
+    return best;
+  }
+
+  // Attribution seam: in the real page these come from the visitor's link.
+  const qs = new URLSearchParams(window.location.search);
+  for (const k of ['utm_source', 'utm_medium', 'utm_campaign']) document.getElementById(k).value = qs.get(k) || '';
+  document.getElementById('referrer').value = document.referrer || '';
+
+  // Hero form: step 1 checks the ZIP, step 2 takes the email. Both stop at a stub; nothing is sent.
+  const form = document.getElementById('updates'), zip = document.getElementById('zip'), email = document.getElementById('email');
+  const stepZip = document.getElementById('step-zip'), stepEmail = document.getElementById('step-email');
+  const msg = document.getElementById('msg'), ask = document.getElementById('ask'), restart = document.getElementById('restart');
+  let checkedZip = '';
+  const submitSignup = (payload) => { /* store plugs in here */ return payload; };
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!stepZip.hidden) {
+      const z = zip.value.trim();
+      if (!/^\d{5}$/.test(z)) { msg.textContent = 'Enter a 5-digit ZIP code.'; zip.focus(); return; }
+      checkedZip = z;
+      const hit = ZIPS[z];
+      globe.from = globe.rot; globe.t0 = hero.t; globe.target = hit || null;
+      globe.to = hit ? aim(hit) : null;
+      ask.textContent = hit && hit.inside ? `${z} is inside the first area around U Village.` : `${z} is outside the first area, for now.`;
+      msg.textContent = hit && hit.inside ? 'Get an email when Packet launches.' : 'Get an email when Packet reaches your street.';
+      stepZip.hidden = true; stepEmail.hidden = false; restart.hidden = false; email.focus();
+      return;
+    }
+    if (!email.checkValidity() || !email.value) { msg.textContent = 'Enter an email address, like you@example.com.'; email.focus(); return; }
+    submitSignup({ zip: checkedZip, email: email.value, utm_source: qs.get('utm_source'), referrer: document.referrer });
+    ask.textContent = `You're on the list for ${checkedZip}.`;
+    msg.textContent = 'Draft: nothing was sent.';
+    stepEmail.hidden = true;
+  });
+  restart.addEventListener('click', () => {
+    stepZip.hidden = false; stepEmail.hidden = true; restart.hidden = true;
+    ask.textContent = 'Is Packet coming to your street?'; msg.textContent = ''; zip.value = ''; zip.focus();
+    globe.from = globe.rot; globe.target = null;
+  });
+
+  const form2 = document.getElementById('updates-2'), email2 = document.getElementById('email-2'), msg2 = document.getElementById('msg-2');
+  form2.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!email2.checkValidity() || !email2.value) { msg2.textContent = 'Enter an email address, like you@example.com.'; return; }
+    submitSignup({ zip: checkedZip, email: email2.value });
+    msg2.textContent = "You're on the list. Draft: nothing was sent.";
+  });
+
+  // How it works: the icon's trip from A to B, driven by how far the section has scrolled.
+  const tripCv = document.getElementById('cv-trip');
+  const bullets = [...document.querySelectorAll('.steps .bullet')];
+  let tripP = still ? 1 : 0;
+  const trip = mount(tripCv, (ctx, w, h) => {
+    const r = tripCv.getBoundingClientRect();
+    let xs = bullets.map((b) => { const q = b.getBoundingClientRect(); return q.left - r.left + q.width / 2; });
+    if (xs[2] - xs[0] < w * 0.3) xs = [w * 0.08, w * 0.5, w * 0.92];
+    const s = Math.max(8, Math.min(14, w / 80)), lw = Math.max(2, s * 0.22);
+    const ys = [h * 0.72, h * 0.5, h * 0.28];
+    const m01 = (xs[0] + xs[1]) / 2, m12 = (xs[1] + xs[2]) / 2;
+    const legs = [
+      [[xs[0], ys[0]], [m01, ys[0]], [m01, ys[1]], [xs[1], ys[1]]],
+      [[xs[1], ys[1]], [m12, ys[1]], [m12, ys[2]], [xs[2], ys[2]]]
+    ];
+    const pairs = (leg) => leg.slice(1).map((b, i) => [leg[i], b]);
+    const dots = (segs, r) => {
+      for (const [[x1, y1], [x2, y2]] of segs) {
+        const n = Math.max(1, Math.round(Math.hypot(x2 - x1, y2 - y1) / 8));
+        for (let i = 0; i <= n; i++) { ctx.beginPath(); ctx.arc(x1 + (x2 - x1) * i / n, y1 + (y2 - y1) * i / n, r, 0, Math.PI * 2); ctx.fill(); }
+      }
+    };
+    ctx.fillStyle = INK.blk; dots([...pairs(legs[0]), ...pairs(legs[1])], 1.5);
+    function on(leg, f) {
+      const ss = pairs(leg), lens = ss.map(([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1]));
+      let d = f * lens.reduce((a, b) => a + b, 0); const trail = [];
+      for (let i = 0; i < ss.length; i++) {
+        const [a, b] = ss[i];
+        if (d <= lens[i]) { const g = lens[i] ? d / lens[i] : 0, p = [a[0] + (b[0] - a[0]) * g, a[1] + (b[1] - a[1]) * g]; trail.push([a, p]); return { p, trail }; }
+        trail.push([a, b]); d -= lens[i];
+      }
+      return { p: leg[leg.length - 1], trail };
+    }
+    const p = ease(clamp01(tripP));
+    const first = on(legs[0], clamp01(p * 2)), second = on(legs[1], clamp01(p * 2 - 1));
+    ctx.fillStyle = INK.mus; dots(p <= 0.5 ? first.trail : [...first.trail, ...second.trail], 3.2);
+    const [ix, iy] = p <= 0.5 ? first.p : second.p;
+    marks(ctx, ix, iy, s, p >= 0.999 ? 0.7 : 1, lw, true);
+  }, false);
+  function onScroll() {
+    if (!still) {
+      const r = tripCv.getBoundingClientRect(), vh = window.innerHeight;
+      tripP = clamp01((vh * 0.85 - r.top) / (vh * 0.6));
+    }
+    bullets.forEach((b, i) => b.classList.toggle('on', tripP >= [0, 0.5, 0.999][i]));
+    trip.paint();
+  }
+  window.addEventListener('scroll', () => requestAnimationFrame(onScroll), { passive: true });
+  window.addEventListener('resize', onScroll);
+  onScroll();
+
+  // Bottom CTA: the corner marks rush toward the app icon at the vanishing point.
+  mount(document.getElementById('cv-cta'), (ctx, w, h, t) => {
+    const vx = w * 0.45, vy = h * 0.5, tile = Math.max(56, Math.min(88, w / 8));
+    const D0 = tile * 0.75, q = 1.42, Dmax = Math.hypot(w, h), f = (t * 0.2) % 1;
+    ctx.fillStyle = INK.blk;
+    for (let i = 0; ; i++) {
+      const D = D0 * Math.pow(q, i + f);
+      if (D > Dmax) break;
+      const rot = 0.025 * (i + f), cr = Math.cos(rot), sr = Math.sin(rot);
+      const r = Math.max(0.8, Math.min(5, D * 0.011)), sp = Math.max(3, r * 2.7);
+      const off = D * 0.075, len = D * 0.2;
+      ctx.globalAlpha = Math.min(1, (D - D0) / (D0 * 0.8));
+      for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+        for (let a = 0; a <= len; a += sp) {
+          for (const [x, y] of [[sx * (D + off + a), sy * D], [sx * D, sy * (D + off + a)]]) {
+            const X = vx + x * cr - y * sr, Y = vy + x * sr + y * cr;
+            if (X < -10 || X > w + 10 || Y < -10 || Y > h + 10) continue;
+            ctx.beginPath(); ctx.arc(X, Y, r, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+  }, true);
+
+  // Mission drawing: lines draw in once, when the figure is half in view.
+  const dwg = document.getElementById('drawing');
+  // second pen pass: a fainter copy of each line, wobbled differently, so strokes read as sketched
+  dwg.querySelectorAll('svg .ln, svg .hid, svg .ctr, svg .thin').forEach((el) => { const c = el.cloneNode(true); c.classList.add('pass2'); el.after(c); });
+  function drawIn() { if (dwg.getBoundingClientRect().top < window.innerHeight * 0.75) { dwg.classList.add('on'); window.removeEventListener('scroll', drawIn); } }
+  window.addEventListener('scroll', drawIn, { passive: true }); drawIn();
+
+  // Product showcase. One product at a time; moves on after DUR with no interaction, and any touch, swipe or key resets the wait.
+  const car = document.querySelector('.car'), stage = document.getElementById('car-track');
+  const panels = [...stage.querySelectorAll('.slide')], tabs = [...car.querySelectorAll('.tab')], pp = document.getElementById('car-pp');
+  const peek = document.getElementById('car-peek'), nextName = document.getElementById('car-next-name');
+  const DUR = 7000;
+  let cur = 0, playing = !still, wait = 0;
+  car.style.setProperty('--dur', DUR + 'ms');
+  car.classList.toggle('still', still); car.classList.toggle('paused', !playing);
+  function mark(i) {
+    cur = i;
+    panels.forEach((p, k) => { p.classList.toggle('on', k === i); p.toggleAttribute('inert', k !== i); });
+    tabs.forEach((t, k) => { t.classList.remove('on'); t.classList.toggle('done', k < i); t.toggleAttribute('aria-current', k === i); });
+    void tabs[i].offsetWidth; tabs[i].classList.add('on'); // restart the fill
+    const n = panels[(i + 1) % panels.length];
+    peek.innerHTML = n.querySelector('.slide-art').innerHTML;
+    nextName.textContent = n.querySelector('h3').textContent;
+  }
+  function arm() { clearTimeout(wait); if (playing) wait = setTimeout(() => go(cur + 1), DUR); }
+  function go(i) { mark((i + panels.length) % panels.length); arm(); }
+  document.getElementById('car-next').addEventListener('click', () => go(cur + 1));
+  tabs.forEach((t, k) => t.addEventListener('click', () => go(k)));
+  let x0 = null;
+  stage.addEventListener('pointerdown', (e) => { x0 = e.clientX; });
+  stage.addEventListener('pointerup', (e) => { if (x0 !== null && Math.abs(e.clientX - x0) > 48) go(cur + (e.clientX < x0 ? 1 : -1)); x0 = null; });
+  ['pointerdown', 'keydown', 'focusin'].forEach((e) => car.addEventListener(e, () => { mark(cur); arm(); }, { passive: true }));
+  pp.addEventListener('click', () => {
+    playing = !playing; car.classList.toggle('paused', !playing);
+    pp.setAttribute('aria-label', playing ? 'Pause' : 'Play'); mark(cur); arm();
+  });
+  mark(0); arm();
+
+  // Views: home, products, press. Only bare #tokens reach the page, so each view is one.
+  const views = { products: document.getElementById('view-products'), press: document.getElementById('view-press') };
+  const home = document.getElementById('view-home'), homeLink = document.querySelector('nav .home');
+  function route() {
+    const v = window.location.hash.slice(1), base = v.split('-')[0];
+    const sub = base in views ? base : null;
+    home.hidden = !!sub; homeLink.hidden = !sub;
+    for (const [k, el] of Object.entries(views)) el.hidden = k !== sub;
+    document.querySelectorAll('nav a.navlink').forEach((a) => a.toggleAttribute('aria-current', a.getAttribute('href') === '#' + sub));
+    document.querySelectorAll('nav a[aria-current]').forEach((a) => a.setAttribute('aria-current', 'page'));
+    if (sub) { const el = v !== base && document.getElementById(v); if (el) el.scrollIntoView(); else window.scrollTo(0, 0); }
+    if (v === 'updates') { zip.focus({ preventScroll: true }); document.getElementById('top').scrollIntoView(); }
+    if (!sub) { hero.paint(); onScroll(); }
+  }
+  window.addEventListener('hashchange', route);
+  route();
+})();
+</script>

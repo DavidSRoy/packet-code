@@ -1,23 +1,195 @@
 @import "tailwindcss";
 
-:root {
-	--background: #ffffff;
-	--foreground: #171717;
+@theme {
+	--color-red: #b4432f;
+	--color-ink: #111111;
+	--color-mustard: #d3a13f;
+	--color-white: #ffffff;
+	--spacing-margin: clamp(20px, 6.5vw, 96px);
 }
 
 @theme inline {
-	--color-background: var(--background);
-	--color-foreground: var(--foreground);
+	--font-display: var(--font-libre-franklin), system-ui, sans-serif;
+	--font-body: var(--font-atkinson), system-ui, sans-serif;
+	--font-label: var(--font-barlow), "Arial Narrow", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-	:root {
-		--background: #0a0a0a;
-		--foreground: #ededed;
-	}
+:root {
+	--control-h: 44px;
+	--control-font: 16px;
+	--field-label: 12px;
+	color-scheme: light;
+}
+
+[hidden] {
+	display: none !important;
 }
 
 body {
-	background: var(--background);
-	color: var(--foreground);
+	background: var(--color-white);
+	color: var(--color-ink);
+	font-family: var(--font-body);
+	font-size: 17px;
+	line-height: 1.45;
+}
+
+a {
+	color: var(--color-ink);
+	text-underline-offset: 3px;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+	outline: 2px solid var(--color-ink);
+	outline-offset: 3px;
+}
+
+/* Side margin plus safe-area insets. */
+@utility pad {
+	padding-left: max(var(--spacing-margin), env(safe-area-inset-left, 0px));
+	padding-right: max(var(--spacing-margin), env(safe-area-inset-right, 0px));
+}
+
+/* Short uppercase labels. */
+@utility lbl {
+	font-family: var(--font-label);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	font-size: 14px;
+}
+
+.navlink {
+	white-space: nowrap;
+	font-family: var(--font-display);
+	font-weight: 600;
+	font-size: 15px;
+	text-decoration: none;
+	padding: 12px 0;
+}
+
+nav a[aria-current="page"] {
+	text-decoration: underline;
+	text-underline-offset: 6px;
+	text-decoration-thickness: 2px;
+}
+
+/* Station-sign button: band across the top, arrow module first, label flush left. */
+.sign {
+	display: inline-flex;
+	align-self: flex-start;
+	align-items: stretch;
+	height: var(--control-h);
+	background: var(--color-ink);
+	color: var(--color-white);
+	text-decoration: none;
+	border: 0;
+	border-radius: 4px;
+	position: relative;
+	padding: 0 16px 0 0;
+	font: inherit;
+	cursor: pointer;
+}
+
+.sign::before {
+	content: "";
+	position: absolute;
+	left: 6px;
+	right: 6px;
+	top: 5px;
+	height: 1.5px;
+	background: var(--color-white);
+}
+
+.sign:hover {
+	color: var(--color-white);
+	background: #000;
+}
+
+.sign:disabled {
+	cursor: default;
+}
+
+.sign .arrow {
+	width: 36px;
+	display: grid;
+	place-items: center;
+	border-right: 1.5px solid var(--color-white);
+	margin: 11px 0 5px;
+}
+
+.sign .arrow svg {
+	width: 14px;
+	height: 14px;
+}
+
+.sign .txt {
+	padding-left: 12px;
+	padding-top: 3px;
+	display: flex;
+	align-items: center;
+	font-weight: 700;
+	font-size: var(--control-font);
+}
+
+/* Emblem: the wordmark inside four crop marks. Sized by font-size. */
+.emblem {
+	position: relative;
+	display: inline-block;
+	align-self: flex-start;
+	margin: 16px;
+}
+
+.emblem > span {
+	display: block;
+	font-family: var(--font-display);
+	font-weight: 600;
+	line-height: 1;
+	text-box: trim-both cap alphabetic;
+	padding: 0.37em;
+}
+
+.emblem i {
+	position: absolute;
+	background: var(--color-ink);
+}
+
+/* Leading lines: bars run from the margin off the right edge. */
+.lines {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-top: 32px;
+	margin-right: calc(-1 * max(var(--spacing-margin), env(safe-area-inset-right, 0px)));
+}
+
+.lines span {
+	display: block;
+	height: 8px;
+}
+
+/* Sketch filters for the line drawings. */
+.drawing svg :is(path, circle, rect) {
+	filter: url(#pen1);
+}
+
+.drawing .pass2 {
+	filter: url(#pen2);
+	stroke-opacity: 0.45;
+	transform: translate(0.8px, 0.6px);
+}
+
+.sketch-pen3 :is(path, circle, rect) {
+	filter: url(#pen3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation: none !important;
+		transition: none !important;
+		scroll-behavior: auto !important;
+	}
 }

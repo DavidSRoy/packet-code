@@ -1,8 +1,32 @@
 import type { Metadata } from "next";
+import { Atkinson_Hyperlegible_Next, Barlow_Condensed, Libre_Franklin } from "next/font/google";
+import { SketchFilters } from "@/components/site/SketchFilters";
 import "./globals.css";
 
+const libreFranklin = Libre_Franklin({
+	subsets: ["latin"],
+	weight: ["400", "600"],
+	variable: "--font-libre-franklin",
+	display: "swap",
+});
+
+const atkinson = Atkinson_Hyperlegible_Next({
+	subsets: ["latin"],
+	weight: ["400", "700"],
+	variable: "--font-atkinson",
+	display: "swap",
+});
+
+const barlow = Barlow_Condensed({
+	subsets: ["latin"],
+	weight: ["600"],
+	variable: "--font-barlow",
+	display: "swap",
+});
+
 export const metadata: Metadata = {
-	title: "Landing",
+	title: "Packet",
+	description: "Delivery from U Village shops to homes nearby, by autonomous aircraft.",
 };
 
 export default function RootLayout({
@@ -10,12 +34,26 @@ export default function RootLayout({
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
+	const beaconToken = process.env.NEXT_PUBLIC_CF_BEACON_TOKEN;
 	return (
-		<html lang="en">
+		<html
+			lang="en"
+			className={`${libreFranklin.variable} ${atkinson.variable} ${barlow.variable}`}
+		>
 			<head>
 				<link rel="icon" href="/favicon.svg" type="image/svg+xml"></link>
 			</head>
-			<body className="antialiased">{children}</body>
+			<body className="antialiased">
+				<SketchFilters />
+				{children}
+				{beaconToken ? (
+					<script
+						defer
+						src="https://static.cloudflareinsights.com/beacon.min.js"
+						data-cf-beacon={JSON.stringify({ token: beaconToken })}
+					/>
+				) : null}
+			</body>
 		</html>
 	);
 }

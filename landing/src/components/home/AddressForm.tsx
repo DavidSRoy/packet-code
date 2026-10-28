@@ -2,14 +2,12 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { SignButton } from "@/components/site/SignButton";
+import { TextField } from "./TextField";
 import type { SignupFlow } from "./useSignupFlow";
 
 interface Props {
 	flow: SignupFlow;
 }
-
-const FIELD = "flex flex-1 basis-[200px] flex-col gap-2";
-const INPUT = "h-[var(--control-h)] w-full border-0 border-b-[1.5px] border-ink bg-transparent p-0 text-[length:var(--control-font)] text-ink";
 
 /** Both steps share one slot. The message line is the live region. */
 export function AddressForm(props: Props) {
@@ -66,20 +64,17 @@ export function AddressForm(props: Props) {
 			{flow.step === "address" && (
 				<>
 				<div className="flex flex-wrap items-end gap-4">
-					<label className={FIELD} htmlFor="address">
-						<span className="lbl text-[length:var(--field-label)]">Street address or cross streets</span>
-						<input
-							id="address"
-							ref={addressRef}
-							className={INPUT}
-							name="address"
-							autoComplete="street-address"
-							maxLength={200}
-							placeholder="NE 45th St and 25th Ave NE"
-							value={address}
-							onChange={(e) => setAddress(e.target.value)}
-						/>
-					</label>
+					<TextField
+						id="address"
+						label="Street address or cross streets"
+						inputRef={addressRef}
+						name="address"
+						autoComplete="street-address"
+						maxLength={200}
+						placeholder="NE 45th St and 25th Ave NE"
+						value={address}
+						onChange={(e) => setAddress(e.target.value)}
+					/>
 					<SignButton label="Check" type="submit" isBusy={isBusy} busyLabel="Checking…" />
 				</div>
 				{msg}
@@ -88,20 +83,17 @@ export function AddressForm(props: Props) {
 			{flow.step === "email" && (
 				<>
 					<div className="flex flex-wrap items-end gap-4">
-						<label className={FIELD} htmlFor="email">
-							<span className="lbl text-[length:var(--field-label)]">Email</span>
-							<input
-								id="email"
-								ref={emailRef}
-								className={INPUT}
-								name="email"
-								type="email"
-								autoComplete="email"
-								placeholder="you@example.com"
-								value={email}
-								onChange={(e) => setEmail(e.target.value)}
-							/>
-						</label>
+						<TextField
+							id="email"
+							label="Email"
+							inputRef={emailRef}
+							name="email"
+							type="email"
+							autoComplete="email"
+							placeholder="you@example.com"
+							value={email}
+							onChange={(e) => setEmail(e.target.value)}
+						/>
 						<SignButton label="Get updates" type="submit" isBusy={isBusy} busyLabel="Sending…" />
 					</div>
 					{msg}

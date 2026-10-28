@@ -17,3 +17,11 @@ export function round(n: number, decimals: number): number {
   const factor = 10 ** decimals;
   return Math.round(n * factor) / factor;
 }
+
+/** Equirectangular distance in km. Accurate to well under 1% at city scale. */
+export function distanceKm(a: LatLng, b: LatLng): number {
+  const rad = Math.PI / 180;
+  const x = (b[1] - a[1]) * rad * Math.cos(((a[0] + b[0]) / 2) * rad);
+  const y = (b[0] - a[0]) * rad;
+  return 6371 * Math.hypot(x, y);
+}

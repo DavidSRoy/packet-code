@@ -193,3 +193,20 @@ nav a[aria-current="page"] {
 		scroll-behavior: auto !important;
 	}
 }
+
+/* Text button under the sign-up form. */
+.textbtn {
+	align-self: flex-start;
+	height: var(--control-h);
+	padding: 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--color-black, #111);
+	text-decoration: underline;
+	text-underline-offset: 5px;
+	text-decoration-thickness: 1.5px;
+	cursor: pointer;
+}

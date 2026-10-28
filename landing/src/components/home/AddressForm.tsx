@@ -9,7 +9,7 @@ interface Props {
 }
 
 const FIELD = "flex flex-1 basis-[200px] flex-col gap-2";
-const INPUT = "h-[var(--control-h)] w-full border-0 border-b-[1.5px] border-black bg-transparent p-0 text-[length:var(--control-font)] text-black";
+const INPUT = "h-[var(--control-h)] w-full border-0 border-b-[1.5px] border-ink bg-transparent p-0 text-[length:var(--control-font)] text-ink";
 
 /** Both steps share one slot. The message line is the live region. */
 export function AddressForm(props: Props) {
@@ -52,16 +52,22 @@ export function AddressForm(props: Props) {
 		requestAnimationFrame(() => addressRef.current?.focus());
 	}
 
+	const msg = (
+		<p role="status" aria-live="polite" className="m-0 min-h-6">
+			{flow.error || flow.hint}
+		</p>
+	);
+
 	return (
 		<form id="updates" noValidate onSubmit={onFormSubmit} className="flex flex-col gap-4">
-			<div role="status" aria-live="polite" className="flex flex-col gap-4">
-				<p className="m-0 text-[18px] font-bold leading-[1.35]">{flow.heading}</p>
-				<p className="m-0 min-h-6">{flow.error || flow.hint}</p>
-			</div>
+			<p role="status" aria-live="polite" className="m-0 text-[18px] font-bold leading-[1.35]">
+				{flow.heading}
+			</p>
 			{flow.step === "address" && (
+				<>
 				<div className="flex flex-wrap items-end gap-4">
 					<label className={FIELD} htmlFor="address">
-						<span className="text-[length:var(--field-label)]">Street address or cross streets</span>
+						<span className="lbl text-[length:var(--field-label)]">Street address or cross streets</span>
 						<input
 							id="address"
 							ref={addressRef}
@@ -76,12 +82,14 @@ export function AddressForm(props: Props) {
 					</label>
 					<SignButton label="Check" type="submit" isBusy={isBusy} busyLabel="Checking…" />
 				</div>
+				{msg}
+				</>
 			)}
 			{flow.step === "email" && (
 				<>
 					<div className="flex flex-wrap items-end gap-4">
 						<label className={FIELD} htmlFor="email">
-							<span className="text-[length:var(--field-label)]">Email</span>
+							<span className="lbl text-[length:var(--field-label)]">Email</span>
 							<input
 								id="email"
 								ref={emailRef}
@@ -96,6 +104,7 @@ export function AddressForm(props: Props) {
 						</label>
 						<SignButton label="Get updates" type="submit" isBusy={isBusy} busyLabel="Sending…" />
 					</div>
+					{msg}
 					<button type="button" className="textbtn" onClick={onRestartClick}>
 						Check another address
 					</button>

@@ -46,8 +46,11 @@ function measure(canvas: HTMLCanvasElement, w: number, h: number): Layout {
 	const c = copy ? copy.getBoundingClientRect() : null;
 	const isOverlapping = c !== null && c.top < r.bottom && c.bottom > r.top && c.left < r.right;
 	const isNarrow = r.width < 700;
+	// The copy box is content-box: left padding, then up to COPY_MAX_W of content.
+	const padL = copy ? parseFloat(getComputedStyle(copy).paddingLeft) || 0 : 0;
+	const padR = copy ? parseFloat(getComputedStyle(copy).paddingRight) || 0 : 0;
 	return {
-		clipX: c && isOverlapping ? c.left - r.left + Math.min(c.width, COPY_MAX_W) + 40 : 0,
+		clipX: c && isOverlapping ? c.left - r.left + padL + Math.min(c.width - padL - padR, COPY_MAX_W) + 40 : 0,
 		anchor: {
 			x: isNarrow || !c ? w * 0.5 : Math.max(c.right - r.left + 120, w * 0.55),
 			y: h * (isNarrow ? 0.45 : 0.42),

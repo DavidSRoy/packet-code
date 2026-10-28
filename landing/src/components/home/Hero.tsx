@@ -21,7 +21,7 @@ export function Hero() {
 			<HeroGlobe target={flow.target} />
 			<div
 				data-hero-copy
-				className="pad relative z-[1] flex max-w-[440px] flex-col gap-6 pb-16 pt-[clamp(40px,9vh,112px)] max-[760px]:max-w-none max-[760px]:pb-14 max-[760px]:pt-4"
+				className="pad relative z-[1] box-content flex max-w-[440px] flex-col gap-6 pb-16 pt-[clamp(40px,9vh,112px)] max-[760px]:max-w-none max-[760px]:pb-14 max-[760px]:pt-4"
 			>
 				<h1 className="m-0 font-display text-[clamp(64px,9vw,136px)] font-semibold leading-none tracking-[-0.02em]">
 					Packet

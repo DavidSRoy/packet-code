@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Atkinson_Hyperlegible_Next, Barlow_Condensed, Libre_Franklin } from "next/font/google";
+import { Footer } from "@/components/site/Footer";
+import { Nav } from "@/components/site/Nav";
 import { SketchFilters } from "@/components/site/SketchFilters";
 import "./globals.css";
 
@@ -45,7 +47,10 @@ export default function RootLayout({
 			</head>
 			<body className="antialiased">
 				<SketchFilters />
+				<div className="h-2 bg-ink" />
+				<Nav />
 				{children}
+				<Footer />
 				{beaconToken ? (
 					<script
 						defer

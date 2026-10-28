@@ -24,14 +24,14 @@ export function StorePreview() {
 					>
 						<item.Drawing />
 						<b className="text-[17px]">{item.name}</b>
-						<span className="text-[14px]">{item.shop}</span>
-						<span className="text-[14px]">{item.price}</span>
+						<span className="text-[14px] leading-5">{item.shop}</span>
+						<span className="mt-1 text-[15px] font-bold">{item.price}</span>
 					</li>
 				))}
 			</ul>
 			<Link
 				href="/#updates"
-				className="self-start py-1 text-[15px] font-bold underline decoration-[1.5px] underline-offset-[5px]"
+				className="self-start py-1 text-[14px] leading-5 underline underline-offset-[3px]"
 			>
 				Get updates when ordering opens
 			</Link>

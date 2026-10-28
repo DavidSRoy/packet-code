@@ -45,7 +45,7 @@ ap.add_argument("--height", type=int, default=720)
 ap.add_argument("--fps", type=int, default=10)
 ap.add_argument("--port", type=int, default=8080)
 ap.add_argument("--hfov", type=float, default=None,
-                help="horizontal FOV, deg. Default: 48.8 for a Logitech C270, else 70 (OV9281)")
+                help="horizontal FOV, deg. Default: 48.8 for a Logitech C270, 70.4 for a C920 (78 deg diagonal, 16:9), else 70 (OV9281)")
 ap.add_argument("--layout", default=os.path.join(HERE, "lid_layout.json"))
 ap.add_argument("--mount-fwd", type=float, default=0.134, help="m, under the GPS mast")
 ap.add_argument("--mount-right", type=float, default=0.0)
@@ -98,7 +98,7 @@ def grab():
 
 
 NAME = camera_name(a.dev)
-HFOV = a.hfov if a.hfov else (48.8 if "C270" in NAME.upper() else 70.0)
+HFOV = a.hfov if a.hfov else (48.8 if "C270" in NAME.upper() else 70.4 if "C920" in NAME.upper() else 70.0)
 
 
 def lid_pose(r):
@@ -142,18 +142,23 @@ def watchdog():
             os._exit(3)
 
 
+DETECT_WORKERS = 2      # each worker takes the newest frame no worker has taken yet (alternate frames)
+claim = {"n": -1}
+rate = {"n": 0, "t0": time.time()}
+
+
 def detect():
     """Full frame, full size, always the newest frame, never an old frame twice. One
-    search takes about 190 ms on the Pi Zero 2 with 7 threshold windows (lid_tags.py),
-    so detection runs at about 5 Hz; the CPU is full, so a second worker would not help."""
+    search takes about 190 ms on the Pi Zero 2 with 7 threshold windows (lid_tags.py);
+    two workers run on alternate frames, and a slower worker never puts back an older pose."""
     finder = LidFinder(a.layout)
-    seen, n, t0 = -1, 0, time.time()
     while True:
         with cond:
-            cond.wait_for(lambda: latest["n"] != seen and latest["y"] is not None, timeout=2)
-            if latest["n"] == seen or latest["y"] is None:
+            cond.wait_for(lambda: latest["n"] > claim["n"] and latest["y"] is not None, timeout=2)
+            if latest["n"] <= claim["n"] or latest["y"] is None:
                 continue                         # no new frame: do not report an old pose as new
             y, seen, t_cap = latest["y"], latest["n"], latest["at"]
+            claim["n"] = seen
         gray = np.ascontiguousarray(y)
         try:
             K = camera_matrix(gray.shape[1], gray.shape[0], HFOV)
@@ -161,11 +166,14 @@ def detect():
             err = None
         except Exception as e:                  # keep the stream running if one frame fails
             boxes, err = [], f"{type(e).__name__}: {e}"
-        n += 1
-        if time.time() - t0 > 2:
-            lid["hz"], n, t0 = round(n / (time.time() - t0), 1), 0, time.time()
-        lid.update(t=time.time(), frame=seen, boxes=boxes, w=gray.shape[1], h=gray.shape[0],
-                   error=err, latency_ms=round((time.time() - t_cap) * 1000))
+        with cond:
+            rate["n"] += 1
+            if time.time() - rate["t0"] > 2:
+                lid["hz"] = round(rate["n"] / (time.time() - rate["t0"]), 1)
+                rate["n"], rate["t0"] = 0, time.time()
+            if seen > lid["frame"]:
+                lid.update(t=time.time(), frame=seen, boxes=boxes, w=gray.shape[1], h=gray.shape[0],
+                           error=err, latency_ms=round((time.time() - t_cap) * 1000))
 
 
 class H(BaseHTTPRequestHandler):
@@ -338,6 +346,7 @@ threading.Thread(target=grab, daemon=True).start()
 threading.Thread(target=watchdog, daemon=True).start()
 if a.mav != "none":
     threading.Thread(target=radio, daemon=True).start()
-threading.Thread(target=detect, daemon=True).start()
+for _ in range(DETECT_WORKERS):
+    threading.Thread(target=detect, daemon=True).start()
 print(f"streaming on http://0.0.0.0:{a.port}/  camera {NAME}, HFOV {HFOV} deg", flush=True)
 ThreadingHTTPServer(("", a.port), H).serve_forever()

@@ -39,7 +39,7 @@ const INKS: readonly Ink[] = [
 ];
 
 const SMALL = "text-[14px] leading-5";
-const PLATE_ART = "flex h-[200px] items-center justify-center border border-ink";
+const PLATE_ART = "grid h-[200px] place-items-center border border-ink";
 
 export default function PressPage() {
 	return (
@@ -78,7 +78,7 @@ export default function PressPage() {
 			<ManualSection no="3.0" title="Brand">
 				<div className="grid grid-cols-2 gap-6 max-[760px]:grid-cols-[minmax(0,1fr)]">
 					<figure className="m-0 flex flex-col gap-3">
-						<div className={`${PLATE_ART} [&_.emblem]:m-0 [&_.emblem]:self-center`}>
+						<div className={`${PLATE_ART} emblem-plate`}>
 							<Emblem size={48} />
 						</div>
 						<figcaption className="flex flex-col gap-1">
@@ -90,7 +90,7 @@ export default function PressPage() {
 						</figcaption>
 					</figure>
 					<figure className="m-0 flex flex-col gap-3">
-						<div className={`${PLATE_ART} gap-10`} aria-hidden="true">
+						<div className={`flex h-[200px] items-center justify-center gap-10 border border-ink`} aria-hidden="true">
 							<span className="font-display text-[40px] font-semibold leading-none">Aa</span>
 							<span className="font-body text-[40px] leading-none">Aa</span>
 							<span className="font-label text-[40px] font-semibold uppercase leading-none">Aa</span>

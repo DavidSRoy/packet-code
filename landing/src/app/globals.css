@@ -141,6 +141,12 @@ nav a[aria-current="page"] {
 	margin: 16px;
 }
 
+/* Emblem centred in a plate (press brand section). Unlayered, so it beats nothing but .emblem itself by specificity. */
+.emblem-plate .emblem {
+	margin: 0;
+	align-self: center;
+}
+
 .emblem > span {
 	display: block;
 	font-family: var(--font-display);

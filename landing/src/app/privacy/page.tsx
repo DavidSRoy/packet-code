@@ -17,7 +17,7 @@ const BLOCKS: readonly Block[] = [
 		title: "What we collect",
 		paragraphs: [
 			"When you sign up for updates, we store your email address. If you checked an address first, we also store whether it is inside the area Packet plans to serve and its location rounded to about 1 km. We do not store the address you typed.",
-			"We also store the campaign tags in the link you arrived from (utm_source, utm_medium and utm_campaign) and the page that referred you, when your browser provides them. Your browser holds these for the length of the visit and sends them with your sign-up. They are not sent anywhere else.",
+			"We also store the campaign tags in the link you arrived from (utm_source, utm_medium and utm_campaign) and the address of the page that referred you, when your browser provides them. Your browser holds these for the length of the visit and sends them with your sign-up. They are not sent anywhere else.",
 			"We keep the date you first signed up and the date of your latest sign-up.",
 		],
 	},

@@ -1,7 +1,7 @@
 import { round } from "../lib/geo.ts";
 import { parseQuery, parseSignup } from "../lib/signup-input.ts";
 import { checkAddress, type CheckResult } from "./check-address.ts";
-import type { FetchFn } from "./geocode.ts";
+import { GeocoderError, type FetchFn } from "./geocode.ts";
 import { upsertSignup, type SignupDb } from "./signups.ts";
 
 export interface Deps {
@@ -21,7 +21,8 @@ export async function handleCheck(body: unknown, deps: Deps): Promise<HandlerRes
   let result: CheckResult;
   try {
     result = await checkAddress(parsed.q, deps.fetchFn);
-  } catch {
+  } catch (e) {
+    if (!(e instanceof GeocoderError)) throw e;
     deps.log("[Check:POST] Geocoder failed");
     return { status: 502, body: { error: "geocoder" } };
   }
@@ -52,7 +53,8 @@ export async function handleSignup(body: unknown, deps: Deps): Promise<HandlerRe
         lat = round(result.lat, 2);
         lng = round(result.lng, 2);
       }
-    } catch {
+    } catch (e) {
+      if (!(e instanceof GeocoderError)) throw e;
       // The sign-up is never lost to a geocoder outage: save the email without a location.
       deps.log("[Signup:POST] Geocoder failed, saving without location");
     }

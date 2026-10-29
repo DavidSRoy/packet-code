@@ -211,15 +211,19 @@ class H(BaseHTTPRequestHandler):
 
 
 def wifi_ip():
-    """This Pi's IPv4 address on the default route (no packet is sent)."""
+    """This Pi's IPv4 address on the default route (no packet is sent), else
+    on wlan0: as a hotspot (wifi_join.sh) the Pi has no default route."""
     import socket
+    import subprocess
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as u:
             u.connect(("192.0.2.1", 9))
             ip = u.getsockname()[0]
         return None if ip.startswith("127.") else ip
     except OSError:
-        return None
+        out = subprocess.run(["ip", "-4", "-o", "addr", "show", "wlan0"],
+                             capture_output=True, text=True).stdout.split()
+        return out[out.index("inet") + 1].split("/")[0] if "inet" in out else None
 
 
 def snapshots(m, send_lock):

@@ -18,8 +18,7 @@ done
 # so a first boot without network can still finish later.
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-# dnsmasq-base: DHCP for the Wi-Fi hotspot (wifi_join.sh, NetworkManager shared mode)
-apt-get install -y avahi-daemon dnsmasq-base python3-opencv python3-numpy python3-serial \
+apt-get install -y avahi-daemon python3-opencv python3-numpy python3-serial \
   python3-venv python3-pip v4l-utils git tmux
 
 install -d -o packet -g packet "$DST"

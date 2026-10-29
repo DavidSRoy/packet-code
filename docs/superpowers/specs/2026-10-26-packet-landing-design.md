@@ -269,7 +269,7 @@ The client keeps the UTM fields from the landing URL (and the referrer) in `sess
 **Geocoder.** Nominatim (OpenStreetMap), called only from the Worker:
 - query `format=jsonv2&limit=1&countrycodes=us&viewbox=<Seattle bbox>&bounded=1`;
 - a descriptive `User-Agent` with a contact address;
-- a 4s timeout.
+- a 6s timeout.
 
 This follows Nominatim's usage policy: low volume, no autocomplete, attribution on `/privacy`. If traffic outgrows it, swap the geocoder inside `checkAddress` only; nothing else changes.
 

@@ -3,9 +3,14 @@ import { SEATTLE_BOX } from "../config/service-area.ts";
 
 export type FetchFn = (input: string, init?: RequestInit) => Promise<Response>;
 
-export class GeocoderError extends Error {}
+export class GeocoderError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "GeocoderError";
+  }
+}
 
-const TIMEOUT_MS = 4000;
+const TIMEOUT_MS = 6000;
 const USER_AGENT = "PacketLanding/1.0 (+[CONTACT EMAIL])";
 
 function isRecord(v: unknown): v is Record<string, unknown> {

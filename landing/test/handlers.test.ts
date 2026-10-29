@@ -155,3 +155,22 @@ test("signup: upsert keeps first non-null values (existing column wins)", async 
   );
   assert.ok(!d.sql[0].includes("COALESCE(excluded."));
 });
+
+test("check: geocoder failure logs the reason, never the query", async () => {
+  const d = deps({ geoFails: true });
+  await handleCheck({ q: "4500 25th Ave NE" }, d);
+  assert.equal(d.logged[0], '[Check:POST] Geocoder failed — {"reason":"[Geocoder:geocode] Request failed"}');
+});
+
+test("signup: geocoder failure logs the reason, never the address", async () => {
+  const d = deps({ geoFails: true });
+  await handleSignup({ email: "a@b.co", q: "4500 25th Ave NE" }, d);
+  assert.match(d.logged[0], /^\[Signup:POST\] Geocoder failed, saving without location — \{"reason":"\[Geocoder:geocode\] Request failed"\}$/);
+  assert.ok(!d.logged[0].includes("25th"));
+});
+
+test("signup: insert failure logs the error name", async () => {
+  const d = deps({ dbFails: true });
+  await handleSignup({ email: "a@b.co", utm_source: "flyer" }, d);
+  assert.equal(d.logged[0], '[Signup:POST] Insert failed — {"in_area":null,"utm_source":"flyer","error":"Error"}');
+});

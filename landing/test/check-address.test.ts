@@ -75,3 +75,6 @@ test("a cross-street miss falls through to the geocoder", async () => {
   assert.equal(isCalled, true);
   assert.ok(r.found && r.inArea);
 });
+
+test("GeocoderError carries its own name", async () =>
+  assert.rejects(checkAddress("x", fakeJson({ nope: 1 }), EMPTY), { name: "GeocoderError" }));

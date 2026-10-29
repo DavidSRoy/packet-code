@@ -25,7 +25,7 @@ export async function handleCheck(body: unknown, deps: Deps): Promise<HandlerRes
     result = await checkAddress(parsed.q, deps.fetchFn, deps.intersections);
   } catch (e) {
     if (!(e instanceof GeocoderError)) throw e;
-    deps.log("[Check:POST] Geocoder failed");
+    deps.log(`[Check:POST] Geocoder failed — ${JSON.stringify({ reason: e.message })}`);
     return { status: 502, body: { error: "geocoder" } };
   }
   if (!result.found) return { status: 200, body: { found: false } };
@@ -58,7 +58,7 @@ export async function handleSignup(body: unknown, deps: Deps): Promise<HandlerRe
     } catch (e) {
       if (!(e instanceof GeocoderError)) throw e;
       // The sign-up is never lost to a geocoder outage: save the email without a location.
-      deps.log("[Signup:POST] Geocoder failed, saving without location");
+      deps.log(`[Signup:POST] Geocoder failed, saving without location — ${JSON.stringify({ reason: e.message })}`);
     }
   }
 
@@ -73,8 +73,10 @@ export async function handleSignup(body: unknown, deps: Deps): Promise<HandlerRe
       utmCampaign: input.utmCampaign,
       referrer: input.referrer,
     });
-  } catch {
-    deps.log(`[Signup:POST] Insert failed — ${JSON.stringify({ in_area: inArea, utm_source: input.utmSource })}`);
+  } catch (e) {
+    // D1 error names carry no bound values, so the name is safe to log.
+    const error = e instanceof Error ? e.name : "unknown";
+    deps.log(`[Signup:POST] Insert failed — ${JSON.stringify({ in_area: inArea, utm_source: input.utmSource, error })}`);
     return { status: 500, body: { error: "server" } };
   }
   return { status: 200, body: { ok: true } };

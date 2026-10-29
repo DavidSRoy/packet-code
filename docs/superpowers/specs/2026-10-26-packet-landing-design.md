@@ -237,7 +237,7 @@ CREATE TABLE signups (
 );
 ```
 
-The address text is never stored or logged. A repeat sign-up with the same email upserts: it keeps `created_at`, overwrites the other fields when the new value is non-null, and bumps `updated_at`.
+The address text is never stored or logged. A repeat sign-up with the same email upserts: it fills fields that are still empty, keeps every value already stored (first touch wins, so the flyer that first brought someone in keeps the credit and nobody who knows an email can rewrite its row), keeps `created_at`, and bumps `updated_at`.
 
 ### 10.2 Endpoints
 
@@ -329,7 +329,7 @@ The build ships with these as visible `[BRACKETS]`. All must be replaced before 
     - The globe turns to the point each time.
     - `checkAddress` and the point-in-polygon test also get a small unit check with fixed coordinates, so they can be tested without the network.
   - **Hero sign-up**: one row appears in local D1 with `in_area`, rounded `lat`/`lng` and the UTM fields from `/?utm_source=flyer&utm_medium=qr&utm_campaign=uvillage-1`. No address text is in the row or the logs.
-  - **Repeat sign-up**: the same email upserts and doesn't duplicate.
+  - **Repeat sign-up**: the same email upserts and doesn't duplicate. It fills only fields that are still empty and keeps the values already stored.
   - **Closing form**: stores a row with null `in_area`.
   - **Bad input**: posting it directly to the API returns 400.
   - **Showcase**: advances after 7s; the arrow, the tabs, swiping and pause work; the About links land on the right product on `/products`.

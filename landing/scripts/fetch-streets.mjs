@@ -86,6 +86,9 @@ async function fetchOverpass() {
 }
 
 const data = await fetchOverpass();
+// Overpass reports timeouts and memory limits as a `remark` on a 200 response.
+if (data.remark) throw new Error(`[fetch-streets:main] Overpass returned a remark — ${data.remark}`);
+if (!data.elements?.some((el) => el.type === "way")) throw new Error("[fetch-streets:main] Overpass returned no ways");
 
 const main = [];
 const minor = [];

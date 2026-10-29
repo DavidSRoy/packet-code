@@ -2,11 +2,13 @@ import { round } from "../lib/geo.ts";
 import { parseQuery, parseSignup } from "../lib/signup-input.ts";
 import { checkAddress, type CheckResult } from "./check-address.ts";
 import { GeocoderError, type FetchFn } from "./geocode.ts";
+import type { IntersectionIndex } from "./intersections.ts";
 import { upsertSignup, type SignupDb } from "./signups.ts";
 
 export interface Deps {
   db: SignupDb | undefined;
   fetchFn: FetchFn;
+  intersections: IntersectionIndex;
   log: (msg: string) => void;
 }
 
@@ -20,7 +22,7 @@ export async function handleCheck(body: unknown, deps: Deps): Promise<HandlerRes
   if (!parsed.ok) return { status: 400, body: { error: parsed.error } };
   let result: CheckResult;
   try {
-    result = await checkAddress(parsed.q, deps.fetchFn);
+    result = await checkAddress(parsed.q, deps.fetchFn, deps.intersections);
   } catch (e) {
     if (!(e instanceof GeocoderError)) throw e;
     deps.log("[Check:POST] Geocoder failed");
@@ -47,7 +49,7 @@ export async function handleSignup(body: unknown, deps: Deps): Promise<HandlerRe
   let lng: number | null = null;
   if (input.q !== null) {
     try {
-      const result = await checkAddress(input.q, deps.fetchFn);
+      const result = await checkAddress(input.q, deps.fetchFn, deps.intersections);
       if (result.found) {
         inArea = result.inArea;
         lat = round(result.lat, 2);

@@ -6,6 +6,7 @@ import {
   type Deps,
 } from "../src/server/handlers.ts";
 import type { SignupDb } from "../src/server/signups.ts";
+import { buildIndex } from "../src/server/intersections.ts";
 
 interface Options {
   geo?: [number, number];
@@ -47,6 +48,7 @@ function deps(options: Options = {}): TestDeps {
         : [];
       return Promise.resolve(Response.json(hits));
     },
+    intersections: buildIndex({ names: [], points: [] }),
     log: (msg) => logged.push(msg),
     sql,
     bound,

@@ -117,41 +117,59 @@ UW MPSK|<device passphrase>|20
 ```
 
 At every boot, `wifi_join.sh` adds these networks to NetworkManager (with the
-fixed MAC that UW MPSK needs) and connects.
-
-### Video in the field: the Mac's Wi-Fi network
-
-With no shared network, the Mac makes one with Internet Sharing, and the Pi
-joins it like any other network. The Mac gets its internet from an iPhone on
-USB (map tiles, cloud push, TFR refresh).
-
-1. Connect the iPhone by USB and turn on Personal Hotspot.
-2. Wi-Fi settings: turn **Auto-Join off** for the usual networks. When the Mac
-   joins a network with internet, the iPhone USB link stops, and Internet
-   Sharing has no source. Then turn Wi-Fi off and on: Wi-Fi shows "Not Associated".
-3. System Settings > General > Sharing > Internet Sharing (i):
-   - Share your connection from: **iPhone USB**
-   - To devices using: **Wi-Fi** only
-   - Wi-Fi Options: name `PacketGround`, channel **1, 6 or 11** (the Pi Zero 2 W
-     has no 5 GHz), security WPA2/WPA3 Personal, password
-4. Turn Internet Sharing on. The Mac is `192.168.2.1`; the Pi gets `192.168.2.x`.
-5. On the Pi, in `wifi.txt`, with the highest priority:
-   ```
-   PacketGround|<password>|30
-   ```
-
-The Pi sends its address over the radio (PIIP), so the ground-control page
-finds the video by itself.
-
-Check on the Mac (bridge100 at 192.168.2.1, `bootpd` running, internet on the iPhone):
-
-```bash
-ifconfig bridge100 | grep inet; pgrep -l bootpd; route -n get default | grep interface
-```
-
-Without the iPhone (not tested): the page has no map tiles, no cloud push, and
-TFRs from the cache only. `setup.sh` runs again at each boot
+fixed MAC that UW MPSK needs) and connects. `setup.sh` runs again at each boot
 until it finishes. (The HDMI `status_screen.sh` was removed on 2026-10-25: it ran
 `cloud-init status`, `nmcli` and a DNS lookup every 5 s, about 1 CPU core, and
 the drone has no screen.)
 Never commit `wifi.txt`; `.gitignore` blocks it.
+
+### Video in the field: the Mac's Wi-Fi network
+
+With no shared network, the Mac makes one with Internet Sharing (`PacketGround`)
+and the Pi joins it. The Mac gets its internet from an iPhone on USB (map tiles,
+cloud push, TFR refresh). The Mac is `192.168.2.1`; the Pi gets `192.168.2.x`
+and sends it over the radio, so the page finds the video by itself.
+
+One time:
+
+- Mac, System Settings > General > Sharing > Internet Sharing (i), with the
+  toggle off: share from **iPhone USB**, to **Wi-Fi** only. Wi-Fi Options: name
+  `PacketGround`, channel **1, 6 or 11** (the Pi Zero 2 W has no 5 GHz),
+  WPA2/WPA3 Personal (macOS has no WPA2-only choice), password.
+- Pi, `wifi.txt`, with a priority above all other lines:
+  ```
+  PacketGround|<password>|40
+  ```
+
+Before each flight:
+
+1. Plug the iPhone and the telemetry radio directly into the Mac, not into a
+   shared hub (on 2026-10-29 both dropped off USB together more than once).
+   Turn on Personal Hotspot.
+2. Mac Wi-Fi: **Auto-Join off** for the usual networks, then Wi-Fi off and on.
+   Wi-Fi must show "Not Associated": when the Mac joins a network with internet,
+   the iPhone USB link stops, and Internet Sharing has no source.
+3. Internet Sharing off, then on. Check (bridge100 at 192.168.2.1, `bootpd`,
+   internet on the iPhone):
+   ```bash
+   ifconfig bridge100 | grep inet; pgrep -l bootpd; route -n get default | grep interface
+   ```
+4. Power the drone. Start `ground_control/server.py`. The camera panel shows
+   `WI-FI · 10 FPS` within about 1 min of the Pi boot.
+
+Known limits (2026-10-29):
+
+- The Wi-Fi driver as loaded at boot does not join this network ("Authentication
+  timed out"; macOS offers WPA2/WPA3 and the Pi tries WPA3). After one driver
+  reload it joins with WPA2, so `wifi_join.sh` reloads the driver at each boot.
+  The cause is not known. A reboot with this in place is not tested yet.
+- The Mac network restarted every few minutes in the test (new MAC address each
+  time). The Pi retries forever (`autoconnect-retries 0`); in between, the page
+  shows the radio snapshots.
+- **Switch to the Pi hotspot** (the Pi makes a WPA2-only network, the Mac joins
+  it) when this is not reliable enough. That code is the reverted first version
+  of [PR #2](https://github.com/sanjanas18/packethw/pull/2) (commit `1081934`
+  and the next three).
+
+Without the iPhone (not tested): no map tiles, no cloud push, and TFRs from the
+cache only.

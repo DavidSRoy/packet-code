@@ -117,36 +117,7 @@ UW MPSK|<device passphrase>|20
 ```
 
 At every boot, `wifi_join.sh` adds these networks to NetworkManager (with the
-fixed MAC that UW MPSK needs) and connects.
-
-### Drone hotspot (video to the laptop without a shared network)
-
-An `AP` line makes the Pi its own Wi-Fi network (2.4 GHz WPA2, Pi at
-`10.42.0.1`, DHCP for the laptop):
-
-```
-# AP|SSID|PASSWORD|PRIORITY   (password: 8 or more characters)
-AP|PacketDrone|<password>|0
-```
-
-- The hotspot is always "in range". With priority 0 it starts only when no
-  listed network is in range at boot; with the highest priority it always starts.
-- Its DHCP gives no gateway and no DNS (`/etc/NetworkManager/dnsmasq-shared.d/packet-ap.conf`),
-  so the laptop keeps its internet on iPhone USB or Ethernet.
-- The Pi sends `10.42.0.1` over the radio (PIIP), so the ground-control page
-  finds the video by itself.
-- Needs `dnsmasq-base` (`setup.sh` installs it; on a Pi set up before 2026-10-29:
-  `sudo apt-get install dnsmasq-base`).
-
-On the Mac:
-
-```bash
-tools/drone_wifi.sh join PacketDrone <password>   # joins, checks http://10.42.0.1:8080
-tools/drone_wifi.sh check
-tools/drone_wifi.sh leave PacketDrone             # back to the usual Wi-Fi
-```
-
-Test: `bash companion/test/wifi_join_test.sh` (fake nmcli, 9 checks). `setup.sh` runs again at each boot
+fixed MAC that UW MPSK needs) and connects. `setup.sh` runs again at each boot
 until it finishes. (The HDMI `status_screen.sh` was removed on 2026-10-25: it ran
 `cloud-init status`, `nmcli` and a DNS lookup every 5 s, about 1 CPU core, and
 the drone has no screen.)

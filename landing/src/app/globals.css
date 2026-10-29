@@ -268,6 +268,18 @@ nav a[aria-current="page"] {
 	opacity: 1;
 }
 
+/* Dashed hidden lines and centerlines keep their own dasharray, so they fade in instead of drawing. */
+.drawing .hid,
+.drawing .ctr {
+	opacity: 0;
+	transition: opacity 0.6s 0.3s;
+}
+
+.drawing.on .hid,
+.drawing.on .ctr {
+	opacity: 1;
+}
+
 .sketch-pen3 :is(path, circle, rect) {
 	filter: url(#pen3);
 }
@@ -286,7 +298,9 @@ nav a[aria-current="page"] {
 		--dash: 0px !important;
 	}
 
-	.drawing .late {
+	.drawing .late,
+	.drawing .hid,
+	.drawing .ctr {
 		opacity: 1 !important;
 	}
 }

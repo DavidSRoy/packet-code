@@ -54,12 +54,12 @@ export function VehiclePlanSide() {
 				</title>
 				{/* plan view, centre (170,190) */}
 				{twice((c) => (
-					<path className={`ctr${c}`} d="M20 190H320M170 40V340" pathLength="1" />
+					<path className={`ctr${c}`} d="M20 190H320M170 40V340" />
 				))}
 				{ROTORS.map(([cx, cy]) => (
 					<g key={`disc-${cx}-${cy}`}>
 						{twice((c) => (
-							<circle className={`hid${c}`} cx={cx} cy={cy} r="56" pathLength="1" />
+							<circle className={`hid${c}`} cx={cx} cy={cy} r="56" />
 						))}
 					</g>
 				))}
@@ -97,7 +97,7 @@ export function VehiclePlanSide() {
 				</g>
 				{/* side view, centre x 500, ground y 300 */}
 				{twice((c) => (
-					<path className={`ctr${c}`} d="M500 120V320" pathLength="1" />
+					<path className={`ctr${c}`} d="M500 120V320" />
 				))}
 				{twice((c) => (
 					<path className={`ln${c}`} d="M380 300H620" pathLength="1" />

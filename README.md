@@ -40,6 +40,8 @@ Open http://localhost:8650. QGroundControl can stay open: the server forwards al
 
 Options: `--port`, `--baud`, `--http`, `--qgc none`, `--cloud-url` (see below).
 
+Box camera video in the field: the Mac makes a Wi-Fi network with Internet Sharing and the Pi joins it (see [companion/README.md](companion/README.md#video-in-the-field-the-macs-wi-fi-network)).
+
 The page shows a satellite map with the drone, its heading, home, the geofence ring, the flown track and a 5 s lead line. The map tiles need internet. The rest of the page works offline.
 
 ## Cloud telemetry API (`cloud/telemetry-api/`)

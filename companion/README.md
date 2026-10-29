@@ -117,7 +117,40 @@ UW MPSK|<device passphrase>|20
 ```
 
 At every boot, `wifi_join.sh` adds these networks to NetworkManager (with the
-fixed MAC that UW MPSK needs) and connects. `setup.sh` runs again at each boot
+fixed MAC that UW MPSK needs) and connects.
+
+### Video in the field: the Mac's Wi-Fi network
+
+With no shared network, the Mac makes one with Internet Sharing, and the Pi
+joins it like any other network. The Mac gets its internet from an iPhone on
+USB (map tiles, cloud push, TFR refresh).
+
+1. Connect the iPhone by USB and turn on Personal Hotspot.
+2. Wi-Fi settings: turn **Auto-Join off** for the usual networks. When the Mac
+   joins a network with internet, the iPhone USB link stops, and Internet
+   Sharing has no source. Then turn Wi-Fi off and on: Wi-Fi shows "Not Associated".
+3. System Settings > General > Sharing > Internet Sharing (i):
+   - Share your connection from: **iPhone USB**
+   - To devices using: **Wi-Fi** only
+   - Wi-Fi Options: name `PacketGround`, channel **1, 6 or 11** (the Pi Zero 2 W
+     has no 5 GHz), security WPA2/WPA3 Personal, password
+4. Turn Internet Sharing on. The Mac is `192.168.2.1`; the Pi gets `192.168.2.x`.
+5. On the Pi, in `wifi.txt`, with the highest priority:
+   ```
+   PacketGround|<password>|30
+   ```
+
+The Pi sends its address over the radio (PIIP), so the ground-control page
+finds the video by itself.
+
+Check on the Mac (bridge100 at 192.168.2.1, `bootpd` running, internet on the iPhone):
+
+```bash
+ifconfig bridge100 | grep inet; pgrep -l bootpd; route -n get default | grep interface
+```
+
+Without the iPhone (not tested): the page has no map tiles, no cloud push, and
+TFRs from the cache only. `setup.sh` runs again at each boot
 until it finishes. (The HDMI `status_screen.sh` was removed on 2026-10-25: it ran
 `cloud-init status`, `nmcli` and a DNS lookup every 5 s, about 1 CPU core, and
 the drone has no screen.)

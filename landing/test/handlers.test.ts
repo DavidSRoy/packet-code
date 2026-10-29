@@ -174,3 +174,15 @@ test("signup: insert failure logs the error name", async () => {
   await handleSignup({ email: "a@b.co", utm_source: "flyer" }, d);
   assert.equal(d.logged[0], '[Signup:POST] Insert failed — {"in_area":null,"utm_source":"flyer","error":"Error"}');
 });
+
+test("signup: an outside address stores in_area 0", async () => {
+  const d = deps({ geo: [47.68, -122.327] });
+  await handleSignup({ email: "a@b.co", q: "Green Lake" }, d);
+  assert.deepEqual(d.bound[0].slice(1, 4), [0, 47.68, -122.33]);
+});
+
+test("signup: a not-found address stores null in_area, lat and lng", async () => {
+  const d = deps();
+  assert.equal((await handleSignup({ email: "a@b.co", q: "asdfgh" }, d)).status, 200);
+  assert.deepEqual(d.bound[0].slice(1, 4), [null, null, null]);
+});

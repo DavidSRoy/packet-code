@@ -12,7 +12,7 @@ export function WhatSection() {
 			<LeadingLines />
 			<p className="m-0 mt-8 max-w-[60ch]">
 				Order in the Packet app, follow it as it comes, and find it at your front door. Packet starts in
-				University Village and the streets around it, including the U District, Bryant and the UW campus.
+				University Village and the streets around it, including the U District and Bryant.
 			</p>
 		</section>
 	);

@@ -120,7 +120,7 @@ See `home-1440.png` and `home-390-sheet.png`.
 ### 6.2 What
 - h2 "Delivery from U Village shops to homes nearby."
 - The leading lines.
-- Body copy: "Order in the Packet app, follow it as it comes, and find it at your front door. Packet starts in University Village and the streets around it, including the U District, Bryant and the UW campus." This replaces the mockup's "[RADIUS]".
+- Body copy: "Order in the Packet app, follow it as it comes, and find it at your front door. Packet starts in University Village and the streets around it, including the U District and Bryant." This replaces the mockup's "[RADIUS]".
 
 ### 6.3 How it works
 - h2 "Three steps, all in the app."

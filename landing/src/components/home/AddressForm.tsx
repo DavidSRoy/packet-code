@@ -5,6 +5,8 @@ import { SignButton } from "@/components/site/SignButton";
 import { TextField } from "./TextField";
 import type { SignupFlow } from "./useSignupFlow";
 
+const MSG_ID = "updates-msg";
+
 interface Props {
 	flow: SignupFlow;
 }
@@ -17,6 +19,7 @@ export function AddressForm(props: Props) {
 	const addressRef = useRef<HTMLInputElement>(null);
 	const emailRef = useRef<HTMLInputElement>(null);
 	const isBusy = flow.status !== "idle";
+	const hasError = flow.error !== "";
 
 	useEffect(() => {
 		if (flow.step === "email") emailRef.current?.focus();
@@ -51,7 +54,7 @@ export function AddressForm(props: Props) {
 	}
 
 	const msg = (
-		<p role="status" aria-live="polite" className="m-0 min-h-6">
+		<p id={MSG_ID} role="status" aria-live="polite" className="m-0 min-h-6">
 			{flow.error || flow.hint}
 		</p>
 	);
@@ -71,6 +74,8 @@ export function AddressForm(props: Props) {
 						name="address"
 						autoComplete="street-address"
 						maxLength={200}
+						isInvalid={hasError}
+						describedBy={MSG_ID}
 						placeholder="NE 45th St and 25th Ave NE"
 						value={address}
 						onChange={(e) => setAddress(e.target.value)}
@@ -91,6 +96,8 @@ export function AddressForm(props: Props) {
 							type="email"
 							autoComplete="email"
 							placeholder="you@example.com"
+							isInvalid={hasError}
+							describedBy={MSG_ID}
 							value={email}
 							onChange={(e) => setEmail(e.target.value)}
 						/>

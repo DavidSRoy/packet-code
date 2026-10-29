@@ -12,6 +12,8 @@ const FAILED = "Something went wrong. Try again in a moment.";
 export interface EmailSignup {
 	status: EmailStatus;
 	message: string;
+	/** True while the message is an error rather than the confirmation. */
+	isError: boolean;
 	onSubmit(email: string): void;
 }
 
@@ -43,5 +45,5 @@ export function useEmailSignup(): EmailSignup {
 		});
 	}, []);
 
-	return { status, message, onSubmit };
+	return { status, message, isError: message !== "" && status !== "done", onSubmit };
 }

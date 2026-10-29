@@ -42,6 +42,7 @@ export function Showcase() {
 			>
 				<div
 					className="relative grid min-h-[clamp(400px,38vw,540px)] touch-pan-y overflow-hidden -mr-[max(var(--spacing-margin),env(safe-area-inset-right,0px))] max-[760px]:min-h-0"
+					aria-live={showcase.isRunning ? "off" : "polite"}
 					onPointerDown={onStagePointerDown}
 					onPointerUp={onStagePointerUp}
 				>

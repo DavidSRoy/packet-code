@@ -1,17 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
-import { captureAttribution } from "@/lib/attribution";
 import { AddressForm } from "./AddressForm";
 import { HeroGlobe } from "./HeroGlobe";
 import { useSignupFlow } from "./useSignupFlow";
 
 export function Hero() {
 	const flow = useSignupFlow();
-
-	useEffect(() => {
-		captureAttribution();
-	}, []);
 
 	return (
 		<header

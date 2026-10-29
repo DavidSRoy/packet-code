@@ -30,6 +30,17 @@ export function readAttribution(): Attribution {
 	}
 }
 
+/** The referrer, or null when it is empty, unparseable or this site's own page. */
+function externalReferrer(): string | null {
+	if (!document.referrer) return null;
+	try {
+		return new URL(document.referrer).origin === window.location.origin ? null : document.referrer;
+	} catch (err) {
+		if (err instanceof TypeError) return null;
+		throw err;
+	}
+}
+
 /** First load only: stores utm_* and the referrer, never overwriting a stored value. */
 export function captureAttribution(): void {
 	try {
@@ -39,7 +50,8 @@ export function captureAttribution(): void {
 			const v = params.get(k);
 			if (v && !next[k]) next[k] = v;
 		}
-		if (document.referrer && !next.referrer) next.referrer = document.referrer;
+		const referrer = externalReferrer();
+		if (referrer && !next.referrer) next.referrer = referrer;
 		window.sessionStorage.setItem(KEY, JSON.stringify(next));
 	} catch {
 		// Storage can be blocked; attribution is best effort.

@@ -95,6 +95,20 @@ On the FC, `lua/ceil_guard.lua` applies the value:
 
 Tests: `python -m airspace.test_ceiling` (22 checks) and `python tools/sim/ceiling_test.py --ardupilot ~/ardupilot-x650/ardupilot` (SITL, 26 checks). The SITL test flies `tools/sim/x650.json`, a model of the real drone from the flight logs (2.92 kg, 6S, hover throttle 0.26; SITL gives 0.27).
 
+## Flight mode: perma-LOITER (`tools/perma_loiter.parm`)
+
+The radio does not pick the flight mode. `FLTMODE_CH = 0` turns the SC switch off, and `INITIAL_MODE = 5` boots the FC in LOITER. LOITER cannot arm without an EKF position (`PreArm: Need Position Estimate`), so the drone cannot take off before GPS preflight is done.
+
+Why: on 2026-10-29 (tlog 144111) the FC armed in STABILIZE before the EKF used GPS. SC was flipped to LOITER, the FC refused (`Mode change to Loiter failed: requires position`) and did not retry because SC never moved again. The pilot flew LOITER stick habits in STABILIZE and crashed.
+
+No radio override: during RTL (SF button or fence) and AUTO/GUIDED, change the mode from ground control. In a backend trip, SA off still stops the drone (BRAKE, then LOITER). With no GPS in flight, the EKF failsafe lands (`FS_EKF_ACTION = 1`); there is no STABILIZE fallback.
+
+Load, then reboot the FC (INITIAL_MODE applies at boot):
+```bash
+.venv/bin/python tools/param_load.py /dev/cu.usbserial-DU0E540E 57600 tools/perma_loiter.parm
+```
+To undo: `FLTMODE_CH = 7`, `INITIAL_MODE = 0`, `FLTMODE1..6 = 0,0,0,2,0,5`.
+
 ## SD kill switch guard (`lua/sd_guard.lua`)
 
 This guard gates the SD motor kill by height, so a flick of SD by mistake at height does not drop the drone.

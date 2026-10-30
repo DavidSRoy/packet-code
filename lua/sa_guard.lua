@@ -13,7 +13,7 @@
 -- actions are not overridden. It works without the laptop, because it runs
 -- on the Pixhawk.
 --
--- The pilot can also take over at any time with the mode switch (SC).
+-- The mode switch (SC) is off (tools/perma_loiter.parm): SA off is the radio takeover.
 
 local TABLE_KEY = 75
 assert(param:add_table(TABLE_KEY, "SAG_", 2), "SAG_ param table failed")

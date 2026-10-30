@@ -11,7 +11,8 @@ How it fits together
    "approved": false. A person checks a route on the map, then approves it.
 3. Fly: MissionRunner.goto("uplace") checks the SA switch and the preflight
    rules, uploads the approved route, arms, and starts AUTO. The pilot takes
-   over at any time with the mode switch (SC) or by turning SA off.
+   over at any time by turning SA off (the mode switch is off, see
+   tools/perma_loiter.parm).
 
 Altitudes in routes are relative to the pad where the route starts, because
 ArduPilot sets home at that pad when it arms. Files live in packethw/routes/.
@@ -551,7 +552,7 @@ class MissionRunner:
                 if self.current_seq >= land_seq and st == "enroute":
                     self._set(state="landing")
                 if s["mode"] != "AUTO":
-                    # pilot moved the mode switch, or the SA guard / a failsafe changed mode
+                    # ground control, the SA guard / a failsafe changed mode
                     why = "SA off" if not self.sa_on() else f"mode changed to {s['mode']}"
                     self._set(state="pilot", reason=f"pilot control ({why})", ended=_now())
                     L.note(f"Backend: trip stopped, {why}. Pilot has control.", 4)

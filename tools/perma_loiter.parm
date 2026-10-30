@@ -1,0 +1,15 @@
+# Perma-LOITER (2026-10-29, after the log 144111 crash).
+# The radio no longer picks the flight mode: the FC boots in LOITER and stays there.
+# LOITER cannot arm without an EKF position ("PreArm: Need Position Estimate"),
+# so the drone cannot take off before GPS preflight is done.
+# Load: python tools/param_load.py PORT BAUD tools/perma_loiter.parm
+FLTMODE_CH,0
+INITIAL_MODE,5
+# Not read while FLTMODE_CH is 0. Set anyway, so the switch still means LOITER
+# if FLTMODE_CH is turned back on.
+FLTMODE1,5
+FLTMODE2,5
+FLTMODE3,5
+FLTMODE4,5
+FLTMODE5,5
+FLTMODE6,5

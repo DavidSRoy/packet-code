@@ -6,7 +6,8 @@
 --
 -- The built-in RTL switch (RCx_OPTION = 4) does not work with a button: it
 -- leaves RTL again when the button goes back up. This script latches RTL.
--- To take control back during RTL, move the mode switch (SC).
+-- No radio override during RTL: the mode switch is off (tools/perma_loiter.parm).
+-- Change the mode from ground control to take control back.
 
 local TABLE_KEY = 77
 assert(param:add_table(TABLE_KEY, "SFR_", 3), "SFR_ param table failed")

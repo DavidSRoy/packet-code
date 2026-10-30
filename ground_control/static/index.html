@@ -123,7 +123,8 @@
   #actions { top: 64px; right: 12px; width: 252px; padding: 12px; max-height: calc(100vh - 84px - var(--air-h, 190px)); overflow-y: auto; }
   /* trips (backend pad-to-pad) */
   #trips, #lights { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
-  #lights .row2 { margin-bottom: 0; grid-template-columns: repeat(4, 1fr); }
+  #lights .row2 { margin-bottom: 0; grid-template-columns: repeat(5, auto); }
+  #lights .mini { padding: 0 2px; }
   .trip-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
   .badge { font: 600 10px var(--mono); padding: 2px 6px; border-radius: 2px; border: 1px solid var(--line-2); color: var(--muted); }
   .badge.on { color: #001018; background: var(--ok); border-color: var(--ok); }
@@ -405,6 +406,7 @@
       <button class="mini" data-lights="aviation" title="Red left, green right, white tail, strobe (SB middle)">Nav</button>
       <button class="mini" data-lights="landing" title="Landing: all arms steady white, for the box camera at night (ground control only)">Land</button>
       <button class="mini" data-lights="off" title="All lights off (SB down)">Off</button>
+      <button class="mini" id="b-show">Show</button>
     </div>
   </div>
   <div id="trips">
@@ -748,6 +750,7 @@ $("b-kill").addEventListener("pointerdown", () => {
 });
 ["pointerup", "pointerleave", "pointercancel"].forEach(t => $("b-kill").addEventListener(t, killUp));
 document.querySelectorAll("[data-lights]").forEach(b => b.onclick = () => send({ type: "lights", mode: b.dataset.lights }));
+$("b-show").onclick = () => send({ type: "light_show", on: !$("b-show").classList.contains("on") });
 
 /* ---------- render ---------- */
 function dot(id, cls) { $(id).className = "dot " + (cls || ""); }
@@ -982,7 +985,13 @@ function render(down) {
   document.querySelectorAll("[data-lights]").forEach(b => {
     b.classList.toggle("on", b.dataset.lights === lmode); b.disabled = down || !s.link;
   });
-  $("lights-note").textContent = s.rc_ok ? "Boxer SB overrides" : "";
+  // delivery show (LIT_SHOW): plays while disarmed, the next arming ends it
+  const show = $("b-show"), noShow = s.lights_show == null;
+  show.classList.toggle("on", !!s.lights_show);
+  show.disabled = down || !s.link || noShow;
+  show.title = noShow ? "lights.lua not loaded on the FC (no LIT_SHOW parameter)"
+    : "Delivery show: rainbow spin, ripple and green pulses while disarmed. Arming (stick right) ends it. Tap again to stop.";
+  $("lights-note").textContent = s.lights_show ? (s.armed ? "Show on landing" : "Show playing") : s.rc_ok ? "Boxer SB overrides" : "";
 
   $("mode").textContent = s.mode || "—";
   // ArduCopter modes whose allows_arming() is false (mode.h, 4.7)

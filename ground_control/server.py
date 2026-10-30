@@ -99,6 +99,7 @@ class Link:
             "batt_v": None, "batt_a": None, "gps_fix": 0, "sats": 0,
             "batt_pct": None, "batt_mah": None, "batt_cap": None, "batt_min": None, "batt_min_basis": None,
             "rc_ok": False, "rssi": 0, "sd_stop": False, "lights_raw": None,
+            "lights_show": None,   # LIT_SHOW from the FC; None = lights.lua not loaded (no such param)
             "lat": None, "lon": None, "log_file": None,
             "home_lat": None, "home_lon": None, "fence_on": None, "fence_r": None,
             "alt_msl": None, "cloud": "off", "sa_on": False, "sa_raw": None,
@@ -174,6 +175,16 @@ class Link:
             self.m.write(buf)
         self.note(f"Laptop: lights {mode}")
 
+    def light_show(self, on):
+        """Delivery light show (LIT_SHOW in lua/lights.lua): plays while disarmed, the next arming ends it.
+
+        A parameter, not an RC override, so the Boxer's SB does not take it back after 3 s."""
+        if self.sysid is None:
+            return
+        self.send(self.m.mav.param_set_send, self.sysid, self.compid, b"LIT_SHOW", 1.0 if on else 0.0,
+                  mavutil.mavlink.MAV_PARAM_TYPE_REAL32)
+        self.note(f"Laptop: light show {'on' if on else 'off'}")
+
     def note(self, text, sev=6):
         self.messages.append((time.time(), sev, text))
         del self.messages[:-40]
@@ -183,7 +194,7 @@ class Link:
         rates = {30: 10, 33: 5, 74: 5, 1: 2, 24: 2, 65: 2, 147: 1, 42: 2, 242: 0.2, 193: 2}  # ..., MISSION_CURRENT, HOME_POSITION
         for msg_id, hz in rates.items():
             self.command(mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL, msg_id, int(1e6 / hz))
-        for name in (b"FENCE_ENABLE", b"FENCE_RADIUS", b"BATT_CAPACITY"):
+        for name in (b"FENCE_ENABLE", b"FENCE_RADIUS", b"BATT_CAPACITY", b"LIT_SHOW"):
             self.send(self.m.mav.param_request_read_send, self.sysid, self.compid, name, -1)
 
     def handle(self, msg):
@@ -202,7 +213,10 @@ class Link:
                 self.next_stream_req = 0
             s["last_hb"] = time.time()
             s["mode"] = mavutil.mode_string_v10(msg)
-            s["armed"] = bool(msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
+            armed = bool(msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
+            if armed and not s["armed"] and s["lights_show"]:
+                s["lights_show"] = False   # lights.lua clears LIT_SHOW on arming; the 10 s param read confirms
+            s["armed"] = armed
         elif t == "GLOBAL_POSITION_INT":
             s["alt"] = msg.relative_alt / 1000
             s["lat_fc"], s["lon_fc"] = msg.lat / 1e7, msg.lon / 1e7
@@ -264,6 +278,8 @@ class Link:
             elif msg.param_id == "BATT_CAPACITY":
                 s["batt_cap"] = msg.param_value
                 self.estimate_time()
+            elif msg.param_id == "LIT_SHOW":
+                s["lights_show"] = msg.param_value >= 1
 
     def lid_update(self, msg):
         """Put the LID* DEBUG_VECT parts of one detection together (LIDATT comes last)."""
@@ -831,6 +847,8 @@ def build_app(link, pilot, auto, air, ceil):
                     pilot.kill()
                 elif kind == "lights":
                     link.lights(d.get("mode"))
+                elif kind == "light_show":
+                    link.light_show(bool(d.get("on")))
                 elif kind == "rec_start":
                     why = auto.recorder.start(d.get("from"), d.get("to"))
                     if why:

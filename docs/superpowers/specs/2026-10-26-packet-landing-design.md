@@ -242,7 +242,7 @@ The address text is never stored or logged. A repeat sign-up with the same email
 ### 10.2 Endpoints
 
 Both are route handlers in `landing/src/app/api/`. Both use one shared server function, `checkAddress(q)`, which:
-- geocodes the query;
+- resolves a cross street ("NE 45th St and Brooklyn Ave NE") from the server-only OSM intersections table, and geocodes the query only when that finds nothing;
 - tests the point against the service-area boundary (§11);
 - returns `{ found, inArea, lat, lng }`.
 

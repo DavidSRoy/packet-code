@@ -12,7 +12,9 @@
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "check:placeholders": "node scripts/check-placeholders.mjs",
     "test": "node --test test/*.test.ts",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts"
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts",
+    "db:migrate:local": "wrangler d1 migrations apply packet-landing --local",
+    "dev:local": "npm run db:migrate:local && next dev"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.3",

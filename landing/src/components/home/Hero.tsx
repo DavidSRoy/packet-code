@@ -21,7 +21,6 @@ export function Hero() {
 					Packet
 				</h1>
 				<AddressForm flow={flow} />
-				<p className="m-0 text-[14px]">Packet for iPhone is coming to the App Store [LAUNCH DATE].</p>
 			</div>
 		</header>
 	);

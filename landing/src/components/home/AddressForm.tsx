@@ -70,6 +70,7 @@ export function AddressForm(props: Props) {
 					<TextField
 						id="address"
 						label="Street address or cross streets"
+						isLabelHidden
 						inputRef={addressRef}
 						name="address"
 						autoComplete="street-address"

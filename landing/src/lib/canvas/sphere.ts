@@ -24,14 +24,14 @@ export interface SphereView {
 	rot: readonly [number, number];
 }
 
-/** Sphere radians per metre on the ground. Sized so U Village, NE 45th St and the Montlake curve share the hero. */
-const RAD_PER_M = 0.0004;
+/** Sphere radians per metre on the ground. Sized so the streets around U Village fill the globe's face. */
+const RAD_PER_M = 0.0007;
 /**
  * Where U Village sits on the sphere, as [lon, lat]. Chosen so that at the
- * drift's resting rotation [0, 0.42] U Village lands in the hero's visible
- * upper-left of the globe, right of the copy (about x 1000, y 270 at 1440).
+ * drift's resting rotation [0, 0.42] U Village sits a little above the
+ * centre of the globe's face.
  */
-const MAP_CENTRE: readonly [lon: number, lat: number] = [-0.02, -1.1];
+const MAP_CENTRE: readonly [lon: number, lat: number] = [0, -0.5];
 const C_LON = Math.cos(MAP_CENTRE[0]);
 const S_LON = Math.sin(MAP_CENTRE[0]);
 const C_LAT = Math.cos(MAP_CENTRE[1]);
@@ -93,8 +93,8 @@ interface StreetTexture {
 
 const TEXTURE_SIZE = 1024;
 /** Full stroke widths in sphere radians, from the mockup's grid thresholds. */
-const MAIN_WIDTH = 0.0145;
-const MINOR_WIDTH = 0.008;
+const MAIN_WIDTH = 0.025;
+const MINOR_WIDTH = 0.014;
 
 const textures = new WeakMap<Streets, StreetTexture>();
 
@@ -158,7 +158,11 @@ interface Dot {
 	a: number;
 }
 
-const DOT: readonly (Dot | null)[] = [null, { v: 0.38, a: 0.55 }, { v: 0.75, a: 1 }];
+const DOT: readonly (Dot | null)[] = [null, { v: 0.3, a: 0.4 }, { v: 0.62, a: 1 }];
+
+/** The faint base grid that shows the sphere's shape where there are no streets. */
+const GRID: Dot = { v: 0.22, a: 0.45 };
+const GRID_SPACING = Math.PI / 12;
 
 /** Points along each edge so the outline follows the sphere instead of cutting chords. */
 const OUTLINE_STEPS = 20;
@@ -212,8 +216,8 @@ export function drawSphere(
 			const k = s > 0 ? c / s : 0;
 			const col = Math.floor((mx * k + extent) * toCell);
 			const row = Math.floor((my * k + extent) * toCell);
-			if (col < 0 || row < 0 || col >= size || row >= size) continue;
-			const dot = DOT[cells[row * size + col]];
+			const isInTexture = col >= 0 && row >= 0 && col < size && row < size;
+			const dot = (isInTexture ? DOT[cells[row * size + col]] : null) ?? (isOnGrid(x2, y1, z2, step / R) ? GRID : null);
 			if (!dot) continue;
 			const r = dot.v * step * 0.48;
 			ctx.globalAlpha = (0.35 + 0.65 * z) * dot.a;
@@ -225,6 +229,15 @@ export function drawSphere(
 	}
 	ctx.globalAlpha = 1;
 	drawOutline(ctx, o, outline);
+}
+
+/** True when a sphere point lies on a latitude or longitude line of the base grid, within half a cell. */
+function isOnGrid(x: number, y: number, z: number, cell: number): boolean {
+	const lat = Math.asin(Math.max(-1, Math.min(1, y)));
+	const lon = Math.atan2(x, z);
+	const tol = cell * 0.35;
+	const near = (a: number): number => Math.abs(a - Math.round(a / GRID_SPACING) * GRID_SPACING);
+	return near(lat) < tol || near(lon) * Math.cos(lat) < tol;
 }
 
 function drawOutline(ctx: CanvasRenderingContext2D, o: SphereView, outline: readonly LatLng[]): void {

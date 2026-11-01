@@ -22,15 +22,19 @@ interface Props {
 	target: LatLng | null;
 }
 
-/** Globe placement from the mockup: low and right, bleeding off the edge. */
+/** Width over which the art fades out before the copy column. */
+const FADE_PX = 160;
+
+/** Globe placement: right of the copy, small enough that its rim shows, bleeding off the right edge. */
 function heroView(w: number, h: number): Omit<SphereView, "rot"> {
 	const isNarrow = w < 700;
+	const R = isNarrow ? h * 0.46 : Math.min(h * 0.47, w * 0.36);
 	return {
-		cx: isNarrow ? w * 0.78 : w * 0.88,
-		cy: isNarrow ? h * 0.95 : h * 0.86,
-		R: isNarrow ? w * 0.95 : Math.max(w, h) * 0.6,
+		cx: isNarrow ? w * 0.5 : w - R * 0.7,
+		cy: h * 0.5,
+		R,
 		roll: -0.5,
-		step: Math.max(5, Math.min(8, w / 190)),
+		step: Math.max(4, Math.min(8, R / 60)),
 	};
 }
 
@@ -40,21 +44,18 @@ interface Layout {
 	anchor: Anchor;
 }
 
-function measure(canvas: HTMLCanvasElement, w: number, h: number): Layout {
+function measure(canvas: HTMLCanvasElement, view: Omit<SphereView, "rot">): Layout {
 	const r = canvas.getBoundingClientRect();
 	const copy = canvas.parentElement?.querySelector(COPY_SELECTOR);
 	const c = copy ? copy.getBoundingClientRect() : null;
 	const isOverlapping = c !== null && c.top < r.bottom && c.bottom > r.top && c.left < r.right;
-	const isNarrow = r.width < 700;
 	// The copy box is content-box: left padding, then up to COPY_MAX_W of content.
 	const padL = copy ? parseFloat(getComputedStyle(copy).paddingLeft) || 0 : 0;
 	const padR = copy ? parseFloat(getComputedStyle(copy).paddingRight) || 0 : 0;
 	return {
 		clipX: c && isOverlapping ? c.left - r.left + padL + Math.min(c.width - padL - padR, COPY_MAX_W) + 40 : 0,
-		anchor: {
-			x: isNarrow || !c ? w * 0.5 : Math.max(c.right - r.left + 120, w * 0.55),
-			y: h * (isNarrow ? 0.45 : 0.42),
-		},
+		// the front of the globe, a little up and left of centre where the sphere faces the viewer
+		anchor: { x: view.cx - view.R * 0.25, y: view.cy - view.R * 0.2 },
 	};
 }
 
@@ -71,8 +72,8 @@ export function HeroGlobe(props: Props) {
 			canvas,
 			(ctx, w, h, t) => {
 				const aim = aimRef.current;
-				const layout = measure(canvas, w, h);
 				const base = heroView(w, h);
+				const layout = measure(canvas, base);
 				const view: SphereView = { ...base, rot: globeRotation(aim, t, base, layout.anchor, isAnimated) };
 				ctx.save();
 				ctx.beginPath();
@@ -87,6 +88,16 @@ export function HeroGlobe(props: Props) {
 						drawMarks(ctx, x, y, Math.max(8, w / 110), 3 - 2 * p, 2.5, false);
 						ctx.globalAlpha = 1;
 					}
+				}
+				if (layout.clipX > 0) {
+					// soften the cut at the copy column so the sphere does not end on a straight line
+					const fade = ctx.createLinearGradient(layout.clipX, 0, layout.clipX + FADE_PX, 0);
+					fade.addColorStop(0, "rgba(0,0,0,1)");
+					fade.addColorStop(1, "rgba(0,0,0,0)");
+					ctx.globalCompositeOperation = "destination-out";
+					ctx.fillStyle = fade;
+					ctx.fillRect(layout.clipX, 0, FADE_PX, h);
+					ctx.globalCompositeOperation = "source-over";
 				}
 				ctx.restore();
 			},

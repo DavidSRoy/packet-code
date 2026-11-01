@@ -98,7 +98,7 @@ See `home-1440.png` and `home-390-sheet.png`.
 
 ### 6.1 Hero: sign-up over a turning globe
 - Left: h1 "Packet" (Libre Franklin 600, `clamp(64px, 9vw, 136px)`). Under it, the sign-up form in two steps that share one slot:
-  1. "Is Packet coming to your street?" One field, labeled "Street address or cross streets", with placeholder "NE 45th St and 25th Ave NE", and a station-sign button, "Check".
+  1. "Is Packet coming to your street?" One field, labeled "Street address or cross streets" for screen readers only (no visible label), with placeholder "NE 45th St and 25th Ave NE", and a station-sign button, "Check".
   2. After the check, the result line plus an email field and "Get updates". A "Check another address" text button returns to step 1.
 - The mockup still shows a ZIP field. The field changes as described here; the layout and button do not.
 - Result copy. The question line is replaced by the result, and a hint line sits under the form:
@@ -110,9 +110,8 @@ See `home-1440.png` and `home-390-sheet.png`.
   - Success: "You're on the list." (both forms)
   - Server or geocoder error: "Something went wrong. Try again in a moment." The entered values stay in the fields.
   - While checking or sending, the button reads "Checking…" or "Sending…" and is disabled.
-- Small line under the form: "Packet for iPhone is coming to the App Store [LAUNCH DATE]."
-- Right (behind the copy, bleeding off the edge): a canvas **halftone globe**. The street grid around U Village is drawn as dots on a sphere, tilted (`roll -0.5`) and sitting low and right, not centered. It drifts slowly.
-  - On a check, the globe turns so the found point lands beside the copy, and four corner marks close in on it. The service-area boundary is drawn on the globe as a dotted outline, so inside and outside are visible.
+- Right (beside the copy, bleeding off the right edge): a canvas **halftone globe**. The street grid around U Village is drawn as dots on a sphere, tilted (`roll -0.5`), small enough that the rim shows, over a faint latitude and longitude grid so the sphere reads where there are no streets. The art fades out before the copy column instead of ending on a straight cut. It drifts slowly.
+  - On a check, the globe turns so the found point lands on the globe's front face, and four corner marks close in on it. The service-area boundary is drawn on the globe as a dotted outline, so inside and outside are visible.
   - The anchor-solving approach is in the mockup's `aim()` function.
   - Use real U Village streets (§6.9).
 - On phones the globe sits above the copy, 300px tall.

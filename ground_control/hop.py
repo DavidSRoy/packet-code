@@ -10,9 +10,11 @@ hold locked over the exact spot it started from, on the box camera and the IMU o
   to set 1. Indoors with no GPS home, it gives the EKF an origin from the last known
   position: only a map label, the camera position is relative to it.
 - Start point: the FC's own camera-based position (LOCAL_POSITION_NED) just before
-  arming. Then GUIDED, arm, take off straight up to the button height, and lock a
-  position target exactly over the start point (SET_POSITION_TARGET_LOCAL_NED,
-  heading held). The FC holds it against drift and rotation by itself.
+  arming. Then GUIDED and arm: lua/hop_takeoff.lua on the FC flies the takeoff (holds
+  the start point on the skids, lifts off, hands over to position control, HOPT 4).
+  Then the laptop locks a position target exactly over the start point
+  (SET_POSITION_TARGET_LOCAL_NED, heading held) and climbs it at CLIMB_MPS to the
+  button height. The FC holds it against drift and rotation by itself.
 - The laptop watches with the tags directly: height = tag height above where it sat
   (zero = on the ground); sideways drift = the tag position against where it started.
 - MOTORS OFF when: the button is released (hop_up, or no hop_alive for KEEPALIVE_S, or
@@ -22,7 +24,8 @@ hold locked over the exact spot it started from, on the box camera and the IMU o
   the mode changes.
 - On the drone, lua/hop_guard.lua latches on when HOP_CH goes high while armed and stops
   the motors when HOP_CH is not high (laptop, page or radio gone: RC_OVERRIDE_TIME 0.3 s),
-  over HOP_MAX_M, or over HOP_TILT. The laptop refuses unless it hears that script (HOPG).
+  over HOP_MAX_M, or over HOP_TILT. The laptop refuses unless it hears that script (HOPG)
+  and lua/hop_takeoff.lua (HOPT).
 """
 import json
 import math
@@ -40,11 +43,8 @@ RATE_HZ = 25
 GUARD_FRESH_S = 3.0          # HOPG from hop_guard.lua must be newer than this
 MAX_OVERRIDE_TIME = 0.5      # RC_OVERRIDE_TIME must be at most this (s)
 POS_YAW_MASK = 0b0000_1001_1111_1000    # SET_POSITION_TARGET: use x, y, z and yaw; ignore velocity, acceleration, yaw rate
-LIFTOFF_M = 0.02             # tag height this far above the ground = in the air: lock over the start point at once
-TAKEOFF_M = 0.05             # the FC takeoff only lifts it this far; the hover climbs the rest itself ...
-CLIMB_MPS = 0.05             # ... at this rate (a fast climb blurred the tags out of detection, 2026-11-02)
+CLIMB_MPS = 0.05             # climb rate after the handover (a fast climb blurred the tags out of detection, 2026-11-02)
 DRIFT_MAX_M = 0.20           # tags say it moved this far sideways from the start = motors off
-CLIMB_S = 8.0                # not off the ground (LIFTOFF_M) this long after the takeoff: lock anyway
 POSE_START_S = 1.0           # a tag pose this fresh, with the box in view, is needed to start
 POSE_LOST_S = 1.2            # radio pose (about 2 Hz): none for this long = motors off
 POSE_LOST_WIFI_S = 0.5       # Wi-Fi pose (about 10 Hz)
@@ -55,7 +55,7 @@ SETTLE_M = 0.03              # after the zero: FC position within this of the ta
 SETTLE_V = 0.03              # ... and FC speed under this, m/s ...
 SETTLE_HOLD_S = 1.0          # ... staying there this long (it can pass through on its way) ...
 SETTLE_S = 6.0               # ... within this long, before the start point is taken and it arms
-TAKEOFF_ACK_S = 5.0          # no takeoff answer and not off the ground this long = motors off (resent at half; liftoff takes about 2 s)
+TAKEOFF_S = 10.0             # no handover from lua/hop_takeoff.lua this long after arming = motors off (it takes about 3 s)
 ORIGIN_ASK_S = 1.5           # the FC must answer the EKF origin request this soon (or it has none)
 SOURCE_ACK_S = 3.0           # the FC must accept the source switch this soon
 HEIGHT_AGREE_M = 0.15        # FC height change vs camera height change: more than this ...
@@ -146,6 +146,8 @@ class Hop:
             return "SD kill switch is on stop"
         if time.time() - s.get("hop_guard_t", 0.0) > GUARD_FRESH_S:
             return "hop_guard.lua is not running on the drone (no HOPG): install it first"
+        if time.time() - (s.get("hopt") or (None, 0.0))[1] > GUARD_FRESH_S:
+            return "hop_takeoff.lua is not running on the drone (no HOPT): install it first"
         rot = s.get("rc_override_time")
         if rot is None or rot < 0 or rot > MAX_OVERRIDE_TIME:
             return f"RC_OVERRIDE_TIME is {rot}: set it to 0.3 so a lost link stops the motors fast"
@@ -334,13 +336,13 @@ class Hop:
             loc, p = s.get("local"), self.pose()
             if loc and p and p[2] is not None and abs((loc[2] + p[2]) - off0[0]) > SETTLE_M:
                 return self.kill(f"the FC height moved {abs((loc[2] + p[2]) - off0[0]) * 100:.0f} cm when it armed")
-            L.command(MAV.MAV_CMD_NAV_TAKEOFF, p7=min(TAKEOFF_M, self.height))
-            # The takeoff answer is checked in the loop, not waited for: the radio can lose it
-            # (2026-11-02 22:44: no answer, but it climbed), and waiting held off the lock
-            to_ack = lambda: (s.get("acks", {}).get(MAV.MAV_CMD_NAV_TAKEOFF) or (None, 0))
-            to_resent, lifted = False, False
-            self.status = {"state": "climbing", "height": self.height, "reason": None}
-            t_up, locked, last_lock = time.time(), False, 0.0
+            # The takeoff itself is flown by lua/hop_takeoff.lua on the FC (armed in GUIDED with the
+            # button channel high): it holds the start point on the skids, lifts off and hands
+            # over to position control (HOPT 4). Only then does the laptop send position targets
+            t_to = time.time()
+            hopt = lambda: (s.get("hopt") or (0, 0.0))
+            self.status = {"state": "takeoff", "height": self.height, "reason": None}
+            locked, last_lock = False, 0.0
             cam_t, cam_h = None, None
             fc0, disagree_t = s["alt"], None                   # FC height at arming: its change must follow the camera
             while held():
@@ -361,16 +363,11 @@ class Hop:
                 if s["mode"] != "GUIDED":
                     return self.kill(f"mode changed to {s['mode']}")
                 est = cam_h - self.h0                          # tag height above where it sat
-                lifted = lifted or est >= LIFTOFF_M
-                a = to_ack()
-                if a[1] >= t_to and a[0] != MAV.MAV_RESULT_ACCEPTED:
-                    return self.kill(f"the FC refused the takeoff (result {a[0]})")
-                if a[1] < t_to and not lifted:                 # no answer and still on the ground
-                    if now - t_up > TAKEOFF_ACK_S:
-                        return self.kill("the FC did not answer the takeoff and the drone did not lift")
-                    if not to_resent and now - t_up > TAKEOFF_ACK_S / 2:
-                        L.command(MAV.MAV_CMD_NAV_TAKEOFF, p7=min(TAKEOFF_M, self.height))
-                        to_resent = True
+                code, code_t = hopt()
+                if code == 9 and code_t >= t_to:
+                    return self.kill("the FC takeoff script stopped the motors (see its HTO message)")
+                if not locked and now - t_to > TAKEOFF_S:
+                    return self.kill(f"no handover from the FC takeoff script in {TAKEOFF_S:g} s")
                 if est > self.height + CAM_CEILING_M:
                     return self.kill(f"tag height {est * 100:.0f} cm, over {(self.height + CAM_CEILING_M) * 100:.0f} cm")
                 drift = math.hypot(p[4] - cam0[4], p[5] - cam0[5]) if p and p[1] and cam0 and cam0[4] is not None else None
@@ -384,14 +381,14 @@ class Hop:
                             return self.kill(f"FC height does not follow the camera ({gap * 100:.0f} cm apart)")
                     else:
                         disagree_t = None
-                # 6. off the ground (or after CLIMB_S): lock over the start point and heading, and keep it
-                # locked. GUIDED takes a position target only once in the air; the takeoff only lifts it off
-                # The height target climbs from the takeoff height at CLIMB_MPS to the button height
-                if not locked and (est >= LIFTOFF_M or now - t_up > CLIMB_S):
-                    locked, t_lock = True, now
-                    L.note("Laptop: hover locked over the start point", 6)
+                # 6. handed over (HOPT 4): lock over the start point and heading, and keep it locked; the
+                # height target climbs from where it is at CLIMB_MPS. No target before: it would take
+                # GUIDED out of the script's angle control on the skids
+                if not locked and code == 4 and code_t >= t_to:
+                    locked, t_lock, h_lock = True, now, max(0.0, est)
+                    L.note(f"Laptop: hover locked over the start point at {h_lock * 100:.0f} cm", 6)
                 if locked:
-                    h_tgt = min(self.height, min(TAKEOFF_M, self.height) + CLIMB_MPS * (now - t_lock))
+                    h_tgt = min(self.height, h_lock + CLIMB_MPS * (now - t_lock))
                     climbing = h_tgt < self.height
                     if now - last_lock >= (0.2 if climbing else 1.0):   # resent: a lost message cannot unlock it
                         self._hold_target(start, yaw0, h_tgt)

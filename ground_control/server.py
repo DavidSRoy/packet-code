@@ -281,6 +281,8 @@ class Link:
             self.note(msg.text, msg.severity)
         elif t == "NAMED_VALUE_FLOAT" and msg.name == "HOPG":
             s["hop_guard_t"] = time.time()
+        elif t == "NAMED_VALUE_FLOAT" and msg.name == "HOPT":   # lua/hop_takeoff.lua state (hop.py)
+            s["hopt"] = (int(round(msg.value)), time.time())
         elif t == "LOCAL_POSITION_NED":   # the EKF position from its origin (on source set 2: the camera)
             s["local"] = (msg.x, msg.y, msg.z, time.time(), msg.vx, msg.vy, msg.vz)
         elif t == "COMMAND_ACK":

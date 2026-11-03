@@ -39,13 +39,24 @@ KEEPALIVE_S = 0.15           # page must say "still held" this often
 RATE_HZ = 25
 GUARD_FRESH_S = 3.0          # HOPG from hop_guard.lua must be newer than this
 MAX_OVERRIDE_TIME = 0.5      # RC_OVERRIDE_TIME must be at most this (s)
-POS_ONLY_MASK = 0b0000_1101_1111_1000   # SET_POSITION_TARGET: use x, y, z; ignore velocity, acceleration, yaw, yaw rate
+POS_YAW_MASK = 0b0000_1001_1111_1000    # SET_POSITION_TARGET: use x, y, z and yaw; ignore velocity, acceleration, yaw rate
+LIFTOFF_M = 0.02             # tag height this far above the ground = in the air: lock over the start point at once
+TAKEOFF_M = 0.05             # the FC takeoff only lifts it this far; the hover climbs the rest itself ...
+CLIMB_MPS = 0.05             # ... at this rate (a fast climb blurred the tags out of detection, 2026-11-02)
 DRIFT_MAX_M = 0.20           # tags say it moved this far sideways from the start = motors off
-CLIMB_S = 8.0                # the takeoff climb must reach 80% of the height this soon
+CLIMB_S = 8.0                # not off the ground (LIFTOFF_M) this long after the takeoff: lock anyway
 POSE_START_S = 1.0           # a tag pose this fresh, with the box in view, is needed to start
 POSE_LOST_S = 1.2            # radio pose (about 2 Hz): none for this long = motors off
 POSE_LOST_WIFI_S = 0.5       # Wi-Fi pose (about 10 Hz)
 CAM_CEILING_M = 0.25         # tag height more than this above the target = motors off
+ZERO_PAYLOAD_TYPE = 39003    # TUNNEL to the Pi: zero the FC on the box camera (cam_stream.py)
+ZERO_ACK_S = 2.0             # the Pi must answer the zero this soon
+SETTLE_M = 0.03              # after the zero: FC position within this of the tags' ...
+SETTLE_V = 0.03              # ... and FC speed under this, m/s ...
+SETTLE_HOLD_S = 1.0          # ... staying there this long (it can pass through on its way) ...
+SETTLE_S = 6.0               # ... within this long, before the start point is taken and it arms
+TAKEOFF_ACK_S = 5.0          # no takeoff answer and not off the ground this long = motors off (resent at half; liftoff takes about 2 s)
+ORIGIN_ASK_S = 1.5           # the FC must answer the EKF origin request this soon (or it has none)
 SOURCE_ACK_S = 3.0           # the FC must accept the source switch this soon
 HEIGHT_AGREE_M = 0.15        # FC height change vs camera height change: more than this ...
 HEIGHT_AGREE_S = 1.0         # ... for this long = the FC is not on the camera = motors off
@@ -184,12 +195,14 @@ class Hop:
             self.kill(why)
 
     # ---- the hover --------------------------------------------------------------
-    def _hold_target(self, start):
-        """Position target exactly over the start point, at the button height (local NED, z down)."""
+    def _hold_target(self, start, yaw, height=None):
+        """Position target exactly over the start point, at the button height (local NED, z down),
+        nose on the start heading (rad)."""
         L = self.link
         L.send(L.m.mav.set_position_target_local_ned_send, 0, L.sysid, L.compid,
-               MAV.MAV_FRAME_LOCAL_NED, POS_ONLY_MASK, start[0], start[1], start[2] - self.height,
-               0, 0, 0, 0, 0, 0, 0, 0)
+               MAV.MAV_FRAME_LOCAL_NED, POS_YAW_MASK, start[0], start[1],
+               start[2] - (self.height if height is None else height),
+               0, 0, 0, 0, 0, 0, yaw, 0)
 
     def _run(self, gen):
         L, s = self.link, self.link.state
@@ -230,25 +243,81 @@ class Hop:
                 return self.kill("the FC did not answer the switch to camera navigation")
             if a[0] != MAV.MAV_RESULT_ACCEPTED:
                 return self.kill(f"the FC refused the switch to camera navigation (result {a[0]})")
-            # 2. An EKF origin, if there is no home (indoors): only a map label for the camera position
-            if s.get("home_lat") is None:
+            # 2. An EKF origin (indoors there is no GPS to set one): only a map label for the camera
+            # position, but GUIDED needs it to turn the takeoff height into a target. Ask the FC
+            # itself: the laptop's home can be from before an FC reboot, and then the takeoff fails
+            t_org = time.time()
+            L.command(MAV.MAV_CMD_REQUEST_MESSAGE, 49)          # GPS_GLOBAL_ORIGIN
+            has_origin = lambda: (s.get("origin_t") or 0) >= t_org
+            if not wait(has_origin, ORIGIN_ASK_S):
+                return
+            if not has_origin():
                 lat, lon = s.get("lat_fc") or s.get("lat"), s.get("lon_fc") or s.get("lon")
-                if lat is None or lon is None:
-                    return self.kill("no home and no last known position to give the EKF an origin")
+                if not lat or not lon:
+                    return self.kill("the FC has no EKF origin and there is no last known position to give it one")
                 L.send(L.m.mav.set_gps_global_origin_send, L.sysid, int(lat * 1e7), int(lon * 1e7),
                        int((s.get("alt_msl") or 0.0) * 1000), int(time.time() * 1e6))
                 L.note(f"Laptop: EKF origin set at {lat:.6f}, {lon:.6f} (a label only, no GPS home indoors)", 4)
-                if not wait(lambda: s.get("home_lat") is not None, 3.0):
+                t_org = time.time()
+                L.command(MAV.MAV_CMD_REQUEST_MESSAGE, 49)
+                if not wait(has_origin, 3.0):
                     return
-            # 3. The start point, in the FC's camera-based position
-            if not wait(lambda: s.get("local") and s["local"][3] > t_switch + 0.3, 2.0):
+                if not has_origin():
+                    return self.kill("the FC did not take the EKF origin")
+            # 3. Zero on the box: the box is the origin. The Pi sends its next camera pose with a
+            # new reset counter, so the EKF jumps to it instead of walking over from where it was
+            t_zero = time.time()
+            L.send(L.m.mav.tunnel_send, 1, 191, ZERO_PAYLOAD_TYPE, 0, [0] * 128)
+            if not wait(lambda: (s.get("vision_zero") or (0, 0))[1] >= t_zero, ZERO_ACK_S):
                 return
-            loc = s.get("local")
-            if not loc or loc[3] <= t_switch + 0.3:
-                return self.kill("no FC position from the camera (LOCAL_POSITION_NED)")
-            start = loc[:3]
+            if (s.get("vision_zero") or (0, 0))[1] < t_zero:
+                return self.kill("the Pi did not answer the zero on the box (camera server down?)")
+            # 4. The start point: wait until the FC position agrees with the tags (NED x, y = lid x,
+            # -y) and it is not moving, held for SETTLE_HOLD_S, before arming. The FC height may sit a
+            # constant amount off the tag height (an EKF height datum, e.g. after an arming without a
+            # home): it must only hold steady; the hover height is taken relative to it
+            agree_t, off0 = [None], [None]
+
+            def settled():
+                loc, p = s.get("local"), self.pose()
+                ok = (loc and loc[3] > t_zero + 0.3 and p and p[1] and p[2] is not None
+                      and math.hypot(loc[0] - p[4], loc[1] + p[5]) < SETTLE_M
+                      and math.sqrt(loc[4] ** 2 + loc[5] ** 2 + loc[6] ** 2) < SETTLE_V)
+                if ok:
+                    off = loc[2] + p[2]                         # FC z minus (-tag height)
+                    off0[0] = off if agree_t[0] is None else off0[0]
+                    ok = abs(off - off0[0]) < SETTLE_M
+                if not ok:
+                    agree_t[0] = None
+                    return False
+                agree_t[0] = agree_t[0] or time.time()
+                return time.time() - agree_t[0] >= SETTLE_HOLD_S
+            if not wait(settled, SETTLE_S):
+                return
+            if not settled():
+                loc, p = s.get("local"), self.pose()
+                if not loc or loc[3] <= t_zero + 0.3:
+                    return self.kill("no FC position from the camera (LOCAL_POSITION_NED)")
+                if not p or not p[1] or p[2] is None:
+                    return self.kill("the FC did not settle on the camera (box tags out of view)")
+                return self.kill(f"the FC did not settle on the camera in {SETTLE_S:g} s: FC "
+                                 f"{loc[0] * 100:.0f}, {loc[1] * 100:.0f} cm moving "
+                                 f"{math.sqrt(loc[4] ** 2 + loc[5] ** 2 + loc[6] ** 2) * 100:.0f} cm/s, height "
+                                 f"offset not steady; tags {p[4] * 100:.0f}, {-p[5] * 100:.0f} cm")
+            start = s["local"][:3]
+            # Home here, before arming: ArduCopter resets its height datum when it arms without a
+            # home (indoors there is no GPS to set one), which moves the FC height under the hover
+            t_home = time.time()
+            L.command(MAV.MAV_CMD_DO_SET_HOME, 1)                 # 1 = at the current position
+            L.command(MAV.MAV_CMD_REQUEST_MESSAGE, 242)           # HOME_POSITION
+            has_home = lambda: (s.get("home_t") or 0) >= t_home
+            if not wait(has_home, 3.0):
+                return
+            if not has_home():
+                return self.kill("the FC did not set its home (needed before arming without GPS)")
+            yaw0 = math.radians(s["yaw"])                   # start heading (EKF: the box camera)
             cam0 = self.pose()
-            # 4. GUIDED (needs a position: the camera), arm, take off straight up
+            # 5. GUIDED (needs a position: the camera), arm, take off straight up
             L.set_mode("GUIDED")
             if not wait(lambda: s["mode"] == "GUIDED", 3.0):
                 return
@@ -259,7 +328,17 @@ class Hop:
                 return
             if not s["armed"]:
                 return self.kill("drone refused to arm (see its PreArm message)")
-            L.command(MAV.MAV_CMD_NAV_TAKEOFF, p7=self.height)
+            t_to = time.time()
+            if not wait(lambda: False, 0.4):                   # a datum reset at arming shows within this
+                return
+            loc, p = s.get("local"), self.pose()
+            if loc and p and p[2] is not None and abs((loc[2] + p[2]) - off0[0]) > SETTLE_M:
+                return self.kill(f"the FC height moved {abs((loc[2] + p[2]) - off0[0]) * 100:.0f} cm when it armed")
+            L.command(MAV.MAV_CMD_NAV_TAKEOFF, p7=min(TAKEOFF_M, self.height))
+            # The takeoff answer is checked in the loop, not waited for: the radio can lose it
+            # (2026-11-02 22:44: no answer, but it climbed), and waiting held off the lock
+            to_ack = lambda: (s.get("acks", {}).get(MAV.MAV_CMD_NAV_TAKEOFF) or (None, 0))
+            to_resent, lifted = False, False
             self.status = {"state": "climbing", "height": self.height, "reason": None}
             t_up, locked, last_lock = time.time(), False, 0.0
             cam_t, cam_h = None, None
@@ -282,6 +361,16 @@ class Hop:
                 if s["mode"] != "GUIDED":
                     return self.kill(f"mode changed to {s['mode']}")
                 est = cam_h - self.h0                          # tag height above where it sat
+                lifted = lifted or est >= LIFTOFF_M
+                a = to_ack()
+                if a[1] >= t_to and a[0] != MAV.MAV_RESULT_ACCEPTED:
+                    return self.kill(f"the FC refused the takeoff (result {a[0]})")
+                if a[1] < t_to and not lifted:                 # no answer and still on the ground
+                    if now - t_up > TAKEOFF_ACK_S:
+                        return self.kill("the FC did not answer the takeoff and the drone did not lift")
+                    if not to_resent and now - t_up > TAKEOFF_ACK_S / 2:
+                        L.command(MAV.MAV_CMD_NAV_TAKEOFF, p7=min(TAKEOFF_M, self.height))
+                        to_resent = True
                 if est > self.height + CAM_CEILING_M:
                     return self.kill(f"tag height {est * 100:.0f} cm, over {(self.height + CAM_CEILING_M) * 100:.0f} cm")
                 drift = math.hypot(p[4] - cam0[4], p[5] - cam0[5]) if p and p[1] and cam0 and cam0[4] is not None else None
@@ -295,13 +384,18 @@ class Hop:
                             return self.kill(f"FC height does not follow the camera ({gap * 100:.0f} cm apart)")
                     else:
                         disagree_t = None
-                # 5. at the height (or after CLIMB_S): lock over the start point, and keep it locked
-                if not locked and (est >= 0.8 * self.height or now - t_up > CLIMB_S):
-                    locked = True
+                # 6. off the ground (or after CLIMB_S): lock over the start point and heading, and keep it
+                # locked. GUIDED takes a position target only once in the air; the takeoff only lifts it off
+                # The height target climbs from the takeoff height at CLIMB_MPS to the button height
+                if not locked and (est >= LIFTOFF_M or now - t_up > CLIMB_S):
+                    locked, t_lock = True, now
                     L.note("Laptop: hover locked over the start point", 6)
-                if locked and now - last_lock >= 1.0:          # once a second: a lost message cannot unlock it
-                    self._hold_target(start)
-                    last_lock = now
+                if locked:
+                    h_tgt = min(self.height, min(TAKEOFF_M, self.height) + CLIMB_MPS * (now - t_lock))
+                    climbing = h_tgt < self.height
+                    if now - last_lock >= (0.2 if climbing else 1.0):   # resent: a lost message cannot unlock it
+                        self._hold_target(start, yaw0, h_tgt)
+                        last_lock = now
                 self.status = {"state": "locked" if locked else "climbing", "height": self.height, "reason": None,
                                "height_now": round(est, 3), "drift_m": None if drift is None else round(drift, 3),
                                "pose": p[3], "pose_age": round(now - cam_t, 2)}

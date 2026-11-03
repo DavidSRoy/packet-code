@@ -23,9 +23,12 @@ below it. It looks straight down with the top of the image toward the drone nose
 --mount-rot turns the camera counter-clockwise (seen from above) from that.
 """
 import argparse
+import collections
 import json
 import math
 import os
+import shutil
+import subprocess
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -34,6 +37,7 @@ import cv2
 import numpy as np
 
 from h264 import WifiH264
+from imu_pose import ImuPose, wrap
 from lid_tags import LidFinder, camera_matrix
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -58,6 +62,20 @@ ap.add_argument("--detect-scale", type=float, default=0.4,
                 help="shrink each frame by this before the tag search (0.4 = 512x288 from 1280x720). Measured "
                      "2026-11-02 on the Pi Zero 2 W: 1.0 = 3.4 Hz, 0.5 = 9.3 Hz. Fine for hovers and pickups "
                      "(tags about 9 px/cell at 0.25 m); the far range shrinks with it")
+ap.add_argument("--exposure", type=int, default=40,
+                help="fixed exposure, 100 us units (40 = 4 ms); 0 = the camera's auto exposure. Auto ran 33 ms "
+                     "indoors: the motor vibration at spin-up smeared the tags out of detection (2026-11-02). "
+                     "4 ms with gain 200 still found both tags at 10 Hz")
+ap.add_argument("--gain", type=int, default=200, help="camera gain with --exposure (C920: 0-255)")
+ap.add_argument("--imu-tilt", type=int, default=1,
+                help="1 = the tilt from the FC attitude (zeroed with the tags while still and disarmed), the "
+                     "heading and position from the tags (imu_pose.py); 0 = everything from the tags")
+ap.add_argument("--imu-lag", type=float, default=0.0,
+                help="s: the camera frame is this much older than its capture time (t_cap) for the attitude match")
+ap.add_argument("--rec-dir", default=os.path.expanduser("~/rec"),
+                help="while the FC is armed (and REC_PRE_S before): every searched frame (JPEG, as the CV saw it) "
+                     "and its full CV result (cv.jsonl), one folder per arming; 'none' to turn off")
+ap.add_argument("--rec-keep", type=int, default=10, help="recordings to keep (oldest deleted)")
 ap.add_argument("--vision", type=int, default=1,
                 help="1 = send the lid pose to the FC as VISION_POSITION_ESTIMATE (EKF ExternalNav); 0 = off")
 a = ap.parse_args()
@@ -83,6 +101,11 @@ def grab():
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, a.height)
     cap.set(cv2.CAP_PROP_FPS, a.fps)
     cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)          # keep the raw YUYV bytes
+    if a.exposure > 0:                            # after opening: opening can reset the controls
+        r = subprocess.run(["v4l2-ctl", "-d", a.dev, "-c", "auto_exposure=1", "-c", f"exposure_time_absolute={a.exposure}",
+                            "-c", f"gain={a.gain}", "-c", "exposure_dynamic_framerate=0"], capture_output=True, text=True)
+        print(f"exposure {a.exposure * 0.1:g} ms, gain {a.gain}" + (f" (v4l2-ctl: {r.stderr.strip()})" if r.returncode else ""),
+              flush=True)
     while True:
         ok, buf = cap.read()
         if not ok or buf is None:
@@ -130,7 +153,11 @@ def lid_pose(r):
     yaw = math.degrees(math.atan2(fwd_l[1], fwd_l[0]))   # nose direction from lid +x, CCW
     down_l = Rt @ down_c
     tilt = math.degrees(math.acos(max(-1.0, min(1.0, -down_l[2]))))
+    tag_tilt = tilt
+    if r.get("tag_R") is not None:                # the tags' own tilt, for comparison (imu_fix)
+        tag_tilt = math.degrees(math.acos(max(-1.0, min(1.0, -(np.array(r["tag_R"]).T @ down_c)[2]))))
     return {"box": r["box"], "tags": r["tags"], "px_per_cell": round(r["px_per_cell"], 1),
+            "pose": r.get("pose", "tags"), "tag_tilt_deg": round(tag_tilt, 1),
             "camera_m": [round(v, 4) for v in cam], "drone_m": [round(v, 4) for v in centre],
             "yaw_deg": round(yaw, 1), "tilt_deg": round(tilt, 1),
             "range_m": round(r["range_m"], 3), "outlines": r["outlines"],
@@ -149,7 +176,46 @@ def watchdog():
             os._exit(3)
 
 
-DETECT_WORKERS = 2      # each worker takes the newest frame no worker has taken yet (alternate frames)
+att_buf = collections.deque(maxlen=200)   # FC ATTITUDE: (Pi receive time, roll, pitch, yaw), newest last
+imu = ImuPose(a.mount_rot)
+imu_lock = threading.Lock()
+imu_last = {}                             # box -> attitude of its last zero frame (stillness check)
+STILL_RAD = math.radians(0.3)             # attitude change between zero frames above this: not still
+
+
+def att_at(t):
+    """The FC attitude at time t (interpolated), or None without a fresh one around t."""
+    buf = list(att_buf)
+    for (t0, *a0), (t1, *a1) in zip(buf, buf[1:]):
+        if t0 <= t <= t1 and t1 - t0 < 0.2:
+            f = (t - t0) / (t1 - t0) if t1 > t0 else 0.0
+            return (a0[0] + f * (a1[0] - a0[0]), a0[1] + f * (a1[1] - a0[1]), a0[2] + f * wrap(a1[2] - a0[2]))
+    return None
+
+
+def imu_fix(r, t_cap, K):
+    """While still and disarmed: add the frame to the zero. Then (armed or not): the rotation
+    from the IMU tilt and the tag heading, the position from the corners (imu_pose.py).
+    Without a zero or an attitude: the tag-only pose, marked so."""
+    att = att_at(t_cap - a.imu_lag)
+    r = dict(r, pose="tags", tag_tilt=None)
+    if att is None:
+        return r
+    with imu_lock:
+        if not fc["armed"] and time.time() - fc["t"] < 3.0:
+            prev = imu_last.get(r["box"])
+            if prev is not None and max(abs(att[0] - prev[0]), abs(att[1] - prev[1]), abs(wrap(att[2] - prev[2]))) > STILL_RAD:
+                imu.still[r["box"]].clear()                # moved: start the zero again
+            imu_last[r["box"]] = att
+            imu.zero(r["box"], r["R"], att)
+        res = imu.pose(r["box"], r["R"], att, r["obj"], r["img"], K)
+    if res is None:
+        return r
+    R, t = res
+    return dict(r, R=R.tolist(), xyz_m=t.tolist(), pose="imu", tag_R=r["R"])
+
+
+DETECT_WORKERS = 2     # each worker takes the newest frame no worker has taken yet (alternate frames)
 claim = {"n": -1}
 rate = {"n": 0, "t0": time.time(), "skipped": 0}
 
@@ -174,7 +240,10 @@ def detect():
             gray = np.ascontiguousarray(y)
         try:
             K = camera_matrix(gray.shape[1], gray.shape[0], HFOV)
-            boxes = [lid_pose(r) for r in finder.find(gray, K)]
+            found = finder.find(gray, K)
+            if a.imu_tilt:
+                found = [imu_fix(r, t_cap, K) for r in found]
+            boxes = [lid_pose(r) for r in found]
             err = None
         except Exception as e:                  # keep the stream running if one frame fails
             boxes, err = [], f"{type(e).__name__}: {e}"
@@ -184,6 +253,7 @@ def detect():
                 lid["hz"] = round(rate["n"] / (time.time() - rate["t0"]), 1)
                 lid["skipped_pct"] = round(100 * rate["skipped"] / max(1, rate["n"] + rate["skipped"]), 1)
                 rate["n"], rate["t0"], rate["skipped"] = 0, time.time(), 0
+            rec_q.append((seen, t_cap, time.time(), gray, boxes, err))
             if seen > lid["frame"]:
                 # frame = the camera frame number, t_cap = its capture time: the same time as that
                 # frame's /h264 record, the radio pose (LID* time_usec) and VISION_POSITION_ESTIMATE
@@ -203,6 +273,7 @@ class H(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/lid.json"):
             body = json.dumps(dict(lid, frames=latest["n"], camera=NAME, hfov_deg=HFOV, now=time.time(), h264=vid.stats,
+                                   fc_armed=fc["armed"], fc_seen_s=round(time.time() - fc["t"], 1),
                                    mount={"fwd": a.mount_fwd, "right": a.mount_right,
                                           "down": a.mount_down, "rot": a.mount_rot})).encode()
             self.send_response(200)
@@ -253,10 +324,22 @@ def snapshots(m, send_lock):
         now = time.time()
         wait = max(0.002, min(0.05, next_t - now)) if queue and rate > 0 else 0.05
         try:
-            msg = m.recv_match(type="TUNNEL", blocking=True, timeout=wait)
+            msg = m.recv_match(type=["TUNNEL", "HEARTBEAT", "ATTITUDE"], blocking=True, timeout=wait)
         except OSError:
             msg = None
         now = time.time()
+        if msg is not None and msg.get_type() == "ATTITUDE":
+            if msg.get_srcComponent() == 1:                         # the FC (imu_fix)
+                att_buf.append((now, msg.roll, msg.pitch, msg.yaw))
+            msg = None
+        if msg is not None and msg.get_type() == "HEARTBEAT":
+            if msg.get_srcComponent() == 1 and msg.type != 6:      # the FC (not a ground station)
+                fc["armed"], fc["t"] = bool(msg.base_mode & 128), now
+            msg = None
+        if msg is not None and msg.target_system == 1 and msg.target_component == 191 \
+                and msg.payload_type == ZERO_PAYLOAD_TYPE:
+            zero["want"], zero["peer"] = zero["want"] + 1, (msg.get_srcSystem(), msg.get_srcComponent())
+            msg = None
         if msg is not None and msg.target_system == 1 and msg.target_component == 191 \
                 and msg.payload_type == sp.PAYLOAD_TYPE:
             r = sp.unpack(bytes(msg.payload[:msg.payload_length]))
@@ -302,6 +385,58 @@ def snapshots(m, send_lock):
                 pass_done = True
 
 
+fc = {"armed": False, "t": 0.0}           # FC armed state, from its heartbeat (snapshots() reads the link)
+# Ground control's "zero the FC on the box" (TUNNEL ZERO_PAYLOAD_TYPE, before a hover arms): the next
+# vision message carries a new reset counter, so the EKF jumps to the camera pose (the box is the origin)
+ZERO_PAYLOAD_TYPE = 39003
+zero = {"want": 0, "peer": None}
+rec_q = collections.deque(maxlen=200)     # searched frames, newest last: (frame, t_cap, t_done, gray, boxes, err)
+REC_PRE_S, REC_POST_S = 3.0, 2.0
+
+
+def recorder():
+    """Record what the CV saw while the FC is armed: one folder per arming in --rec-dir with
+    frames/<frame>.jpg (the image the tag search ran on) and cv.jsonl (one line per searched
+    frame: frame number, capture time, result time, every box with its tags, tag outlines in
+    that image, pose, yaw, tilt, rvec/tvec, px/cell, and the FC armed state). It starts
+    REC_PRE_S before the arming (from the queue) and ends REC_POST_S after the disarm."""
+    if a.rec_dir == "none":
+        return
+    os.makedirs(a.rec_dir, exist_ok=True)
+    out, jl, last_armed_t = None, None, 0.0
+    while True:
+        time.sleep(0.02)
+        now = time.time()
+        armed = fc["armed"] and now - fc["t"] < 3.0
+        if armed:
+            last_armed_t = now
+        if out is None and armed:
+            out = os.path.join(a.rec_dir, time.strftime("%Y%m%d-%H%M%S"))
+            os.makedirs(os.path.join(out, "frames"), exist_ok=True)
+            jl = open(os.path.join(out, "cv.jsonl"), "a")
+            pre = [r for r in list(rec_q) if r[1] >= now - REC_PRE_S]
+            rec_q.clear()
+            rec_q.extend(pre)                                     # write the frames before the arming too
+            olds = sorted(d for d in os.listdir(a.rec_dir) if os.path.isdir(os.path.join(a.rec_dir, d)))
+            for d in olds[:-a.rec_keep]:
+                shutil.rmtree(os.path.join(a.rec_dir, d), ignore_errors=True)
+        if out is None:
+            continue
+        while rec_q:
+            frame, t_cap, t_done, gray, boxes, err = rec_q.popleft()
+            cv2.imwrite(os.path.join(out, "frames", f"{frame:07d}.jpg"), gray, [cv2.IMWRITE_JPEG_QUALITY, 90])
+            jl.write(json.dumps({"frame": frame, "t_cap": round(t_cap, 4), "t_done": round(t_done, 4),
+                                 "armed": fc["armed"], "w": gray.shape[1], "h": gray.shape[0], "err": err,
+                                 "boxes": boxes}, separators=(",", ":")) + "\n")
+        jl.flush()
+        if not armed and now - last_armed_t > REC_POST_S:
+            jl.close()
+            out, jl = None, None
+
+
+VEL_MAX_GAP_S = 0.25      # two imu poses further apart than this: no velocity from them
+
+
 def vision(m, send_lock):
     """The lid pose to the FC, for its position estimate (EKF ExternalNav, source set 2).
 
@@ -314,9 +449,16 @@ def vision(m, send_lock):
     clockwise). ArduPilot turns this frame to north itself (AP_VisualOdom yaw alignment),
     so the box does not have to point north. Position = the drone centre (lid_pose
     applies the camera mount offsets), so the FC VISO_POS_X/Y/Z stay 0. The covariance
-    is left 0: the FC uses VISO_POS_M_NSE / VISO_YAW_M_NSE. The reset counter goes up
-    when the box changes (a new frame origin)."""
-    last_t, last_box, reset = 0.0, None, 0
+    is left 0: the FC uses VISO_POS_M_NSE / VISO_YAW_M_NSE.
+    With the CV+IMU pose (pose "imu") on two frames in a row of the same box, also a
+    VISION_SPEED_ESTIMATE: the change in position over the time between the two captures,
+    stamped at their midpoint (EKF ExternalNav velocity, VISO_VEL_M_NSE). Between fixes the
+    EKF otherwise integrates the accelerometers alone, and at spin-up that drifted 5 cm the
+    wrong way in 0.4 s (2026-11-02 22:12). The reset counter goes up
+    when the box changes (a new frame origin), and when ground control asks to zero the
+    FC on the box (before a hover arms); the Pi then answers it with the counter it sent."""
+    last_t, last_box, reset, zero_done = 0.0, None, 0, 0
+    prev = None                                      # (capture time, x, y, z, box) of the last imu pose
     while True:
         time.sleep(0.005)
         t = lid["t"]
@@ -330,12 +472,29 @@ def vision(m, send_lock):
         if last_box is not None and b["box"] != last_box:
             reset = (reset + 1) % 256
         last_box = b["box"]
+        want = zero["want"]
+        if want != zero_done:
+            reset = (reset + 1) % 256
         x, y, z = b["drone_m"]
         t_cap = lid["t_cap"]                         # the camera frame's capture time
+        vel = None
+        if b.get("pose") == "imu":
+            if prev and prev[4] == b["box"] and 0.0 < t_cap - prev[0] < VEL_MAX_GAP_S:
+                dt = t_cap - prev[0]
+                vel = ((t_cap + prev[0]) / 2, (x - prev[1]) / dt, (y - prev[2]) / dt, (z - prev[3]) / dt)
+            prev = (t_cap, x, y, z, b["box"])
+        else:
+            prev = None
         try:
             with send_lock:
                 m.mav.vision_position_estimate_send(int(t_cap * 1e6), float(x), float(-y), float(-z),
                                                     0.0, 0.0, -math.radians(b["yaw_deg"]), [0.0] * 21, reset)
+                if vel:
+                    m.mav.vision_speed_estimate_send(int(vel[0] * 1e6), float(vel[1]), float(-vel[2]), float(-vel[3]),
+                                                     [0.0] * 9, reset)
+                if want != zero_done and zero["peer"]:
+                    m.mav.tunnel_send(zero["peer"][0], zero["peer"][1], ZERO_PAYLOAD_TYPE, 1, [reset] + [0] * 127)
+            zero_done = want
         except OSError:
             time.sleep(0.5)
 
@@ -366,6 +525,12 @@ def radio():
     next_ip = 0.0
     while True:
         time.sleep(1.0 / a.mav_hz)
+        if a.imu_tilt and (not att_buf or time.time() - att_buf[-1][0] > 1.0):
+            try:                                    # ask the FC for ATTITUDE at 50 Hz on this link (imu_fix)
+                with send_lock:
+                    m.mav.command_long_send(1, 1, 511, 0, 30, 20000, 0, 0, 0, 0, 0)
+            except OSError:
+                pass
         if time.time() >= next_ip:
             next_ip = time.time() + 5
             ip = wifi_ip()
@@ -399,6 +564,7 @@ def radio():
 vid = WifiH264(a.width, a.height, a.fps)
 threading.Thread(target=grab, daemon=True).start()
 threading.Thread(target=watchdog, daemon=True).start()
+threading.Thread(target=recorder, daemon=True).start()
 if a.mav != "none":
     threading.Thread(target=radio, daemon=True).start()
 for _ in range(DETECT_WORKERS):

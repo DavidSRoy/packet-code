@@ -1,0 +1,9 @@
+# Faster learning of a steady imbalance (2026-11-02). The rate gains were ArduCopter's untuned
+# defaults; with a nose-heavy load the takeoff nose-dip took ~0.6 s to correct (15-17 cm drift),
+# and yaw I = P/10 let a motor yaw imbalance turn the drone 10-16 deg before it caught up.
+# I learns the imbalance in the air (ArduCopter holds it at 0 on the ground). Watch for a slow
+# 1-2 Hz rocking (too much I). An outdoor AUTOTUNE replaces this.
+# Before: ATC_RAT_RLL_I 0.135, ATC_RAT_PIT_I 0.135, ATC_RAT_YAW_I 0.018
+ATC_RAT_RLL_I,0.25
+ATC_RAT_PIT_I,0.25
+ATC_RAT_YAW_I,0.04

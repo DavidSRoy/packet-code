@@ -47,6 +47,13 @@ class LidFinder:
         # windows each failed one case. Cost: about 5 Hz on the Pi Zero 2 (was 10 Hz),
         # chosen for robustness. The offset stays at the OpenCV default (7).
         p.adaptiveThreshWinSizeMax = 63
+        # Read each cell from its middle only (6 px per cell, 35% margin each side; OpenCV
+        # default 4 px, 13%): motor vibration at spin-up blurs the cell edges into their
+        # neighbours. Replayed 2026-11-02 on the 19 recorded spin-up frames the default
+        # missed: box found in 12 (4 before), 22 tags (4); every good frame still found,
+        # no wrong IDs, same time (72 ms at 512x288 on the Pi Zero 2 W)
+        p.perspectiveRemovePixelPerCell = 6
+        p.perspectiveRemoveIgnoredMarginPerCell = 0.35
         # One detector for both dictionaries (OpenCV >= 4.12): the threshold and contour
         # stage runs once on the full frame, then each dictionary decodes the candidates.
         # Same tags and corners as two detectors, half the CPU (measured 2026-10-25 on the
@@ -92,7 +99,8 @@ class LidFinder:
             out.append({"box": box, "tags": names, "range_m": float(np.linalg.norm(tv)),
                         "xyz_m": tv.flatten().tolist(), "yaw_deg": yaw,
                         "px_per_cell": float(min(cell_px)),
-                        "R": R.tolist(), "outlines": outlines})
+                        "R": R.tolist(), "outlines": outlines,
+                        "obj": o, "img": m})                  # the corners (imu_pose.py solves t from them)
         return out
 
 

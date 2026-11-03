@@ -121,8 +121,8 @@ class RadioSnap:
         return self.wifi_ok
 
     def loss(self, now, window=2.0):
-        got = sum(1 for t, _, _ in self.rx if now - t <= window)
-        lost = sum(n for t, n in self.lost if now - t <= window)
+        got = sum(1 for t, _, _ in list(self.rx) if now - t <= window)
+        lost = sum(n for t, n in list(self.lost) if now - t <= window)
         return lost / (got + lost) if got + lost >= 8 else 0.0
 
     def send_ctrl(self):
@@ -169,7 +169,7 @@ class RadioSnap:
                         elif loss < LOSS_LOW:
                             # grow, but stay near what arrives: a rate far above the link
                             # only fills the radio buffer, then the loss and the telemetry drop
-                            got = sum(1 for t, _, _ in self.rx if now - t <= 2.0) / 2.0
+                            got = sum(1 for t, _, _ in list(self.rx) if now - t <= 2.0) / 2.0
                             cap = max(RATE_START, 1.25 * got)
                             self.rate = min(RATE_MAX, cap, self.rate + RATE_STEP)
                     self.send_ctrl()
@@ -181,7 +181,7 @@ class RadioSnap:
                 "rate_pps": round(self.rate, 1),
                 "loss_pct": round(loss * 100, 1),
                 "period_s": round(self.period, 2) if self.period else None,
-                "rx_bps": round(sum(b for _, _, b in self.rx) / 5),
+                "rx_bps": round(sum(b for _, _, b in list(self.rx)) / 5),
                 "receiving": f"{len(self.parts)}/{self.nchunks}" if self.parts else None,
                 "telemetry_hz": {k: round(len(q) / HEALTH_WINDOW, 1) for k, q in self.seen.items()},
             }

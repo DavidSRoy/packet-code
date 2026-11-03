@@ -47,6 +47,7 @@ INPUT_STALE_S = 0.4   # page input older than this counts as "no keys"
 BRAKE_S = 1.5         # keep sending zero velocity this long after release
 
 COPTER_MODES = {"STABILIZE": 0, "ALT_HOLD": 2, "AUTO": 3, "GUIDED": 4, "LOITER": 5, "RTL": 6, "LAND": 9, "BRAKE": 17, "GUIDED_NOGPS": 20}
+ZERO_PAYLOAD_TYPE = 39003   # TUNNEL to/from the Pi (1, 191): "zero the FC on the box camera now" (cam_stream.py)
 VEL_YAWRATE_MASK = 0b0000_0101_1100_0111  # use vx,vy,vz + yaw_rate; ignore pos, accel, yaw
 
 
@@ -199,7 +200,8 @@ class Link:
 
     # ---- receiving -----------------------------------------------------
     def request_streams(self):
-        rates = {30: 10, 33: 5, 74: 5, 1: 2, 24: 2, 65: 2, 147: 1, 42: 2, 242: 0.2, 193: 2, 32: 5}  # ..., MISSION_CURRENT, HOME_POSITION, LOCAL_POSITION_NED
+        rates = {30: 10, 33: 5, 74: 5, 1: 2, 24: 2, 65: 2, 147: 1, 42: 2, 242: 0.2, 193: 2, 32: 5, 83: 10, 85: 5, 36: 10, 241: 5}  # ..., MISSION_CURRENT, HOME_POSITION, LOCAL_POSITION_NED,
+        # ATTITUDE_TARGET and POSITION_TARGET_LOCAL_NED: what the FC tries to hold (in the .tlog for analysis), SERVO_OUTPUT_RAW: the motors, VIBRATION
         for msg_id, hz in rates.items():
             self.command(mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL, msg_id, int(1e6 / hz))
         for name in (b"FENCE_ENABLE", b"FENCE_RADIUS", b"BATT_CAPACITY", b"LIT_SHOW", b"RC_OVERRIDE_TIME",
@@ -280,11 +282,16 @@ class Link:
         elif t == "NAMED_VALUE_FLOAT" and msg.name == "HOPG":
             s["hop_guard_t"] = time.time()
         elif t == "LOCAL_POSITION_NED":   # the EKF position from its origin (on source set 2: the camera)
-            s["local"] = (msg.x, msg.y, msg.z, time.time())
+            s["local"] = (msg.x, msg.y, msg.z, time.time(), msg.vx, msg.vy, msg.vz)
         elif t == "COMMAND_ACK":
             s["acks"][msg.command] = (msg.result, time.time())
+        elif t == "TUNNEL" and msg.payload_type == ZERO_PAYLOAD_TYPE and msg.target_system == 254:
+            s["vision_zero"] = (msg.payload[0], time.time())   # the Pi: its next camera pose resets the FC (counter)
+        elif t == "GPS_GLOBAL_ORIGIN":    # the FC has an EKF origin (hop.py asks before a hover)
+            s["origin_t"] = time.time()
         elif t == "HOME_POSITION":
             s["home_lat"], s["home_lon"] = msg.latitude / 1e7, msg.longitude / 1e7
+            s["home_t"] = time.time()
         elif t == "PARAM_VALUE":
             if msg.param_id == "FENCE_ENABLE":
                 s["fence_on"] = msg.param_value > 0

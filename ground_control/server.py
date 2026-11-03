@@ -199,11 +199,11 @@ class Link:
 
     # ---- receiving -----------------------------------------------------
     def request_streams(self):
-        rates = {30: 10, 33: 5, 74: 5, 1: 2, 24: 2, 65: 2, 147: 1, 42: 2, 242: 0.2, 193: 2}  # ..., MISSION_CURRENT, HOME_POSITION
+        rates = {30: 10, 33: 5, 74: 5, 1: 2, 24: 2, 65: 2, 147: 1, 42: 2, 242: 0.2, 193: 2, 32: 5}  # ..., MISSION_CURRENT, HOME_POSITION, LOCAL_POSITION_NED
         for msg_id, hz in rates.items():
             self.command(mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL, msg_id, int(1e6 / hz))
         for name in (b"FENCE_ENABLE", b"FENCE_RADIUS", b"BATT_CAPACITY", b"LIT_SHOW", b"RC_OVERRIDE_TIME",
-                     b"VISO_TYPE", b"EK3_SRC2_POSXY", b"EK3_SRC2_POSZ"):
+                     b"VISO_TYPE", b"EK3_SRC2_POSXY", b"EK3_SRC2_POSZ", b"EK3_SRC2_YAW"):
             self.send(self.m.mav.param_request_read_send, self.sysid, self.compid, name, -1)
 
     def handle(self, msg):
@@ -279,6 +279,8 @@ class Link:
             self.note(msg.text, msg.severity)
         elif t == "NAMED_VALUE_FLOAT" and msg.name == "HOPG":
             s["hop_guard_t"] = time.time()
+        elif t == "LOCAL_POSITION_NED":   # the EKF position from its origin (on source set 2: the camera)
+            s["local"] = (msg.x, msg.y, msg.z, time.time())
         elif t == "COMMAND_ACK":
             s["acks"][msg.command] = (msg.result, time.time())
         elif t == "HOME_POSITION":
@@ -288,7 +290,7 @@ class Link:
                 s["fence_on"] = msg.param_value > 0
             elif msg.param_id == "FENCE_RADIUS":
                 s["fence_r"] = msg.param_value
-            elif msg.param_id in ("VISO_TYPE", "EK3_SRC2_POSXY", "EK3_SRC2_POSZ"):
+            elif msg.param_id in ("VISO_TYPE", "EK3_SRC2_POSXY", "EK3_SRC2_POSZ", "EK3_SRC2_YAW"):
                 s.setdefault("fc_params", {})[msg.param_id] = msg.param_value
             elif msg.param_id == "RC_OVERRIDE_TIME":
                 s["rc_override_time"] = msg.param_value

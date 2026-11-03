@@ -1,15 +1,16 @@
 -- hop_guard.lua: dead-man for the ground control "hold to hop" button (ArduCopter 4.7)
 --
--- The hop flies in GUIDED_NOGPS (mode 20): level attitude from the IMU and height
--- from the barometer, no GPS position. While the button is held, the laptop holds
--- RC channel HOP_CH high with an RC override (2000). The motors stop at once
--- (disarm) when, armed in GUIDED_NOGPS:
+-- The hover flies in GUIDED on the camera position (EKF source set 2). While the
+-- button is held, the laptop holds RC channel HOP_CH high with an RC override (2000).
+-- The guard LATCHES ON when HOP_CH goes high while armed, and stays on until the
+-- drone disarms, in any mode. While on, the motors stop at once (disarm) when:
 --   - HOP_CH is not high: the button was released (the laptop sends 1000), or the
 --     laptop, the page or the radio is gone (the override times out after
 --     RC_OVERRIDE_TIME and the channel falls back to the receiver),
---   - the height above home is over HOP_MAX_M (barometer),
+--   - the height above home is over HOP_MAX_M (the EKF height: the camera on source set 2),
 --   - the tilt is over HOP_TILT degrees.
--- It acts only in GUIDED_NOGPS, so every other flight is untouched.
+-- A flight that never holds HOP_CH high (fly-to, trips, the Boxer) never latches it,
+-- so every other flight is untouched.
 -- It sends HOPG (NAMED_VALUE_FLOAT) once a second: the laptop allows a hop only
 -- while it hears it.
 --
@@ -28,10 +29,10 @@ local P_CH = Parameter("HOP_CH")
 local P_MAX = Parameter("HOP_MAX_M")
 local P_TILT = Parameter("HOP_TILT")
 
-local MODE_GUIDED_NOGPS = 20
 local HIGH_PWM = 1700
 local PERIOD_MS = 10
 local last_beat = 0
+local latched = false       -- a hover is on: HOP_CH went high while armed
 
 local function kill(why)
   arming:disarm()
@@ -44,10 +45,18 @@ local function update()
     gcs:send_named_float("HOPG", P_ENABLE:get())
     last_beat = now
   end
-  if P_ENABLE:get() < 1 or not arming:is_armed() or vehicle:get_mode() ~= MODE_GUIDED_NOGPS then
+  if P_ENABLE:get() < 1 or not arming:is_armed() then
+    latched = false
     return update, PERIOD_MS
   end
   local pwm = rc:get_pwm(math.floor(P_CH:get()))
+  if not latched then
+    if pwm ~= nil and pwm >= HIGH_PWM then
+      latched = true
+      gcs:send_text(6, "Hop guard: hover on")
+    end
+    return update, PERIOD_MS
+  end
   if pwm == nil or pwm < HIGH_PWM then
     kill("button released or link lost")
     return update, PERIOD_MS

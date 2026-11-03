@@ -188,7 +188,7 @@ local function expect(cond, what) if not cond then print("   FAIL: " .. what); f
 
 local r = run_case("nominal (3 deg nose-heavy)", {})
 expect(not r.aborted and r.max_slide_ground < 0.02, "ground slide under 2 cm")
-expect(r.hand_vz and r.hand_vz < 0.25, "handover climb under 0.25 m/s")
+expect(r.hand_vz and r.hand_vz < 0.10, "handover climb under 0.10 m/s (climb-rate control after liftoff)")
 expect(r.final_slide and r.final_slide < 0.03, "within 3 cm 2 s after handover")
 
 r = run_case("heavy package, 6 deg nose-heavy", { bias = 6.0, weight = 1.15 })

@@ -1,6 +1,11 @@
-"""Hold to hover: while the page button is held, climb straight up a set distance and
-hold locked over the exact spot it started from, on the box camera and the IMU only
-(no GPS, compass or barometer). The moment it is released, stop the motors.
+"""Hover on the box camera: climb straight up a set distance and hold locked over the exact
+spot it started from, on the box camera and the IMU only (no GPS, compass or barometer).
+
+- Run test (the page button now): a timed run with no button held. It holds at the height for
+  the set time, descends at CLIMB_MPS to LAND_BELOW_M under the start and stops the motors once
+  the tags put it back down. The pilot stays at the Boxer SD kill; the page Stop button, a page
+  close, hop_guard.lua (link lost) and every cut below still stop the motors.
+- Hold to hover (press without a duration): only while the button is held; release = motors off.
 
 - Camera navigation: the Pi sends every lid pose straight to the FC
   (VISION_POSITION_ESTIMATE, companion/cam_stream.py vision(), 10 Hz). Before arming,
@@ -37,8 +42,14 @@ from pymavlink import mavutil
 
 MAV = mavutil.mavlink
 HOP_CH = 12                  # lua/hop_guard.lua HOP_CH
-HEIGHT_MIN, HEIGHT_MAX = 0.05, 0.40   # m
-KEEPALIVE_S = 0.15           # page must say "still held" this often
+HEIGHT_MIN, HEIGHT_MAX = 0.01, 0.38   # m above where it sat (a 1-3 cm hover: just clear of the skids)
+KEEPALIVE_S = 0.15           # page must say "still held" this often (hold to hover)
+TEST_MIN_S, TEST_MAX_S = 5.0, 120.0   # test run: time held at the height
+LAND_BELOW_M = 0.02          # test run descent: to this far under the start (pressed onto its legs) ...
+LAND_DONE_M = 0.005          # ... motors off once the tags put it this close to the start height ...
+LAND_HOLD_S = 0.5            # ... for this long
+LAND_EXTRA_S = 2.0           # or this long after the descent target reached the bottom
+TEST_DONE = "test run done: landed, motors off"
 RATE_HZ = 25
 GUARD_FRESH_S = 3.0          # HOPG from hop_guard.lua must be newer than this
 MAX_OVERRIDE_TIME = 0.5      # RC_OVERRIDE_TIME must be at most this (s)
@@ -56,6 +67,7 @@ SETTLE_V = 0.03              # ... and FC speed under this, m/s ...
 SETTLE_HOLD_S = 1.0          # ... staying there this long (it can pass through on its way) ...
 SETTLE_S = 6.0               # ... within this long, before the start point is taken and it arms
 TAKEOFF_S = 10.0             # no handover from lua/hop_takeoff.lua this long after arming = motors off (it takes about 3 s)
+RESEND_S = 0.5               # setup commands are sent again this often until the FC confirms
 ORIGIN_ASK_S = 1.5           # the FC must answer the EKF origin request this soon (or it has none)
 SOURCE_ACK_S = 3.0           # the FC must accept the source switch this soon
 HEIGHT_AGREE_M = 0.15        # FC height change vs camera height change: more than this ...
@@ -70,6 +82,7 @@ class Hop:
         self.active = False
         self.gen = 0                 # one id per hop: an old hop's loop never acts on a new one
         self.last_alive = 0.0
+        self.test_s = None           # a timed test run (Run test button): hold this long, land, motors off
         self.height = 0.127
         self.h0 = None               # tag height of the drone on the ground (= 0 for the hover height)
         self.wifi = None             # (rx time, box in view, drone height above the sticker m), from /lid.json
@@ -131,7 +144,10 @@ class Hop:
         except Exception:
             pass   # the disarm went out first; hop_guard.lua also stops the motors when HOP_CH times out
         self.link.command(SOURCE_SET_CMD, 1)   # back to the normal sources (GPS, barometer)
-        if was:
+        if was and why == TEST_DONE:
+            self.status = {"state": "done", "height": self.height, "reason": why}
+            self.link.note(f"Laptop: {why}", 5)
+        elif was:
             self.status = {"state": "killed", "height": self.height, "reason": why}
             self.link.note(f"Laptop: HOP MOTORS OFF ({why})", 2)
 
@@ -165,11 +181,15 @@ class Hop:
             return "box tags not in view: the hover needs them for its height"
         return None
 
-    def press(self, height):
+    def press(self, height, duration=None):
+        """Start a hover. With duration (s): a timed test run that holds at the height that long,
+        descends and stops the motors itself, with no button held (the Boxer SD kill, the Stop
+        button, hop_guard.lua and the safety cuts stay). Without: hold to hover."""
         try:
             h = float(height)
+            test_s = None if duration is None else max(TEST_MIN_S, min(TEST_MAX_S, float(duration)))
         except (TypeError, ValueError):
-            return self.link.note("Laptop: hop refused, bad height", 4)
+            return self.link.note("Laptop: hop refused, bad height or duration", 4)
         with self.lock:
             if self.active:
                 self.last_alive = time.time()
@@ -180,12 +200,17 @@ class Hop:
                 return self.link.note(f"Laptop: hop refused: {why}", 4)
             self.height = max(HEIGHT_MIN, min(HEIGHT_MAX, h))
             self.h0 = self.pose()[2]          # tag height on the ground: the hover height counts from here
+            self.test_s = test_s
             self.gen += 1
             self.active = True
             self.last_alive = time.time()
             self.status = {"state": "arming", "height": self.height, "reason": None}
-            self.link.note(f"Laptop: hover {self.height * 100:.0f} cm over the start (camera + IMU, GUIDED). "
-                           "Release = motors off.", 4)
+            if test_s is None:
+                self.link.note(f"Laptop: hover {self.height * 100:.0f} cm over the start (camera + IMU, GUIDED). "
+                               "Release = motors off.", 4)
+            else:
+                self.link.note(f"Laptop: test run, {self.height * 100:.0f} cm for {test_s:.0f} s, then it lands. "
+                               "Stop button or SD = motors off.", 4)
             threading.Thread(target=self._run, args=(self.gen,), daemon=True).start()
 
     def alive(self):
@@ -213,7 +238,7 @@ class Hop:
         def held():
             if not self.active or gen != self.gen:
                 return False
-            if time.time() - self.last_alive > KEEPALIVE_S:
+            if self.test_s is None and time.time() - self.last_alive > KEEPALIVE_S:
                 self.kill("button signal lost")
                 return False
             return True
@@ -225,6 +250,18 @@ class Hop:
                 time.sleep(period)
             return held()
 
+        def keep(cond, send, timeout):
+            """Send, and send again every RESEND_S until cond() or timeout: the radio loses
+            single messages (a command or its answer), which stopped hovers at setup."""
+            end, last = time.time() + timeout, 0.0
+            while held() and not cond() and time.time() < end:
+                if time.time() - last >= RESEND_S:
+                    send()
+                    last = time.time()
+                self._override(2000)
+                time.sleep(period)
+            return held()
+
         try:
             # HOP_CH high first: hop_guard.lua latches on with it, and the laptop's checks need it
             for _ in range(3):
@@ -232,13 +269,12 @@ class Hop:
                 time.sleep(0.02)
             # 1. Navigation from the camera and the IMU only (source set 2: position, height, heading)
             t_switch = time.time()
-            L.command(SOURCE_SET_CMD, 2)
             self.status = {"state": "camera source", "height": self.height, "reason": None}
 
             def ack():
                 a = s.get("acks", {}).get(SOURCE_SET_CMD)
                 return a if a and a[1] >= t_switch else None
-            if not wait(lambda: ack() is not None, SOURCE_ACK_S):
+            if not keep(lambda: ack() is not None, lambda: L.command(SOURCE_SET_CMD, 2), SOURCE_ACK_S):
                 return
             a = ack()
             if a is None:
@@ -249,28 +285,29 @@ class Hop:
             # position, but GUIDED needs it to turn the takeoff height into a target. Ask the FC
             # itself: the laptop's home can be from before an FC reboot, and then the takeoff fails
             t_org = time.time()
-            L.command(MAV.MAV_CMD_REQUEST_MESSAGE, 49)          # GPS_GLOBAL_ORIGIN
             has_origin = lambda: (s.get("origin_t") or 0) >= t_org
-            if not wait(has_origin, ORIGIN_ASK_S):
+            if not keep(has_origin, lambda: L.command(MAV.MAV_CMD_REQUEST_MESSAGE, 49), ORIGIN_ASK_S):   # GPS_GLOBAL_ORIGIN
                 return
             if not has_origin():
                 lat, lon = s.get("lat_fc") or s.get("lat"), s.get("lon_fc") or s.get("lon")
                 if not lat or not lon:
                     return self.kill("the FC has no EKF origin and there is no last known position to give it one")
-                L.send(L.m.mav.set_gps_global_origin_send, L.sysid, int(lat * 1e7), int(lon * 1e7),
-                       int((s.get("alt_msl") or 0.0) * 1000), int(time.time() * 1e6))
                 L.note(f"Laptop: EKF origin set at {lat:.6f}, {lon:.6f} (a label only, no GPS home indoors)", 4)
                 t_org = time.time()
-                L.command(MAV.MAV_CMD_REQUEST_MESSAGE, 49)
-                if not wait(has_origin, 3.0):
+
+                def set_origin():
+                    L.send(L.m.mav.set_gps_global_origin_send, L.sysid, int(lat * 1e7), int(lon * 1e7),
+                           int((s.get("alt_msl") or 0.0) * 1000), int(time.time() * 1e6))
+                    L.command(MAV.MAV_CMD_REQUEST_MESSAGE, 49)
+                if not keep(has_origin, set_origin, 4.0):
                     return
                 if not has_origin():
                     return self.kill("the FC did not take the EKF origin")
             # 3. Zero on the box: the box is the origin. The Pi sends its next camera pose with a
             # new reset counter, so the EKF jumps to it instead of walking over from where it was
             t_zero = time.time()
-            L.send(L.m.mav.tunnel_send, 1, 191, ZERO_PAYLOAD_TYPE, 0, [0] * 128)
-            if not wait(lambda: (s.get("vision_zero") or (0, 0))[1] >= t_zero, ZERO_ACK_S):
+            if not keep(lambda: (s.get("vision_zero") or (0, 0))[1] >= t_zero,
+                        lambda: L.send(L.m.mav.tunnel_send, 1, 191, ZERO_PAYLOAD_TYPE, 0, [0] * 128), ZERO_ACK_S):
                 return
             if (s.get("vision_zero") or (0, 0))[1] < t_zero:
                 return self.kill("the Pi did not answer the zero on the box (camera server down?)")
@@ -310,23 +347,25 @@ class Hop:
             # Home here, before arming: ArduCopter resets its height datum when it arms without a
             # home (indoors there is no GPS to set one), which moves the FC height under the hover
             t_home = time.time()
-            L.command(MAV.MAV_CMD_DO_SET_HOME, 1)                 # 1 = at the current position
-            L.command(MAV.MAV_CMD_REQUEST_MESSAGE, 242)           # HOME_POSITION
-            has_home = lambda: (s.get("home_t") or 0) >= t_home
-            if not wait(has_home, 3.0):
+            home_ack = lambda: (s.get("acks", {}).get(MAV.MAV_CMD_DO_SET_HOME) or (None, 0))
+            has_home = lambda: ((s.get("home_t") or 0) >= t_home
+                                or (home_ack()[1] >= t_home and home_ack()[0] == MAV.MAV_RESULT_ACCEPTED))
+
+            def set_home():
+                L.command(MAV.MAV_CMD_DO_SET_HOME, 1)             # 1 = at the current position
+                L.command(MAV.MAV_CMD_REQUEST_MESSAGE, 242)       # HOME_POSITION
+            if not keep(has_home, set_home, 4.0):
                 return
             if not has_home():
                 return self.kill("the FC did not set its home (needed before arming without GPS)")
             yaw0 = math.radians(s["yaw"])                   # start heading (EKF: the box camera)
             cam0 = self.pose()
             # 5. GUIDED (needs a position: the camera), arm, take off straight up
-            L.set_mode("GUIDED")
-            if not wait(lambda: s["mode"] == "GUIDED", 3.0):
+            if not keep(lambda: s["mode"] == "GUIDED", lambda: L.set_mode("GUIDED"), 3.0):
                 return
             if s["mode"] != "GUIDED":
                 return self.kill("the drone did not enter GUIDED (no position from the camera?)")
-            L.command(MAV.MAV_CMD_COMPONENT_ARM_DISARM, 1)
-            if not wait(lambda: s["armed"], 3.0):
+            if not keep(lambda: s["armed"], lambda: L.command(MAV.MAV_CMD_COMPONENT_ARM_DISARM, 1), 3.0):
                 return
             if not s["armed"]:
                 return self.kill("drone refused to arm (see its PreArm message)")
@@ -343,6 +382,7 @@ class Hop:
             hopt = lambda: (s.get("hopt") or (0, 0.0))
             self.status = {"state": "takeoff", "height": self.height, "reason": None}
             locked, last_lock = False, 0.0
+            t_level = t_down = t_ground = None                 # test run: at the height, descending, on the ground
             cam_t, cam_h = None, None
             fc0, disagree_t = s["alt"], None                   # FC height at arming: its change must follow the camera
             while held():
@@ -358,6 +398,9 @@ class Hop:
                 if not s["armed"]:
                     self.active = False
                     L.command(SOURCE_SET_CMD, 1)               # back to the normal sources
+                    if t_down:                                 # the FC's own land detector in the test descent
+                        self.status = {"state": "done", "height": self.height, "reason": TEST_DONE}
+                        return L.note(f"Laptop: {TEST_DONE} (the FC disarmed on landing)", 5)
                     self.status = {"state": "killed", "height": self.height, "reason": "disarmed by the drone"}
                     return L.note("Laptop: hover ended, the drone disarmed (hop_guard.lua or the FC)", 3)
                 if s["mode"] != "GUIDED":
@@ -390,10 +433,30 @@ class Hop:
                 if locked:
                     h_tgt = min(self.height, h_lock + CLIMB_MPS * (now - t_lock))
                     climbing = h_tgt < self.height
+                    # test run: hold at the height for test_s, then descend at CLIMB_MPS to LAND_BELOW_M under
+                    # the start (pressed onto its legs) and stop once the tags say it is down
+                    if self.test_s is not None:
+                        if not climbing and t_level is None:
+                            t_level = now
+                        if t_level is not None and now - t_level >= self.test_s:
+                            t_down = t_down or now
+                            h_tgt = max(-LAND_BELOW_M, self.height - CLIMB_MPS * (now - t_down))
+                            climbing = True                    # moving target: resend at 5 Hz
+                            if est <= LAND_DONE_M:
+                                t_ground = t_ground or now
+                                if now - t_ground >= LAND_HOLD_S:
+                                    return self.kill(TEST_DONE)
+                            else:
+                                t_ground = None
+                            if now - t_down > (self.height + LAND_BELOW_M) / CLIMB_MPS + LAND_EXTRA_S:
+                                return self.kill(TEST_DONE)
                     if now - last_lock >= (0.2 if climbing else 1.0):   # resent: a lost message cannot unlock it
                         self._hold_target(start, yaw0, h_tgt)
                         last_lock = now
-                self.status = {"state": "locked" if locked else "climbing", "height": self.height, "reason": None,
+                self.status = {"state": ("landing" if t_down else "locked") if locked else "climbing",
+                               "height": self.height, "reason": None,
+                               "test_left": None if self.test_s is None or t_level is None
+                               else round(max(0.0, self.test_s - (now - t_level)), 1),
                                "height_now": round(est, 3), "drift_m": None if drift is None else round(drift, 3),
                                "pose": p[3], "pose_age": round(now - cam_t, 2)}
                 self._override(2000)

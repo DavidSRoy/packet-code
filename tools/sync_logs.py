@@ -52,7 +52,8 @@ def main():
             continue
         t0 = time.time()
         ftp.cmd_get([f"/APM/LOGS/{e.name}", str(dest)])
-        ret = ftp.process_ftp_reply("OpenFileRO", timeout=0)
+        # wait for the whole transfer: timeout=0 gave up at once (error 73, RemoteReplyTimeout)
+        ret = ftp.process_ftp_reply("OpenFileRO", timeout=max(60, e.size_b / 2000))
         dt = time.time() - t0
         ok = ret.error_code == 0 and dest.exists() and dest.stat().st_size == e.size_b
         print(f"  {e.name}: {'ok' if ok else 'FAILED ' + str(ret.error_code)} "

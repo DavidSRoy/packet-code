@@ -1,0 +1,9 @@
+# Position loop for the tune_v4 attitude response (log 00000043, 2026-11-03). tune_v4 removed the
+# 2.3 Hz rocking (angle RMS 0.40-0.46 -> 0.28-0.30 deg) and the heading wobble (1.93 -> 0.33 deg),
+# at about +22 ms of attitude response delay at 1-3 rad/s (tools/tuning/attitude_design.py:
+# 105 -> 127 ms). With that, tune_v3's position gains drop to PM 43 over delay 0.25-0.36 s; east
+# swayed again (1.6 cm RMS, 0.25 Hz). These gains: worst PM 52 deg over delay 0.25-0.36 s and gain
+# 0.5-0.75, resonance x1.05, sway for the same push x0.40 (tools/tuning/position_margins.py).
+# Before: PSC_NE_VEL_P 4.0, PSC_NE_VEL_D 0.75
+PSC_NE_VEL_P,3.5
+PSC_NE_VEL_D,1.0

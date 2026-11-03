@@ -1,0 +1,27 @@
+# Rate-loop tune from measured data (log 00000029, 2026-11-03 hover).
+# Identified (airborne, 400 Hz RATE): K ~130 rad/s^2 per unit output on roll and pitch,
+# total loop delay ~38 ms (motors/ESCs/props ~27 ms + the 20 Hz gyro filter ~11 ms).
+# Gyro noise (3.2 kHz batch sampler): motor fundamental 60 Hz at hover, peaks 60/122/244 Hz.
+# The 27 ms motor delay caps the rate crossover near 21 rad/s, so stiffness comes from the
+# angle loop and the rate integral; less D (its high-frequency gain cost gain margin).
+# Margins on the model: rate PM 56 deg, GM 6.3 dB; angle PM 59 deg; at K x1.25 PM 49, GM 4.3.
+# Before: ATC_RAT_RLL/PIT_P 0.135, _I 0.135, _D 0.0036, _FLTD 10, ATC_ANG_RLL/PIT_P 4.5,
+#         INS_GYRO_FILTER 20, INS_HNTCH_ENABLE 0 (FREQ 80, BW 40, REF 0, HMNCS 3)
+ATC_RAT_RLL_P,0.15
+ATC_RAT_PIT_P,0.15
+ATC_RAT_RLL_I,0.45
+ATC_RAT_PIT_I,0.45
+ATC_RAT_RLL_D,0.002
+ATC_RAT_PIT_D,0.002
+ATC_RAT_RLL_FLTD,15
+ATC_RAT_PIT_FLTD,15
+ATC_ANG_RLL_P,9.0
+ATC_ANG_PIT_P,9.0
+INS_GYRO_FILTER,40
+INS_HNTCH_ENABLE,1
+INS_HNTCH_MODE,1
+INS_HNTCH_FREQ,60
+INS_HNTCH_BW,30
+INS_HNTCH_ATT,40
+INS_HNTCH_REF,0.275
+INS_HNTCH_HMNCS,11

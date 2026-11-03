@@ -1,0 +1,3 @@
+# Close the dataflash log at every disarm (2026-11-03): with 0 the last flights stayed in the
+# log the FC was still writing, and it would not stream that log (downloads hung).
+LOG_FILE_DSRMROT,1

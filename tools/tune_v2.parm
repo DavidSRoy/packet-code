@@ -1,0 +1,13 @@
+# Position-loop tune and 3rd-harmonic notch from logs 00000031 (two hovers, 14 s and 57 s, 2026-11-03).
+# After tune_v1 the attitude follows its targets (0.3-0.4 deg RMS); the visible motion is a slow
+# 0.22-0.28 Hz sway of 1-2 cm (max 4-5 cm) from the position controller. Measured: acceleration
+# follows the command with ~200 ms delay, gain 0.92 (PSCN/PSCE). On that model
+# (tools/tuning/position_margins.py) these gains halve the sway for the same push, with velocity
+# loop PM 74 deg / GM 6.3 dB, position loop PM 60 deg, no resonance; at +30 % delay PM 64 / 58.
+# Raw gyro also has the 3rd motor harmonic (175-179 Hz): notch harmonics 1, 2, 3, 4.
+# Before: PSC_NE_POS_P 1, PSC_NE_VEL_P 2, PSC_NE_VEL_I 1, PSC_NE_VEL_D 0.25, INS_HNTCH_HMNCS 11
+PSC_NE_POS_P,1.5
+PSC_NE_VEL_P,3.0
+PSC_NE_VEL_I,0.5
+PSC_NE_VEL_D,0.5
+INS_HNTCH_HMNCS,15

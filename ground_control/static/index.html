@@ -198,8 +198,7 @@
   #hop { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
   #hop .alt-row { margin: 0 0 6px; }
   #hop-arm { display: flex; align-items: center; gap: 6px; font: 11px var(--sans); color: var(--muted); margin-bottom: 6px; cursor: pointer; }
-  #b-hop { touch-action: none; user-select: none; -webkit-user-select: none; }
-  #b-hop.held { background: rgba(255,77,77,.22); border-color: var(--bad); color: #fff; }
+  #b-hop-stop { margin-top: 6px; }
   #hop-state { font: 11px/1.5 var(--mono); color: var(--muted); margin-top: 4px; white-space: normal; }
   .home-ico { width: 18px; height: 18px; border: 1.5px solid var(--text); background: rgba(0,0,0,.5); color: var(--text);
     font: 700 10px var(--mono); display: flex; align-items: center; justify-content: center; }
@@ -412,14 +411,19 @@
   <button class="btn" id="b-hold" data-air="1"><span>Hold</span><kbd>SPACE</kbd></button>
   <button class="btn kill" id="b-kill"><span class="fill" id="kill-fill"></span><span>Kill motors</span><kbd>HOLD 1 S</kbd></button>
   <div id="hop">
-    <div class="trip-h"><span class="lbl">Hold to hover · no GPS</span><span class="badge" id="hop-badge">IDLE</span></div>
+    <div class="trip-h"><span class="lbl">Test hover · no GPS</span><span class="badge" id="hop-badge">IDLE</span></div>
     <div class="alt-row">
       <span class="lbl" style="color:var(--text)">Height</span>
-      <div class="stepper"><button id="hop-dn">−</button><span id="hop-h">5 in</span><button id="hop-up">+</button></div>
+      <div class="stepper"><button id="hop-dn">−</button><span id="hop-h">2 cm</span><button id="hop-up">+</button></div>
     </div>
-    <label id="hop-arm"><input type="checkbox" id="hop-ok"> Props on, area clear: unlock</label>
-    <button class="btn kill" id="b-hop" disabled><span>Hold to hover</span><kbd>LET GO = MOTORS OFF</kbd></button>
-    <div id="hop-state">No GPS: level on the IMU, height from the box tags under the camera. Needs the tags in view; if they leave the view, motors off. No sideways position hold.</div>
+    <div class="alt-row">
+      <span class="lbl" style="color:var(--text)">Hold for</span>
+      <div class="stepper"><button id="hop-tdn">−</button><span id="hop-t">30 s</span><button id="hop-tup">+</button></div>
+    </div>
+    <label id="hop-arm"><input type="checkbox" id="hop-ok"> Props on, area clear, at the SD switch: unlock</label>
+    <button class="btn go" id="b-hop" disabled><span>Run test</span><kbd>TAKEOFF · HOLD · LAND</kbd></button>
+    <button class="btn kill" id="b-hop-stop"><span>Stop</span><kbd>MOTORS OFF</kbd></button>
+    <div id="hop-state">Takes off on the box camera, holds over the start point for the set time, descends and stops the motors. Boxer SD or Stop = motors off. Tags out of view, drift or a lost link also stop the motors.</div>
   </div>
   <div id="flyto">
     <div class="trip-h"><span class="lbl">Fly to point</span><span class="badge" id="ft-badge">IDLE</span></div>
@@ -721,41 +725,32 @@ $("trips").addEventListener("click", e => {
 });
 
 /* ---------- hold to hop (no GPS): release = motors off ---------- */
-let hopIn = 5, hopTimer = null;
-function hopSetH(v) { hopIn = Math.max(2, Math.min(15, Math.round(v))); $("hop-h").textContent = hopIn + " in"; }
-$("hop-up").onclick = () => hopSetH(hopIn + 1);
-$("hop-dn").onclick = () => hopSetH(hopIn - 1);
+let hopCm = 2, hopSec = 30;          // test run: height above where it sat (cm), time held there (s)
+function hopSetH(v) { hopCm = Math.max(1, Math.min(38, Math.round(v))); $("hop-h").textContent = hopCm + " cm"; }
+function hopSetT(v) { hopSec = Math.max(5, Math.min(120, Math.round(v / 5) * 5)); $("hop-t").textContent = hopSec + " s"; }
+$("hop-up").onclick = () => hopSetH(hopCm + 1);
+$("hop-dn").onclick = () => hopSetH(hopCm - 1);
+$("hop-tup").onclick = () => hopSetT(hopSec + 5);
+$("hop-tdn").onclick = () => hopSetT(hopSec - 5);
 $("hop-ok").onchange = () => { $("b-hop").disabled = !$("hop-ok").checked; };
-function hopStop() {
-  if (!hopTimer) return;
-  send({ type: "hop_up" });           // first, before anything else
-  clearInterval(hopTimer); hopTimer = null;
-  $("b-hop").classList.remove("held");
-  $("hop-ok").checked = false; $("b-hop").disabled = true;   // unlock again for the next hop
-}
-$("b-hop").addEventListener("pointerdown", e => {
-  if ($("b-hop").disabled || hopTimer) return;
-  e.preventDefault();
-  $("b-hop").setPointerCapture(e.pointerId);
-  $("b-hop").classList.add("held");
-  send({ type: "hop_down", height: hopIn * 0.0254 });
-  hopTimer = setInterval(() => send({ type: "hop_alive" }), 50);   // the laptop kills after 150 ms without one
-});
-["pointerup", "pointercancel", "lostpointercapture"].forEach(t => $("b-hop").addEventListener(t, hopStop));
-$("b-hop").addEventListener("contextmenu", e => e.preventDefault());
-addEventListener("blur", hopStop);
-document.addEventListener("visibilitychange", hopStop);
-addEventListener("pagehide", hopStop);
+$("b-hop").onclick = () => {
+  if ($("b-hop").disabled) return;
+  send({ type: "hop_test", height: hopCm / 100, duration: hopSec });
+  $("hop-ok").checked = false; $("b-hop").disabled = true;   // unlock again for the next run
+};
+$("b-hop-stop").onclick = () => send({ type: "hop_stop" });
 function renderHop(h) {
   if (!h) return;
   const b = $("hop-badge");
   b.textContent = (h.state || "idle").toUpperCase();
   b.className = "badge" + (h.active ? " on" : "");
-  if (h.state === "refused" || h.state === "killed")
+  if (h.state === "refused" || h.state === "killed" || h.state === "done")
     $("hop-state").textContent = `${h.state.toUpperCase()}: ${h.reason || ""}`;
   else if (h.active)
-    $("hop-state").textContent = `Holding ${Math.round((h.height || 0) * 100)} cm · tag height now ${h.height_now != null ? (h.height_now * 100).toFixed(0) : "?"} cm`
-      + (h.pose ? ` (${h.pose.toUpperCase()}, ${h.pose_age} s)` : "") + " · let go or tags lost = motors off";
+    $("hop-state").textContent = `${h.state === "landing" ? "Landing" : "Holding"} ${Math.round((h.height || 0) * 100)} cm · tag height now ${h.height_now != null ? (h.height_now * 100).toFixed(1) : "?"} cm`
+      + (h.drift_m != null ? ` · off the start ${(h.drift_m * 100).toFixed(1)} cm` : "")
+      + (h.test_left != null && h.state !== "landing" ? ` · lands in ${h.test_left.toFixed(0)} s` : "")
+      + (h.pose ? ` (${h.pose.toUpperCase()})` : "") + " · SD or Stop = motors off";
 }
 
 /* ---------- fly to a point ---------- */

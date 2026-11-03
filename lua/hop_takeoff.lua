@@ -24,8 +24,18 @@
 --  * Commanding a tilt the legs do not let it reach only winds up the integrators:
 --    the tilt target goes from the resting attitude (legs) to level plus the hold
 --    as the weight moves off the legs (T/W from HTO_TW_FAST to 1).
---  * After liftoff it keeps the liftoff thrust (+2 %): ground effect lifts it below
---    the learned hover thrust. No climb in 1.5 s: the ramp goes on at half rate.
+--  * After liftoff it flies a climb rate, not a thrust: holding a thrust above hover
+--    kept accelerating it (10 cm/s at the handover, 17-19 cm/s after) and ArduPilot then
+--    overshot the hover height by 7 cm and swayed 10 cm while it braked (2026-11-03).
+--    PI on the EKF climb rate to CLIMB_MPS, a = KV*e + KI*int(e) (KV 3 /s, KI 3 /s^2:
+--    critically damped at wn 1.7 rad/s, slower than the ~0.1 s motor response), thrust
+--    = hover T/W * (1 + a/g). The hover T/W there (ground effect included) is the thrust
+--    at liftoff less what the ramp added while it rose to the liftoff height: z =
+--    g*r*t^3/6 gives t, and r*t is the excess (5 % at 0.6 cm). The integral follows the
+--    ground effect as it fades. It
+--    hands over at HTO_HAND_M once the climb is down to CLIMB_MPS + 3 cm/s (at the latest
+--    1 cm higher), so ArduPilot has little to brake. Liftoff is seen at 0.6 cm: the climb
+--    rate there is about z^(2/3) of the ramp, 6 cm/s (10 cm/s at 1 cm).
 --  * At HTO_HAND_M above the start it hands over: a position target over the start
 --    point, and ArduPilot's position controller (and ground control) fly on.
 --
@@ -40,8 +50,8 @@ assert(param:add_param(TABLE_KEY, 1, "ENABLE", 1), "HTO_ENABLE")
 assert(param:add_param(TABLE_KEY, 2, "TW_FAST", 0.6), "HTO_TW_FAST")   -- T/W reached quickly (legs still hold)
 assert(param:add_param(TABLE_KEY, 3, "RAMP", 0.2), "HTO_RAMP")         -- T/W per second from TW_FAST on
 assert(param:add_param(TABLE_KEY, 4, "TW_MAX", 1.3), "HTO_TW_MAX")     -- no liftoff by this T/W = abort
-assert(param:add_param(TABLE_KEY, 5, "LIFT_M", 0.01), "HTO_LIFT_M")    -- height rise that counts as liftoff
-assert(param:add_param(TABLE_KEY, 6, "HAND_M", 0.03), "HTO_HAND_M")    -- height to hand over to position control
+assert(param:add_param(TABLE_KEY, 5, "LIFT_M", 0.006), "HTO_LIFT_M")   -- height rise that counts as liftoff (climb there ~ z^(2/3): 6 cm/s at 0.6 cm)
+assert(param:add_param(TABLE_KEY, 6, "HAND_M", 0.015), "HTO_HAND_M")   -- height to hand over to position control (just past liftoff: slower climb to brake)
 assert(param:add_param(TABLE_KEY, 7, "TILT", 5), "HTO_TILT")           -- hold tilt limit, deg
 assert(param:add_param(TABLE_KEY, 8, "ABT_TILT", 10), "HTO_ABT_TILT")  -- actual tilt that aborts, deg
 assert(param:add_param(TABLE_KEY, 9, "ABT_M", 0.15), "HTO_ABT_M")      -- slide that aborts, m
@@ -69,7 +79,11 @@ local PERIOD_MS = 20           -- 50 Hz
 local TW_START = 0.3           -- first T/W once the motors are at full range
 local FAST_RATE = 0.6          -- T/W per second up to HTO_TW_FAST
 local REST_S = 0.2             -- resting attitude averaged this long after arming
-local AIR_WAIT_S = 1.5         -- lifted but not at HTO_HAND_M this long: ramp on at half rate
+local CLIMB_MPS = 0.05         -- climb rate from liftoff to the handover
+local LIFT_TW_MIN = 0.8        -- no liftoff counted below this T/W
+local KV, KI = 3.0, 3.0        -- climb-rate PI, 1/s and 1/s^2
+local AIR_SPAN = 0.15          -- thrust kept within this fraction of the liftoff thrust
+local AIR_TIMEOUT_S = 3.0      -- lifted but not at HTO_HAND_M this long = abort
 
 local IDLE, REST, SPOOL, SKIDS, AIR, DONE = 0, 1, 2, 3, 4, 5
 local REPORT = { [IDLE] = 0, [REST] = 1, [SPOOL] = 1, [SKIDS] = 2, [AIR] = 3, [DONE] = 4 }
@@ -78,7 +92,7 @@ local state = IDLE
 local t_state, t_report = 0, 0
 local start, yaw_deg = nil, 0
 local rest_r, rest_p, rest_n = 0, 0, 0
-local tw, tw_lift, ramp = 0, 0, 0
+local tw, tw_lift, tw_base = 0, 0, 0
 local aborted_until = 0
 
 local function now_s() return millis():tofloat() * 0.001 end
@@ -193,22 +207,30 @@ local function update()
     local w = clamp((tw - tw_fast) / (1 - tw_fast), 0, 1)
     local r, p = tilt_target(en, ee, vn, ve, w)
     command(r, p, tw)
-    if up >= P_LIFT:get() or (vup >= 0.05 and up >= 0.004) then
-      tw_lift = tw
-      ramp = 0
+    -- below LIFT_TW_MIN it cannot be off the ground (ground effect is a few %): an EKF height
+    -- twitch at spin-up read as liftoff at T/W 0.31 (2026-11-03) and the climb loop then aborted
+    if tw >= LIFT_TW_MIN and (up >= P_LIFT:get() or (vup >= 0.05 and up >= 0.004)) then
+      -- the ramp ran past hover while it rose to "up": z = g*r*t^3/6, so it is r*t over the
+      -- hover thrust (ground effect included); that hover thrust seeds the climb-rate loop
+      local r = P_RAMP:get()
+      local t_rise = (6 * math.max(up, 0) / (G * r)) ^ (1 / 3)
+      tw_lift = math.max(tw - r * t_rise, tw_fast)
+      tw_base = tw_lift
       set_state(AIR, t)
-      gcs:send_text(6, string.format("HTO: liftoff at T/W %.2f, slid %.1f cm", tw, slide * 100))
+      gcs:send_text(6, string.format("HTO: liftoff at T/W %.2f (hover %.2f), slid %.1f cm", tw, tw_lift, slide * 100))
     end
   elseif state == AIR then
-    if t - t_state > AIR_WAIT_S then ramp = 0.5 * P_RAMP:get() end
-    tw_lift = tw_lift + ramp * PERIOD_MS * 0.001
-    if tw_lift > P_TW_MAX:get() then
-      abort(t, string.format("no climb by T/W %.2f", tw_lift))
+    if t - t_state > AIR_TIMEOUT_S then
+      abort(t, string.format("lifted but no climb to %.1f cm in %g s", P_HAND:get() * 100, AIR_TIMEOUT_S))
       return update, PERIOD_MS
     end
+    local e = CLIMB_MPS - vup
+    local lo, hi = tw_lift * (1 - AIR_SPAN), math.min(tw_lift * (1 + AIR_SPAN), P_TW_MAX:get())
+    tw_base = clamp(tw_base + tw_lift * KI * e * PERIOD_MS * 0.001 / G, lo, hi)
+    local tw_air = clamp(tw_base + tw_lift * KV * e / G, lo, hi)
     local r, p = tilt_target(en, ee, vn, ve, 1)
-    command(r, p, tw_lift * 1.02)
-    if up >= P_HAND:get() then
+    command(r, p, tw_air)
+    if (up >= P_HAND:get() and vup <= CLIMB_MPS + 0.03) or up >= P_HAND:get() + 0.01 then
       -- position control over the start point, at the current height: ArduPilot flies on
       local target = Vector3f()
       target:x(start:x())
@@ -216,8 +238,8 @@ local function update()
       target:z(start:z() - up)
       if vehicle:set_target_pos_NED(target, true, yaw_deg, false, 0, false, false) then
         set_state(DONE, t)
-        gcs:send_text(6, string.format("HTO: handed over at %.1f cm, slid %.1f cm, T/W %.2f",
-                                       up * 100, slide * 100, tw_lift * 1.02))
+        gcs:send_text(6, string.format("HTO: handed over at %.1f cm climbing %.0f cm/s, slid %.1f cm",
+                                       up * 100, vup * 100, slide * 100))
         report(t, true)
       end
     end

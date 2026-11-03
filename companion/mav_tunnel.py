@@ -24,7 +24,7 @@ import tunnel_proto as tp
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--dev", default="/dev/serial0")
-ap.add_argument("--baud", type=int, default=921600)
+ap.add_argument("--baud", type=int, default=2000000)   # FC SERIAL5_BAUD 2000
 ap.add_argument("--ssh", default="127.0.0.1:22")
 ap.add_argument("--local", default="udpin:127.0.0.1:14650", help="'none' to turn off")
 a = ap.parse_args()

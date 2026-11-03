@@ -912,6 +912,10 @@ def build_app(link, pilot, auto, air, ceil):
                     pilot.hop.release("button released")
                 elif kind == "hop_down":
                     loop.run_in_executor(None, pilot.hop.press, d.get("height"))
+                elif kind == "hop_test":    # Run test: timed hover that lands itself (hop.py press with duration)
+                    loop.run_in_executor(None, pilot.hop.press, d.get("height"), d.get("duration"))
+                elif kind == "hop_stop":    # Stop button: motors off now
+                    pilot.hop.release("Stop button")
                 elif kind == "input":
                     pilot.set_input(d)
                 elif kind == "speeds":
@@ -946,7 +950,7 @@ def build_app(link, pilot, auto, air, ceil):
                 elif kind == "trip":  # same commands as the backend, from this page
                     auto.handle_command({"id": None, "action": d.get("action"), "pad": d.get("pad")}, "Laptop")
         finally:
-            pilot.hop.release("page closed")   # hold-to-hop: no page, no hop
+            pilot.hop.release("page closed")   # hover or test run: no page, no hover
             pilot.set_input({})  # page gone: treat as all keys released
             pusher.cancel()
         return ws

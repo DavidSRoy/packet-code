@@ -27,6 +27,7 @@
  *   4 B data length, 1 B flags (1 = keyframe, SPS and PPS in front), 8 B capture time
  *   (ms since epoch, float64), then one H.264 Annex B access unit.
  *   POST /v1/drones/:id/commands    Bearer COMMAND_TOKEN  {"action":"goto","pad":"qfc"} | hold | resume | return
+ *                                   | {"action":"flyto","lat":..,"lon":..,"alt":..,"land":true,"speed":2}
  *   GET  /v1/drones/:id/commands    Bearer READ_TOKEN or COMMAND_TOKEN (last 20)
  *   GET  /v1/drones/:id/commands/:c Bearer READ_TOKEN or COMMAND_TOKEN
  *   GET  /v1/health                 no auth
@@ -51,7 +52,7 @@ export interface Env {
 }
 
 const COMMAND_EXPIRE_MS = 15_000;      // a command the laptop did not pick up in this time expires
-const ACTIONS = ["goto", "hold", "resume", "return"] as const;
+const ACTIONS = ["goto", "hold", "resume", "return", "flyto"] as const;
 type Action = typeof ACTIONS[number];
 
 /** Pad-to-pad autonomy block from the laptop. */
@@ -126,6 +127,7 @@ export interface Telemetry {
   laptop?: Record<string, unknown> | null;           // laptop side: takeoff, speed limits, camera forwarding, log
   recording?: Record<string, unknown> | null;        // route recording in progress
   pos_rejected?: number | null;                      // GPS jumps the laptop filter threw away
+  flyto?: Record<string, unknown> | null;            // fly to a point (ground_control/flyto.py)
   messages?: FcMessage[];
   gps_fix?: number; sats?: number;
   home_lat?: number | null; home_lon?: number | null;
@@ -190,6 +192,7 @@ function cleanTelemetry(body: unknown): Telemetry | string {
   out.laptop = obj(b.laptop, 4_096);
   out.recording = obj(b.recording, 2_048);
   out.pos_rejected = num(b.pos_rejected);
+  out.flyto = obj(b.flyto, 4_096);
   out.messages = Array.isArray(b.messages)
     ? b.messages.filter((m): m is FcMessage => !!m && typeof m === "object" && typeof (m as FcMessage).ts === "number"
                                                && typeof (m as FcMessage).text === "string")
@@ -323,6 +326,7 @@ function toState(id: string, s: Stored | null, now: number) {
     lights: t.lights ?? null,
     ceiling: t.ceiling ?? null,
     laptop: t.laptop ?? null,
+    flyto: t.flyto ?? null,
     autonomy: toAutonomy(t.autonomy, t.recording),
   };
 }
@@ -360,6 +364,17 @@ function toAutonomy(a: Autonomy | null | undefined, recording: Record<string, un
   };
 }
 
+/** Command status from the fly-to state the laptop reports. */
+function flytoStatus(state: string): string | null {
+  switch (state) {
+    case "starting": case "taking_off": case "enroute": case "landing": return "in_progress";
+    case "arrived": return "done";
+    case "failed": return "failed";
+    case "stopped": return "stopped_by_pilot";
+    default: return null;
+  }
+}
+
 /** Command status from the trip state the laptop reports. */
 function tripStatus(state: string): string | null {
   switch (state) {
@@ -375,10 +390,11 @@ function tripStatus(state: string): string | null {
 
 type CommandRow = {
   id: string; action: string; pad: string | null; status: string; reason: string | null;
-  created_at: number; updated_at: number;
+  created_at: number; updated_at: number; args?: string | null;
 };
+export interface FlytoArgs { lat: number; lon: number; alt: number; land: boolean; speed: number | null }
 function commandOut(c: CommandRow) {
-  return { id: c.id, action: c.action, pad: c.pad, status: c.status, reason: c.reason,
+  return { id: c.id, action: c.action, pad: c.pad, args: c.args ? JSON.parse(c.args) : null, status: c.status, reason: c.reason,
            created_at: new Date(c.created_at).toISOString(), updated_at: new Date(c.updated_at).toISOString() };
 }
 
@@ -401,6 +417,7 @@ export class DroneState extends DurableObject<Env> {
       ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS commands (
         id TEXT PRIMARY KEY, action TEXT NOT NULL, pad TEXT, status TEXT NOT NULL, reason TEXT,
         created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`);
+      try { ctx.storage.sql.exec("ALTER TABLE commands ADD COLUMN args TEXT"); } catch { /* already there */ }
       // Files from the laptop (radio snapshot, routes, airspace map): the latest of each, in chunks
       // (a SQLite value is at most 2 MB).
       ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS blob_chunks (
@@ -469,7 +486,7 @@ export class DroneState extends DurableObject<Env> {
   }
 
   /** Commands: apply the laptop's acks and trip state; return the next queued command, if any. */
-  private exchange(t: Telemetry, now: number): { id: string; action: string; pad: string | null } | null {
+  private exchange(t: Telemetry, now: number): { id: string; action: string; pad: string | null; args: unknown } | null {
     const sql = this.ctx.storage.sql;
     for (const a of t.acks ?? []) this.setStatus(a.id, a.status, a.reason, now);
     const m = t.autonomy?.mission;
@@ -479,15 +496,22 @@ export class DroneState extends DurableObject<Env> {
       if (st && row && row.status !== st && !["rejected", "superseded", "expired"].includes(row.status))
         this.setStatus(m.cmd_id, st, m.reason, now);
     }
+    const f = t.flyto as { cmd_id?: unknown; state?: unknown; reason?: unknown } | null | undefined;
+    if (f && typeof f.cmd_id === "string" && typeof f.state === "string") {
+      const st = flytoStatus(f.state);
+      const row = sql.exec<CommandRow>("SELECT * FROM commands WHERE id = ?", f.cmd_id).toArray()[0];
+      if (st && row && row.status !== st && !["rejected", "superseded", "expired"].includes(row.status))
+        this.setStatus(f.cmd_id, st, typeof f.reason === "string" ? f.reason.slice(0, 200) : null, now);
+    }
     sql.exec("UPDATE commands SET status = 'expired', reason = 'the laptop did not pick it up', updated_at = ? " +
              "WHERE status = 'queued' AND created_at < ?", now, now - COMMAND_EXPIRE_MS);
     const next = sql.exec<CommandRow>("SELECT * FROM commands WHERE status = 'queued' ORDER BY created_at LIMIT 1").toArray()[0];
     if (!next) return null;
     this.setStatus(next.id, "delivered", null, now);
-    return { id: next.id, action: next.action, pad: next.pad };
+    return { id: next.id, action: next.action, pad: next.pad, args: next.args ? JSON.parse(next.args) : null };
   }
 
-  async command(id: string, action: Action, pad: string | null) {
+  async command(id: string, action: Action, pad: string | null, args: FlytoArgs | null = null) {
     const now = Date.now();
     const s = this.latest;
     if (!s || now - s.received_at > ONLINE_S * 1000 || s.t.link === false)
@@ -496,7 +520,8 @@ export class DroneState extends DurableObject<Env> {
     // a newer command replaces one the laptop has not picked up yet
     sql.exec("UPDATE commands SET status = 'superseded', updated_at = ? WHERE status = 'queued'", now);
     const cid = `cmd_${now.toString(36)}${crypto.randomUUID().slice(0, 6)}`;
-    sql.exec("INSERT INTO commands VALUES (?,?,?,?,?,?,?)", cid, action, pad, "queued", null, now, now);
+    sql.exec("INSERT INTO commands (id, action, pad, status, reason, created_at, updated_at, args) VALUES (?,?,?,?,?,?,?,?)",
+      cid, action, pad, "queued", null, now, now, args ? JSON.stringify(args) : null);
     sql.exec("DELETE FROM commands WHERE created_at < ?", now - TRACK_KEEP_MS);
     return { command: commandOut(sql.exec<CommandRow>("SELECT * FROM commands WHERE id = ?", cid).one()) };
   }
@@ -511,7 +536,7 @@ export class DroneState extends DurableObject<Env> {
       .toArray().map(commandOut);
   }
 
-  async ingest(id: string, t: Telemetry): Promise<{ id: string; action: string; pad: string | null } | null> {
+  async ingest(id: string, t: Telemetry): Promise<{ id: string; action: string; pad: string | null; args: unknown } | null> {
     const now = Date.now();
     const next = this.exchange(t, now);
     delete t.acks;
@@ -788,7 +813,16 @@ export default {
         if (!ACTIONS.includes(action)) return error(400, `action must be one of ${ACTIONS.join(", ")}`);
         const pad = action === "goto" ? b.pad : null;
         if (action === "goto" && (typeof pad !== "string" || !PAD_ID.test(pad))) return error(400, "goto needs pad (a-z, 0-9, -)");
-        const r = await stub.command(id, action, pad as string | null);
+        let args: FlytoArgs | null = null;
+        if (action === "flyto") {
+          const lat = num(b.lat), lon = num(b.lon), alt = num(b.alt), speed = b.speed == null ? null : num(b.speed);
+          if (lat == null || lon == null || Math.abs(lat) > 90 || Math.abs(lon) > 180) return error(400, "flyto needs lat and lon");
+          if (alt == null || alt < 2 || alt > 60) return error(400, "flyto needs alt, 2..60 m above home");
+          if (b.speed != null && (speed == null || speed < 0.5 || speed > 5)) return error(400, "speed must be 0.5..5 m/s");
+          if (b.land != null && typeof b.land !== "boolean") return error(400, "land must be true or false");
+          args = { lat, lon, alt, land: b.land !== false, speed };
+        }
+        const r = await stub.command(id, action, pad as string | null, args);
         if ("error" in r) return error(r.status as number, r.error as string);
         return json(r, 202);
       }

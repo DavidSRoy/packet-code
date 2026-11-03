@@ -21,16 +21,27 @@ import os
 
 import cv2
 
-W, H = 300.0, 200.0                      # sticker, mm
-BIG_CELLS, BIG_CELL = 6, 28.0            # 4x4 data + 1-cell black border
-BIG = BIG_CELLS * BIG_CELL               # 168 mm
-BIG_X, BIG_Y = (W - BIG) / 2, (H - BIG) / 2
-SMALL_CELLS, SMALL_CELL = 8, 5.0         # 6x6 data + border
-SMALL = SMALL_CELLS * SMALL_CELL         # 40 mm
-INSET = 10.0                             # sticker edge to small-tag black edge
-CORNERS = [  # (x, y) of each small tag's top-left, in sticker mm (y down)
-    (INSET, INSET), (W - INSET - SMALL, INSET),
-    (W - INSET - SMALL, H - INSET - SMALL), (INSET, H - INSET - SMALL)]
+BIG_CELLS, SMALL_CELLS = 6, 8            # 4x4 data + 1-cell border; 6x6 data + border
+EXTRA_ID0 = 200                          # extra small tags: IDs 200 + 2n, 200 + 2n + 1
+CURRENT_BOX = 1                          # box drawn by tools that need one sticker
+
+
+def configure(w=300.0, h=200.0, big_cell=28.0, small_cell=5.0, inset=10.0, extra=()):
+    """Set the sticker size and tag sizes (mm). extra: centres (x, y) of extra small
+    tags in lid mm (origin sticker centre, +y up), e.g. where the camera looks at the
+    end of the descent."""
+    global W, H, BIG_CELL, BIG, BIG_X, BIG_Y, SMALL_CELL, SMALL, INSET, CORNERS, EXTRA
+    W, H, BIG_CELL, SMALL_CELL, INSET = float(w), float(h), float(big_cell), float(small_cell), float(inset)
+    BIG = BIG_CELLS * BIG_CELL
+    BIG_X, BIG_Y = (W - BIG) / 2, (H - BIG) / 2
+    SMALL = SMALL_CELLS * SMALL_CELL
+    CORNERS = [  # (x, y) of each small tag's top-left, in sticker mm (y down)
+        (INSET, INSET), (W - INSET - SMALL, INSET),
+        (W - INSET - SMALL, H - INSET - SMALL), (INSET, H - INSET - SMALL)]
+    EXTRA = [(W / 2 + x - SMALL / 2, H / 2 - y - SMALL / 2) for x, y in extra]
+
+
+configure()
 
 ARUCO = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 APRIL = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_36h11)
@@ -61,6 +72,13 @@ def corner_ids(box):
     return [4 * box + k for k in range(4)]
 
 
+def small_tags(box):
+    """(id, x, y) of every small tag, top-left corner in sticker mm (y down)."""
+    out = list(zip(corner_ids(box), *zip(*CORNERS)))
+    out += [(EXTRA_ID0 + len(EXTRA) * box + k, x, y) for k, (x, y) in enumerate(EXTRA)]
+    return out
+
+
 def layout(box):
     def quad(x, y, s):  # sticker mm (y down) -> lid metres (y up), OpenCV order
         pts = [(x, y), (x + s, y), (x + s, y + s), (x, y + s)]
@@ -70,23 +88,47 @@ def layout(box):
         "box": box,
         "aruco_4x4_50": {"id": box, "size_m": BIG / 1000, "corners_m": quad(BIG_X, BIG_Y, BIG)},
         "apriltag_36h11": [{"id": i, "size_m": SMALL / 1000, "corners_m": quad(x, y, SMALL)}
-                           for i, (x, y) in zip(corner_ids(box), CORNERS)],
+                           for i, x, y in small_tags(box)],
     }
+
+
+def write_layout(path, boxes):
+    with open(path, "w") as f:
+        json.dump({"sticker_mm": [W, H], "frame": "origin sticker centre, +x right, +y top, "
+                   "+z up, metres; corners TL,TR,BR,BL as printed",
+                   "boxes": [layout(b) for b in boxes]}, f, indent=1)
+    return path
 
 
 def shapes(box):
     """All marks of one sticker: list of ('rect', x, y, w, h) and ('text', ...)."""
     s = [("rect",) + r for r in tag_rects(ARUCO, box, BIG_CELLS, BIG_CELL, BIG_X, BIG_Y)]
-    for i, (x, y) in zip(corner_ids(box), CORNERS):
+    for i, x, y in small_tags(box):
         s += [("rect",) + r for r in tag_rects(APRIL, i, SMALL_CELLS, SMALL_CELL, x, y)]
     # Left strip: box label, read bottom-to-top. Right strip: print-scale check.
-    s.append(("text", INSET + SMALL / 2, H / 2, f"BOX {box:02d}", 11.0, -90))
-    bar_x, bar_y0, bar_len = W - INSET - SMALL / 2 + 6, H / 2 - 25, 50.0
+    # Both sit in the free space around mid-height, between any extra tags in the strips.
+    free = strip_free()
+    label = f"BOX {box:02d}"
+    s.append(("text", INSET + SMALL / 2, H / 2, label, round(min(11.0, (free - 6) / (0.6 * len(label))), 1), -90))
+    bar_len = 50.0 if free >= 56 else 10.0 * ((free - 6) // 10)
+    bar_x, bar_y0 = W - INSET - SMALL / 2 + 6, H / 2 - bar_len / 2
     s.append(("rect", bar_x, bar_y0, 1.0, bar_len))
     for t in (bar_y0, bar_y0 + bar_len - 1.0):
         s.append(("rect", bar_x - 3, t, 7.0, 1.0))
-    s.append(("text", bar_x - 7, H / 2, "BAR 50 mm  |  BIG TAG 168 mm", 3.2, -90))
+    note = f"BAR {bar_len:g} mm  |  BIG TAG {BIG:g} mm"
+    if 0.6 * 3.2 * len(note) > free - 4:
+        note = f"BAR {bar_len:g} mm"
+    s.append(("text", bar_x - 7, H / 2, note, 3.2, -90))
     return s
+
+
+def strip_free():
+    """Free height (mm) around mid-height in the side strips, between extra tags there."""
+    gap = H - 2 * (INSET + SMALL)
+    for x, y in EXTRA:
+        if x < INSET + SMALL or x + SMALL > W - INSET - SMALL:
+            gap = min(gap, 2 * min(abs(y - H / 2), abs(y + SMALL - H / 2)))
+    return gap
 
 
 def svg(box):
@@ -168,17 +210,25 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--boxes", default="1-12", help="e.g. 1-12 or 7")
     ap.add_argument("--out", default="stickers")
+    ap.add_argument("--size", default="300x200", help="sticker WxH mm")
+    ap.add_argument("--big-cell", type=float, default=28.0, help="centre tag cell, mm (tag = 6 cells)")
+    ap.add_argument("--small-cell", type=float, default=5.0, help="corner tag cell, mm (tag = 8 cells)")
+    ap.add_argument("--inset", type=float, default=10.0, help="sticker edge to corner tag, mm")
+    ap.add_argument("--extra", default="", help="extra small tag centres 'x,y;x,y' in lid mm (+y up)")
     a = ap.parse_args()
+    w, h = (float(v) for v in a.size.lower().split("x"))
+    extra = [tuple(float(v) for v in p.split(",")) for p in a.extra.split(";") if p.strip()]
+    configure(w, h, a.big_cell, a.small_cell, a.inset, extra)
     boxes = parse_boxes(a.boxes)
+    top = max(i for i, _, _ in small_tags(max(boxes)))
+    if top > 586:                         # AprilTag 36h11 has IDs 0-586
+        raise SystemExit(f"box {max(boxes)} needs AprilTag ID {top}; 36h11 stops at 586. Use fewer boxes or extra tags.")
     os.makedirs(a.out, exist_ok=True)
     for b in boxes:
         with open(os.path.join(a.out, f"box_{b:02d}.svg"), "w") as f:
             f.write(svg(b))
     pdf(boxes, os.path.join(a.out, "lid_stickers.pdf"))
-    with open(os.path.join(a.out, "lid_layout.json"), "w") as f:
-        json.dump({"sticker_mm": [W, H], "frame": "origin sticker centre, +x right, +y top, "
-                   "+z up, metres; corners TL,TR,BR,BL as printed",
-                   "boxes": [layout(b) for b in boxes]}, f, indent=1)
+    write_layout(os.path.join(a.out, "lid_layout.json"), boxes)
     print(f"wrote {len(boxes)} stickers to {a.out}/")
 
 

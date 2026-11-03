@@ -28,6 +28,8 @@ from pymavlink import mavutil
 
 import autonomy
 import ceiling
+import flyto
+import hop
 from gps_guard import GpsGuard
 from radio_snap import RadioSnap
 
@@ -44,7 +46,7 @@ TAKEOFF_MIN, TAKEOFF_MAX = 0.5, 10.0  # m
 INPUT_STALE_S = 0.4   # page input older than this counts as "no keys"
 BRAKE_S = 1.5         # keep sending zero velocity this long after release
 
-COPTER_MODES = {"STABILIZE": 0, "ALT_HOLD": 2, "AUTO": 3, "GUIDED": 4, "LOITER": 5, "RTL": 6, "LAND": 9, "BRAKE": 17}
+COPTER_MODES = {"STABILIZE": 0, "ALT_HOLD": 2, "AUTO": 3, "GUIDED": 4, "LOITER": 5, "RTL": 6, "LAND": 9, "BRAKE": 17, "GUIDED_NOGPS": 20}
 VEL_YAWRATE_MASK = 0b0000_0101_1100_0111  # use vx,vy,vz + yaw_rate; ignore pos, accel, yaw
 
 
@@ -85,6 +87,8 @@ class Link:
     """Serial link to the drone plus the shared telemetry state."""
 
     def __init__(self, port, baud, qgc, tunnel=None):
+        self.port, self.baud = port, baud
+        self.gcs_hb = mavutil.mavlink.MAVLink(None, srcSystem=255, srcComponent=190)   # MAV_GCS_SYSID heartbeat
         self.m = mavutil.mavlink_connection(port, baud=baud, source_system=254, source_component=190)
         self.qgc = mavutil.mavlink_connection(qgc, source_system=254) if qgc else None
         # SSH to the Pi over the radio (tools/mav_ssh.py): TUNNEL + HEARTBEAT out, anything back in
@@ -109,6 +113,8 @@ class Link:
             # filtered position for display; lat_fc/lon_fc are what the FC reports.
             "lat_fc": None, "lon_fc": None, "gps_q": None, "gps_why": [], "gps_hdop": None,
             "gps_hacc": None, "pos_filtered": False, "pos_rejected": 0,
+            "hop_guard_t": 0.0, "rc_override_time": None,   # lua/hop_guard.lua heartbeat (HOPG), RC_OVERRIDE_TIME
+            "acks": {},     # command id -> (MAV_RESULT, time): COMMAND_ACK from the FC
         }
         self.gps = GpsGuard()
         self.lid_parts = {}
@@ -136,7 +142,10 @@ class Link:
     # ---- sending -------------------------------------------------------
     def send(self, fn, *args):
         with self.lock:
-            fn(*args)
+            try:
+                fn(*args)
+            except OSError:
+                pass   # radio gone (unplugged, or dropped off USB): run() marks the link lost and reconnects
 
     def command(self, cmd, p1=0, p2=0, p3=0, p4=0, p5=0, p6=0, p7=0):
         if self.sysid is None:
@@ -171,8 +180,7 @@ class Link:
         ch_vals[ch - 1] = pwm
         enc = mavutil.mavlink.MAVLink(None, srcSystem=gcs_sysid, srcComponent=190)
         buf = enc.rc_channels_override_encode(self.sysid, self.compid, *ch_vals, *([0] * 10)).pack(enc)
-        with self.lock:
-            self.m.write(buf)
+        self.send(self.m.write, buf)
         self.note(f"Laptop: lights {mode}")
 
     def light_show(self, on):
@@ -194,7 +202,8 @@ class Link:
         rates = {30: 10, 33: 5, 74: 5, 1: 2, 24: 2, 65: 2, 147: 1, 42: 2, 242: 0.2, 193: 2}  # ..., MISSION_CURRENT, HOME_POSITION
         for msg_id, hz in rates.items():
             self.command(mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL, msg_id, int(1e6 / hz))
-        for name in (b"FENCE_ENABLE", b"FENCE_RADIUS", b"BATT_CAPACITY", b"LIT_SHOW"):
+        for name in (b"FENCE_ENABLE", b"FENCE_RADIUS", b"BATT_CAPACITY", b"LIT_SHOW", b"RC_OVERRIDE_TIME",
+                     b"VISO_TYPE", b"EK3_SRC2_POSXY", b"EK3_SRC2_POSZ"):
             self.send(self.m.mav.param_request_read_send, self.sysid, self.compid, name, -1)
 
     def handle(self, msg):
@@ -268,6 +277,10 @@ class Link:
         elif t == "STATUSTEXT":
             self.gps.on_text(msg.text)
             self.note(msg.text, msg.severity)
+        elif t == "NAMED_VALUE_FLOAT" and msg.name == "HOPG":
+            s["hop_guard_t"] = time.time()
+        elif t == "COMMAND_ACK":
+            s["acks"][msg.command] = (msg.result, time.time())
         elif t == "HOME_POSITION":
             s["home_lat"], s["home_lon"] = msg.latitude / 1e7, msg.longitude / 1e7
         elif t == "PARAM_VALUE":
@@ -275,6 +288,10 @@ class Link:
                 s["fence_on"] = msg.param_value > 0
             elif msg.param_id == "FENCE_RADIUS":
                 s["fence_r"] = msg.param_value
+            elif msg.param_id in ("VISO_TYPE", "EK3_SRC2_POSXY", "EK3_SRC2_POSZ"):
+                s.setdefault("fc_params", {})[msg.param_id] = msg.param_value
+            elif msg.param_id == "RC_OVERRIDE_TIME":
+                s["rc_override_time"] = msg.param_value
             elif msg.param_id == "BATT_CAPACITY":
                 s["batt_cap"] = msg.param_value
                 self.estimate_time()
@@ -332,11 +349,37 @@ class Link:
         s["batt_min"] = round(usable_mah / (amps * 1000) * 60, 1)
         s["batt_min_basis"] = basis
 
+    def _reconnect(self, exc):
+        """The radio port died: show the link as lost at once, then reopen it every second until it is back."""
+        self.state["link"] = False
+        self.state["last_hb"] = 0.0
+        self.note(f"Laptop: RADIO LOST ({exc}); reconnecting", 2)
+        print(f"radio lost ({exc}); reconnecting", flush=True)
+        while self.running:
+            time.sleep(1.0)
+            try:
+                with self.lock:
+                    try:
+                        self.m.close()
+                    except Exception:
+                        pass
+                    self.m = mavutil.mavlink_connection(self.port, baud=self.baud, source_system=254, source_component=190)
+                self.next_stream_req = 0.0
+                self.note("Laptop: radio back", 4)
+                print("radio back", flush=True)
+                return
+            except Exception:
+                continue
+
     def run(self):
         """IO loop: drone -> state + QGC, QGC -> drone."""
         while self.running:
             busy = False
-            msg = self.m.recv_msg()
+            try:
+                msg = self.m.recv_msg()
+            except OSError as exc:   # radio unplugged or dropped off USB (SerialException is an OSError)
+                self._reconnect(exc)
+                continue
             if msg is not None and msg.get_type() != "BAD_DATA":
                 busy = True
                 self.handle(msg)
@@ -359,14 +402,12 @@ class Link:
                     q = None
                 if q is not None and q.get_type() != "BAD_DATA":
                     busy = True
-                    with self.lock:
-                        self.m.write(q.get_msgbuf())
+                    self.send(self.m.write, q.get_msgbuf())
             if self.qgc:
                 q = self.qgc.recv_msg()
                 if q is not None and q.get_type() != "BAD_DATA":
                     busy = True
-                    with self.lock:
-                        self.m.write(q.get_msgbuf())
+                    self.send(self.m.write, q.get_msgbuf())
             now = time.time()
             if now - self.last_flush > 1:
                 self.tlog.flush()
@@ -376,6 +417,11 @@ class Link:
             if now > self.next_hb:  # GCS heartbeat, so the drone can detect a lost laptop link
                 self.send(self.m.mav.heartbeat_send, mavutil.mavlink.MAV_TYPE_GCS,
                           mavutil.mavlink.MAV_AUTOPILOT_INVALID, 0, 0, 0)
+                # The FC's GCS failsafe (FS_GCS_ENABLE) counts only MAV_GCS_SYSID (255). Without this,
+                # the 255 RC overrides (lights, hold-to-hover) start the failsafe clock and it then
+                # trips 5 s after they stop: "GCS failsafe on" blocks arming.
+                self.send(self.m.write, self.gcs_hb.heartbeat_encode(
+                    mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID, 0, 0, 0).pack(self.gcs_hb))
                 self.next_hb = now + 1.0
             if self.sysid is not None and now > self.next_stream_req:
                 self.request_streams()
@@ -397,6 +443,12 @@ class Pilot:
         self.takeoff_target = None
         self.takeoff_until = 0.0
         self.busy = False
+        self.flyto = None           # flyto.FlyTo, set by main()
+        self.hop = None             # hop.Hop, set by main()
+
+    def _cancel_flyto(self, reason):
+        if self.flyto:
+            self.flyto.cancel(reason)
 
     def set_input(self, d):
         self.input = {k: max(-1.0, min(1.0, float(d.get(k, 0)))) for k in ("n", "e", "u", "yaw")}
@@ -430,7 +482,12 @@ class Pilot:
             return  # a velocity setpoint now would cancel the takeoff climb
         fresh = time.time() - self.input_time < INPUT_STALE_S
         i = self.input if fresh else {"n": 0, "e": 0, "u": 0, "yaw": 0}
-        if any(abs(v) > 1e-3 for v in i.values()):
+        keys = any(abs(v) > 1e-3 for v in i.values())
+        if self.flyto and self.flyto.active():
+            if not keys:
+                return  # a zero-velocity brake now would cancel the fly-to position target
+            self._cancel_flyto("pilot keys on the page")
+        if keys:
             self.last_nonzero = time.time()
         elif time.time() - self.last_nonzero > BRAKE_S:
             return  # idle: let GUIDED hold position by itself
@@ -499,6 +556,7 @@ class Pilot:
 
     def land(self):
         self.takeoff_target = None
+        self._cancel_flyto("Auto land")
         if self._on_ground("LAND", "LAND"):
             return
         self.link.set_mode("LAND")
@@ -506,6 +564,7 @@ class Pilot:
 
     def rtl(self):
         self.takeoff_target = None
+        self._cancel_flyto("Return home")
         if self._on_ground("RTL", "RTL"):
             return
         self.link.set_mode("RTL")
@@ -514,6 +573,7 @@ class Pilot:
     def hold(self):
         """Stop and hover. Stays in GUIDED if already there; otherwise BRAKE."""
         self.input = {"n": 0, "e": 0, "u": 0, "yaw": 0}
+        self._cancel_flyto("Hold")
         if self._on_ground("HOLD", "BRAKE"):
             return
         if self.link.state["mode"] == "GUIDED":
@@ -524,6 +584,7 @@ class Pilot:
 
     def kill(self):
         # Force disarm: motors stop at once, even in the air.
+        self._cancel_flyto("Kill motors")
         self.link.command(mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 0, 21196)
         self.link.note("Laptop: KILL MOTORS sent", 2)
 
@@ -614,6 +675,7 @@ class CloudPush:
         d["ceiling"] = self.ceil.state if self.ceil else None
         d["laptop"] = self.laptop()
         d["recording"] = self.auto.recorder.status() if self.auto else None
+        d["flyto"] = self.pilot.flyto.status if self.pilot and self.pilot.flyto else None
         d["pos_rejected"] = s.get("pos_rejected")
         new = [m for m in self.link.messages if m[0] > self.msg_sent_t][-20:]
         d["messages"] = [{"ts": int(t * 1000), "sev": sev, "text": txt[:200]} for t, sev, txt in new]
@@ -817,6 +879,8 @@ def build_app(link, pilot, auto, air, ceil):
                 s["speeds"] = pilot.speeds
                 s["messages"] = [{"t": t, "sev": sev, "text": txt} for t, sev, txt in link.messages[-15:]]
                 s["auto"] = auto.summary()
+                s["flyto"] = pilot.flyto.status if pilot.flyto else None
+                s["hop"] = dict(pilot.hop.status, active=pilot.hop.active) if pilot.hop else None
                 s["ceil"] = ceil.state
                 if s["lid"]:
                     s["lid"] = dict(s["lid"], age=time.time() - s["lid"]["rx"])
@@ -831,7 +895,13 @@ def build_app(link, pilot, auto, air, ceil):
                     continue
                 d = json.loads(msg.data)
                 kind = d.get("type")
-                if kind == "input":
+                if kind == "hop_alive":     # first: the hold-to-hop dead-man, many per second
+                    pilot.hop.alive()
+                elif kind == "hop_up":
+                    pilot.hop.release("button released")
+                elif kind == "hop_down":
+                    loop.run_in_executor(None, pilot.hop.press, d.get("height"))
+                elif kind == "input":
                     pilot.set_input(d)
                 elif kind == "speeds":
                     pilot.set_speeds(d)
@@ -845,6 +915,9 @@ def build_app(link, pilot, auto, air, ceil):
                     pilot.hold()
                 elif kind == "kill":
                     pilot.kill()
+                elif kind == "flyto":
+                    loop.run_in_executor(None, lambda d=d: pilot.flyto.start(
+                        d.get("lat"), d.get("lon"), d.get("alt"), d.get("land", True), d.get("speed"), "Laptop"))
                 elif kind == "lights":
                     link.lights(d.get("mode"))
                 elif kind == "light_show":
@@ -862,6 +935,7 @@ def build_app(link, pilot, auto, air, ceil):
                 elif kind == "trip":  # same commands as the backend, from this page
                     auto.handle_command({"id": None, "action": d.get("action"), "pad": d.get("pad")}, "Laptop")
         finally:
+            pilot.hop.release("page closed")   # hold-to-hop: no page, no hop
             pilot.set_input({})  # page gone: treat as all keys released
             pusher.cancel()
         return ws
@@ -914,6 +988,9 @@ def main():
     air = (AirspaceService(region, log=print) if region else AirspaceService(log=print)).start()
     ceil = ceiling.CeilingLink(link, air, enabled=args.ceiling == "auto", home_offset_m=args.home_offset)
     pilot.ceiling = ceil
+    pilot.flyto = flyto.FlyTo(link, pilot, air, ceil)
+    pilot.hop = hop.Hop(link, pilot)
+    auto.flyto = pilot.flyto
     auto.runner.route_check = lambda route, pad: ceiling.check_route(air, route, pad)
     ceil.start()
     threading.Thread(target=link.run, daemon=True).start()

@@ -54,10 +54,17 @@ ap.add_argument("--mount-rot", type=float, default=0.0, help="deg")
 ap.add_argument("--mav", default="udpout:127.0.0.1:14650",
                 help="FC link for the pose over the radio (mav_tunnel.py bridge); 'none' to turn off")
 ap.add_argument("--mav-hz", type=float, default=2.0)
+ap.add_argument("--detect-scale", type=float, default=0.4,
+                help="shrink each frame by this before the tag search (0.4 = 512x288 from 1280x720). Measured "
+                     "2026-11-02 on the Pi Zero 2 W: 1.0 = 3.4 Hz, 0.5 = 9.3 Hz. Fine for hovers and pickups "
+                     "(tags about 9 px/cell at 0.25 m); the far range shrinks with it")
+ap.add_argument("--vision", type=int, default=1,
+                help="1 = send the lid pose to the FC as VISION_POSITION_ESTIMATE (EKF ExternalNav); 0 = off")
 a = ap.parse_args()
 
 latest = {"y": None, "yuyv": None, "n": 0, "at": 0.0}
-lid = {"t": 0.0, "frame": -1, "boxes": [], "hz": 0.0, "w": 0, "h": 0, "error": None}
+lid = {"t": 0.0, "frame": -1, "boxes": [], "hz": 0.0, "w": 0, "h": 0, "error": None,
+       "t_cap": 0.0, "skipped_pct": 0.0}   # t_cap: capture time of the frame this result is from (= its /h264 record time)
 
 
 def camera_name(dev):
@@ -144,7 +151,7 @@ def watchdog():
 
 DETECT_WORKERS = 2      # each worker takes the newest frame no worker has taken yet (alternate frames)
 claim = {"n": -1}
-rate = {"n": 0, "t0": time.time()}
+rate = {"n": 0, "t0": time.time(), "skipped": 0}
 
 
 def detect():
@@ -158,8 +165,13 @@ def detect():
             if latest["n"] <= claim["n"] or latest["y"] is None:
                 continue                         # no new frame: do not report an old pose as new
             y, seen, t_cap = latest["y"], latest["n"], latest["at"]
+            if claim["n"] >= 0:
+                rate["skipped"] += max(0, seen - claim["n"] - 1)   # camera frames no worker searched
             claim["n"] = seen
-        gray = np.ascontiguousarray(y)
+        if a.detect_scale < 1.0:
+            gray = cv2.resize(y, None, fx=a.detect_scale, fy=a.detect_scale, interpolation=cv2.INTER_AREA)
+        else:
+            gray = np.ascontiguousarray(y)
         try:
             K = camera_matrix(gray.shape[1], gray.shape[0], HFOV)
             boxes = [lid_pose(r) for r in finder.find(gray, K)]
@@ -170,9 +182,12 @@ def detect():
             rate["n"] += 1
             if time.time() - rate["t0"] > 2:
                 lid["hz"] = round(rate["n"] / (time.time() - rate["t0"]), 1)
-                rate["n"], rate["t0"] = 0, time.time()
+                lid["skipped_pct"] = round(100 * rate["skipped"] / max(1, rate["n"] + rate["skipped"]), 1)
+                rate["n"], rate["t0"], rate["skipped"] = 0, time.time(), 0
             if seen > lid["frame"]:
-                lid.update(t=time.time(), frame=seen, boxes=boxes, w=gray.shape[1], h=gray.shape[0],
+                # frame = the camera frame number, t_cap = its capture time: the same time as that
+                # frame's /h264 record, the radio pose (LID* time_usec) and VISION_POSITION_ESTIMATE
+                lid.update(t=time.time(), frame=seen, t_cap=t_cap, boxes=boxes, w=gray.shape[1], h=gray.shape[0],
                            error=err, latency_ms=round((time.time() - t_cap) * 1000))
 
 
@@ -287,6 +302,44 @@ def snapshots(m, send_lock):
                 pass_done = True
 
 
+def vision(m, send_lock):
+    """The lid pose to the FC, for its position estimate (EKF ExternalNav, source set 2).
+
+    Every detection with a box in view goes out as one VISION_POSITION_ESTIMATE, at once,
+    stamped with the capture time; nothing is resent between detections. Nothing is sent
+    when no box is in view: the EKF then stops getting ExternalNav, and ground control
+    stops the hold-to-hover.
+    Frame: the lid frame turned to z down, as ArduPilot expects (x = along the lid,
+    y = -across, z = -height above the sticker; yaw = the nose from the lid +x axis,
+    clockwise). ArduPilot turns this frame to north itself (AP_VisualOdom yaw alignment),
+    so the box does not have to point north. Position = the drone centre (lid_pose
+    applies the camera mount offsets), so the FC VISO_POS_X/Y/Z stay 0. The covariance
+    is left 0: the FC uses VISO_POS_M_NSE / VISO_YAW_M_NSE. The reset counter goes up
+    when the box changes (a new frame origin)."""
+    last_t, last_box, reset = 0.0, None, 0
+    while True:
+        time.sleep(0.005)
+        t = lid["t"]
+        if t == last_t:
+            continue
+        last_t = t                                   # one message per detection, nothing in between
+        boxes = lid["boxes"]
+        b = boxes[0] if boxes else None
+        if b is None:
+            continue
+        if last_box is not None and b["box"] != last_box:
+            reset = (reset + 1) % 256
+        last_box = b["box"]
+        x, y, z = b["drone_m"]
+        t_cap = lid["t_cap"]                         # the camera frame's capture time
+        try:
+            with send_lock:
+                m.mav.vision_position_estimate_send(int(t_cap * 1e6), float(x), float(-y), float(-z),
+                                                    0.0, 0.0, -math.radians(b["yaw_deg"]), [0.0] * 21, reset)
+        except OSError:
+            time.sleep(0.5)
+
+
 def radio():
     """Send the pose to the ground station over the radio, without Wi-Fi.
 
@@ -308,6 +361,8 @@ def radio():
     m = mavutil.mavlink_connection(a.mav, source_system=1, source_component=191)
     send_lock = threading.Lock()
     threading.Thread(target=snapshots, args=(m, send_lock), daemon=True).start()
+    if a.vision:
+        threading.Thread(target=vision, args=(m, send_lock), daemon=True).start()
     next_ip = 0.0
     while True:
         time.sleep(1.0 / a.mav_hz)
@@ -324,7 +379,7 @@ def radio():
                     pass
         if time.time() - lid["t"] > 1.5:        # detection stopped: send nothing
             continue
-        us = int(lid["t"] * 1e6)
+        us = int(lid["t_cap"] * 1e6)            # capture time of the frame: matches its /h264 record
         b = lid["boxes"][0] if lid["boxes"] else None
         try:
           with send_lock:

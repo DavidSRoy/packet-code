@@ -122,7 +122,7 @@
   /* right: actions + log */
   #actions { top: 64px; right: 12px; width: 252px; padding: 12px; max-height: calc(100vh - 84px - var(--air-h, 190px)); overflow-y: auto; }
   /* trips (backend pad-to-pad) */
-  #trips, #lights { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  #trips, #lights, #flyto { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
   #lights .row2 { margin-bottom: 0; grid-template-columns: repeat(5, auto); }
   #lights .mini { padding: 0 2px; }
   .trip-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
@@ -189,6 +189,18 @@
 
   /* map icons */
   .drone-ico { width: 44px; height: 44px; }
+  .ft-ico { width: 20px; height: 20px; border: 2px solid #c58bff; border-radius: 50%; background: rgba(197,139,255,.18);
+    color: #e6d4ff; font: 700 11px/16px var(--mono); text-align: center; }
+  #ft-state { font: 11px/1.5 var(--mono); color: var(--text); margin-bottom: 4px; }
+  #ft-state small { color: var(--muted); display: block; white-space: normal; }
+  #flyto .rec { grid-template-columns: 1fr 1fr; margin: 0 0 6px; }
+  #flyto .alt-row { margin: 0 0 6px; }
+  #hop { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  #hop .alt-row { margin: 0 0 6px; }
+  #hop-arm { display: flex; align-items: center; gap: 6px; font: 11px var(--sans); color: var(--muted); margin-bottom: 6px; cursor: pointer; }
+  #b-hop { touch-action: none; user-select: none; -webkit-user-select: none; }
+  #b-hop.held { background: rgba(255,77,77,.22); border-color: var(--bad); color: #fff; }
+  #hop-state { font: 11px/1.5 var(--mono); color: var(--muted); margin-top: 4px; white-space: normal; }
   .home-ico { width: 18px; height: 18px; border: 1.5px solid var(--text); background: rgba(0,0,0,.5); color: var(--text);
     font: 700 10px var(--mono); display: flex; align-items: center; justify-content: center; }
   .leaflet-div-icon { background: none; border: 0; }
@@ -399,6 +411,31 @@
   <button class="btn" id="b-rtl" data-air="1"><span>Return home</span><kbd>RTL</kbd></button>
   <button class="btn" id="b-hold" data-air="1"><span>Hold</span><kbd>SPACE</kbd></button>
   <button class="btn kill" id="b-kill"><span class="fill" id="kill-fill"></span><span>Kill motors</span><kbd>HOLD 1 S</kbd></button>
+  <div id="hop">
+    <div class="trip-h"><span class="lbl">Hold to hover · no GPS</span><span class="badge" id="hop-badge">IDLE</span></div>
+    <div class="alt-row">
+      <span class="lbl" style="color:var(--text)">Height</span>
+      <div class="stepper"><button id="hop-dn">−</button><span id="hop-h">5 in</span><button id="hop-up">+</button></div>
+    </div>
+    <label id="hop-arm"><input type="checkbox" id="hop-ok"> Props on, area clear: unlock</label>
+    <button class="btn kill" id="b-hop" disabled><span>Hold to hover</span><kbd>LET GO = MOTORS OFF</kbd></button>
+    <div id="hop-state">No GPS: level on the IMU, height from the box tags under the camera. Needs the tags in view; if they leave the view, motors off. No sideways position hold.</div>
+  </div>
+  <div id="flyto">
+    <div class="trip-h"><span class="lbl">Fly to point</span><span class="badge" id="ft-badge">IDLE</span></div>
+    <div id="ft-state">Pick a point on the map<small>or type lat, lon</small></div>
+    <div class="rec"><input id="ft-lat" placeholder="lat" inputmode="decimal" maxlength="14"><input id="ft-lon" placeholder="lon" inputmode="decimal" maxlength="14"></div>
+    <div class="alt-row">
+      <span class="lbl" style="color:var(--text)">Height</span>
+      <div class="stepper"><button id="ft-alt-dn">−</button><span id="ft-alt">5 m</span><button id="ft-alt-up">+</button></div>
+    </div>
+    <div class="row2">
+      <button class="mini" id="ft-pick" title="Click the map to set the point">Pick</button>
+      <button class="mini on" id="ft-land" title="Land at the point, or hover there">Land</button>
+      <button class="mini" id="ft-cancel" title="Stop and hover where it is">Stop</button>
+    </div>
+    <button class="btn go" id="ft-go"><span>Fly to point</span><kbd>GUIDED</kbd></button>
+  </div>
   <div id="lights">
     <div class="trip-h"><span class="lbl">Arm lights</span><span class="lbl" id="lights-note"></span></div>
     <div class="row2">
@@ -683,6 +720,104 @@ $("trips").addEventListener("click", e => {
   }
 });
 
+/* ---------- hold to hop (no GPS): release = motors off ---------- */
+let hopIn = 5, hopTimer = null;
+function hopSetH(v) { hopIn = Math.max(2, Math.min(15, Math.round(v))); $("hop-h").textContent = hopIn + " in"; }
+$("hop-up").onclick = () => hopSetH(hopIn + 1);
+$("hop-dn").onclick = () => hopSetH(hopIn - 1);
+$("hop-ok").onchange = () => { $("b-hop").disabled = !$("hop-ok").checked; };
+function hopStop() {
+  if (!hopTimer) return;
+  send({ type: "hop_up" });           // first, before anything else
+  clearInterval(hopTimer); hopTimer = null;
+  $("b-hop").classList.remove("held");
+  $("hop-ok").checked = false; $("b-hop").disabled = true;   // unlock again for the next hop
+}
+$("b-hop").addEventListener("pointerdown", e => {
+  if ($("b-hop").disabled || hopTimer) return;
+  e.preventDefault();
+  $("b-hop").setPointerCapture(e.pointerId);
+  $("b-hop").classList.add("held");
+  send({ type: "hop_down", height: hopIn * 0.0254 });
+  hopTimer = setInterval(() => send({ type: "hop_alive" }), 50);   // the laptop kills after 150 ms without one
+});
+["pointerup", "pointercancel", "lostpointercapture"].forEach(t => $("b-hop").addEventListener(t, hopStop));
+$("b-hop").addEventListener("contextmenu", e => e.preventDefault());
+addEventListener("blur", hopStop);
+document.addEventListener("visibilitychange", hopStop);
+addEventListener("pagehide", hopStop);
+function renderHop(h) {
+  if (!h) return;
+  const b = $("hop-badge");
+  b.textContent = (h.state || "idle").toUpperCase();
+  b.className = "badge" + (h.active ? " on" : "");
+  if (h.state === "refused" || h.state === "killed")
+    $("hop-state").textContent = `${h.state.toUpperCase()}: ${h.reason || ""}`;
+  else if (h.active)
+    $("hop-state").textContent = `Holding ${Math.round((h.height || 0) * 100)} cm · tag height now ${h.height_now != null ? (h.height_now * 100).toFixed(0) : "?"} cm`
+      + (h.pose ? ` (${h.pose.toUpperCase()}, ${h.pose_age} s)` : "") + " · let go or tags lost = motors off";
+}
+
+/* ---------- fly to a point ---------- */
+let ftAlt = 5, ftLand = true, ftPick = false;
+const ftTarget = L.marker([0, 0], { interactive: false, zIndexOffset: 900,
+  icon: L.divIcon({ className: "", iconSize: [20, 20], html: '<div class="ft-ico">✕</div>' }) });
+const ftLine = L.polyline([], { color: "#c58bff", weight: 2, dashArray: "4 6", interactive: false });
+function ftDist(a, b) {   // m, flat earth (fine for a few km)
+  const n = (b[0] - a[0]) * 111320, e = (b[1] - a[1]) * 111320 * Math.cos(a[0] * Math.PI / 180);
+  return Math.hypot(n, e);
+}
+function ftPoint() {
+  const lat = parseFloat($("ft-lat").value), lon = parseFloat($("ft-lon").value);
+  return Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? [lat, lon] : null;
+}
+function ftShow() {
+  const f = state.flyto, active = f && ["starting", "taking_off", "enroute", "landing"].includes(f.state);
+  const p = active && f.target ? [f.target.lat, f.target.lon] : ftPoint();
+  if (!p) { [ftTarget, ftLine].forEach(l => map.hasLayer(l) && map.removeLayer(l)); return; }
+  if (!map.hasLayer(ftTarget)) ftTarget.addTo(map);
+  ftTarget.setLatLng(p);
+  if (state.lat != null) { if (!map.hasLayer(ftLine)) ftLine.addTo(map); ftLine.setLatLngs([[state.lat, state.lon], p]); }
+}
+function ftSetAlt(v) { ftAlt = Math.max(2, Math.min(60, Math.round(v))); $("ft-alt").textContent = ftAlt + " m"; }
+$("ft-alt-up").onclick = () => ftSetAlt(ftAlt + 1);
+$("ft-alt-dn").onclick = () => ftSetAlt(ftAlt - 1);
+$("ft-land").onclick = () => { ftLand = !ftLand; $("ft-land").classList.toggle("on", ftLand); $("ft-land").textContent = ftLand ? "Land" : "Hover"; };
+function ftSetPick(on) {
+  ftPick = on; $("ft-pick").classList.toggle("on", on);
+  if (on && airProbe) $("air-probe").click();     // one map-click tool at a time
+  map.getContainer().style.cursor = on ? "crosshair" : "";
+}
+$("ft-pick").onclick = () => ftSetPick(!ftPick);
+["ft-lat", "ft-lon"].forEach(id => $(id).addEventListener("input", ftShow));
+map.on("click", e => {
+  if (!ftPick) return;
+  $("ft-lat").value = e.latlng.lat.toFixed(7); $("ft-lon").value = e.latlng.lng.toFixed(7);
+  ftSetPick(false); ftShow();
+});
+$("ft-go").onclick = () => {
+  const p = ftPoint();
+  if (!p) { alert("Set the point first: Pick on the map, or type lat and lon."); return; }
+  const sp = +$("sp-h").value;
+  const far = state.lat != null ? `, ${Math.round(ftDist([state.lat, state.lon], p))} m away` : "";
+  const how = state.armed ? "It flies from where it is (GUIDED)." : "It arms and takes off first.";
+  if (confirm(`Fly to ${p[0].toFixed(6)}, ${p[1].toFixed(6)} at ${ftAlt} m, ${sp.toFixed(1)} m/s${far}, then ${ftLand ? "land" : "hover"}?\n\n${how}\nProps on, area clear, Boxer in hand. Any key, Hold, Land or Return home stops it.`))
+    send({ type: "flyto", lat: p[0], lon: p[1], alt: ftAlt, land: ftLand, speed: sp });
+};
+$("ft-cancel").onclick = () => { clearKeys(); send({ type: "hold" }); };
+function renderFlyto(f) {
+  if (!f) return;
+  const active = ["starting", "taking_off", "enroute", "landing"].includes(f.state);
+  const b = $("ft-badge");
+  b.textContent = f.state.replace("_", " ").toUpperCase(); b.className = "badge" + (active ? " on" : "");
+  const where = f.target ? `${f.target.lat.toFixed(6)}, ${f.target.lon.toFixed(6)} at ${f.target.alt} m · ${f.land ? "land" : "hover"}` : "";
+  $("ft-state").innerHTML = f.state === "idle" ? `Pick a point on the map<small>or type lat, lon</small>`
+    : `${esc(f.state.replace("_", " ").toUpperCase())}${active && f.dist_m != null ? ` · ${f.dist_m} m · ${f.eta_s} s` : ""}<small>${esc(f.reason || where)}</small>`;
+  $("ft-go").disabled = active || !state.link;
+  $("ft-cancel").disabled = !active;
+  ftShow();
+}
+
 /* ---------- keys ---------- */
 function inputVector() {
   const k = c => held.has(c) ? 1 : 0;
@@ -891,7 +1026,7 @@ function airPop(mode) {
 }
 $("air-layers").onclick = () => airPop("layers");
 $("air-edit").onclick = () => airPop("edit");
-$("air-probe").onclick = () => { airProbe = !airProbe; $("air-probe").classList.toggle("on", airProbe); map.getContainer().style.cursor = airProbe ? "crosshair" : ""; };
+$("air-probe").onclick = () => { if (!airProbe && ftPick) ftSetPick(false); airProbe = !airProbe; $("air-probe").classList.toggle("on", airProbe); map.getContainer().style.cursor = airProbe ? "crosshair" : ""; };
 map.on("click", async e => {
   if (!airProbe) return;
   try {
@@ -1021,6 +1156,8 @@ function render(down) {
   window.radioPiUrl = s.pi_url;
   window.radioSnap = s.radio_snap;
   renderTrips(s.auto);
+  renderFlyto(s.flyto);
+  renderHop(s.hop);
   renderAir(s.ceil, down);
 
   const big = $("keys-big"), p = $("keys-p");
@@ -1053,6 +1190,7 @@ fitTop();
 function closeAll() {
   if (airPopMode) airPop(airPopMode);
   if (airProbe) $("air-probe").click();
+  if (ftPick) ftSetPick(false);
   if ($("cam").classList.contains("big")) $("cam-big").click();
   if ($("att3d").classList.contains("big")) $("att-big").click();
   map.closePopup();

@@ -207,6 +207,7 @@ The laptop uploads these when its map changes (it checks each minute). The airsp
 - `current_pad` is null while the drone flies or when it is not on a known pad.
 - `can_goto` lists the pads that have an approved route from the current pad.
 - `trip.state`: `idle`, `starting`, `uploading`, `enroute`, `landing`, `arrived`, `holding`, `returning`, `failed`, `pilot` (the pilot took control).
+- `flyto` in `/state` is the fly-to-point state: `state` (`idle`, `starting`, `taking_off`, `enroute`, `landing`, `arrived`, `stopped`, `failed`), `target` (`lat`, `lon`, `alt`), `land`, `speed`, `dist_m`, `eta_s`, `reason`, `source`, `cmd_id`. A `flyto` command's status follows it: `in_progress`, then `done`, `failed` or `stopped_by_pilot`.
 - `recording` is the route recording in progress (`from`, `to`, `phase`, `samples`), or `null`. The full routes are at `GET /routes`.
 
 ## For the backend team: trip commands
@@ -221,6 +222,7 @@ Auth: `Authorization: Bearer <COMMAND_TOKEN>`. This token is separate from `READ
 | `{"action": "hold"}` | Stops and hovers where it is (LOITER). |
 | `{"action": "resume"}` | Continues the trip after a hold. |
 | `{"action": "return"}` | Flies back to the pad it took off from and lands (RTL). |
+| `{"action": "flyto", "lat": 47.6631, "lon": -122.2962, "alt": 10, "land": true, "speed": 2}` | Takes off if it is on the ground, flies in a straight line to the point at `alt` m above home, then lands there (`land: true`, the default) or hovers (`false`). `speed` 0.5–5 m/s (default: the page's horizontal speed). Needs SA on. Refused when the point is over 1 km away, outside the geofence, in or near a NO-FLY area, or the height is above the legal ceiling there. `hold` stops it and hovers; `return` flies home (RTL). |
 
 The reply is `202` with the command:
 

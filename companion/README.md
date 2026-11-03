@@ -70,6 +70,39 @@ SVG per box, `stickers/lid_stickers.pdf` (one page per box, 1:1 scale) and
 | Centre | ArUco 4x4_50 | 168 mm (28 mm cells) | box number (0-49) | box ID from far away |
 | 4 corners | AprilTag 36h11 | 40 mm (5 mm cells) | 4n .. 4n+3 (TL, TR, BR, BL) | final position and yaw |
 
+X1C box (BX-005 v12, inside 218 mm; lid BX-006 v7, 225.6 x 206.4 mm lid top):
+`stickers_218x200/` is the 218 x 200 mm set. Centre ArUco 108 mm (18 mm cells),
+four 30 mm AprilTag corners (3.75 mm cells) and ten more 30 mm AprilTags
+(IDs 200 + 10n .. 200 + 10n + 9): three more along each long edge (a row of five
+with the corners) and two on each short edge. Boxes 0-38 only (36h11 stops at
+ID 586). When these stickers go on, run
+`cam_stream.py --layout stickers_218x200/lid_layout.json` (or copy that file to
+`lid_layout.json`). Remake:
+
+```bash
+python3 lid_stickers.py --boxes 1-12 --out stickers_218x200 --size 218x200 \
+  --big-cell 18 --small-cell 3.75 --inset 5 \
+  --extra "-44.5,80;0,80;44.5,80;-44.5,-80;0,-80;44.5,-80;-89,36;-89,-36;89,36;89,-36"
+```
+
+Camera mount for this set (Master v60, `tools/sim/`): C920 on the left side of
+the body (mount K), lens 40 mm ahead of and 120 mm left of the frame centre
+(between the two left arms, 45 mm out from the landing leg), 40 mm below the
+frame origin, pointing straight down, image top toward the nose. The right side
+at (-40, -120) is the same spot turned 180 deg. Spots under a propeller disc
+(15 in props + 20 mm) are left out for the downwash. Simulated, 40 misaligned
+descents per height: 39-40/40 from 3 m to 0.32 m, 36/40 at 0.27 m, 28/40 at
+0.20 m, 20/40 at 0.17 m (side mount D at 70, 95, -100: 24/40 at 0.20 m, 6/40 at
+0.17 m; old mount at 134, 0, -112 under the GPS mast, right above gripper jaw 2:
+26/40 at 3 m, 16/40 at 0.45 m, 0/40 at 0.17 m). Under the rear-left arm tilted
+25 deg in (mount J) is a little better at 0.20 m (36/40) but sits under a prop.
+
+Simulator (`tools/sim/`, needs opencv-python >= 4.12, numpy, matplotlib; ffmpeg for video):
+- `lid_camera_sim.py --mounts K,D --snap`: scored descents with the real detector.
+- `mount_sweep.py --cam C920`: search lens spots and tilts; `sweep_map.py` draws the result.
+- `descent_video.py --out descent.mp4`: video of one descent (camera image, rear and top views).
+- `lid_camera_viewer.html`: interactive 3D page (open in a browser): move the camera, fly the descent.
+
 `lid_tags.py` finds every box in view and gives its ID and pose. It puts all
 visible tags of one box into one solvePnP.
 

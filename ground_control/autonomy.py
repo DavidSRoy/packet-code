@@ -576,6 +576,7 @@ class Autonomy:
         link.hooks.append(self.runner.on_message)
         link.pos_hooks.append(self.recorder.on_position)
         self.acks = []   # command results waiting to go to the cloud
+        self.flyto = None   # flyto.FlyTo, set by the server: "flyto" commands from the backend
 
     def _recorded(self, path):
         try:
@@ -610,9 +611,39 @@ class Autonomy:
                 "can_goto": ready,
                 "mission": {k: m[k] for k in ("state", "from", "to", "item", "items", "reason", "cmd_id")}}
 
+    def _flyto_command(self, cmd, source):
+        """flyto, and hold / return while a fly-to runs. (accepted, reason)."""
+        f, a = self.flyto, cmd.get("action")
+        if f is None:
+            return False, "fly-to is not available"
+        if a == "flyto":
+            if self.runner.mission["state"] in ("starting", "uploading", "enroute", "landing", "holding"):
+                return False, "a trip is running"
+            args = cmd.get("args") or {}
+            return f.start(args.get("lat"), args.get("lon"), args.get("alt"), args.get("land", True),
+                           args.get("speed"), source, cmd.get("id"))
+        f.cancel(f"{a} from {source}")
+        if a == "hold":
+            if self.link.state["mode"] == "GUIDED":
+                self.link.velocity(0, 0, 0, 0)
+            else:
+                self.link.set_mode("BRAKE")
+            return True, None
+        if not self.sa_on_or_laptop(source):
+            return False, "SA switch is off"
+        self.link.set_mode("RTL")
+        return True, None
+
+    def sa_on_or_laptop(self, source):
+        return source == "Laptop" or bool(self.link.state.get("sa_on"))
+
     def handle_command(self, cmd, source):
-        """cmd: {"id", "action", "pad"?}. Returns the ack for the cloud."""
-        ok, why = self.runner.command(cmd.get("action"), cmd.get("pad"), cmd.get("id"))
+        """cmd: {"id", "action", "pad"?, "args"?}. Returns the ack for the cloud."""
+        a = cmd.get("action")
+        if a == "flyto" or (a in ("hold", "return") and self.flyto is not None and self.flyto.active()):
+            ok, why = self._flyto_command(cmd, source)
+        else:
+            ok, why = self.runner.command(a, cmd.get("pad"), cmd.get("id"))
         ack = {"id": cmd.get("id"), "status": "accepted" if ok else "rejected", "reason": why}
         self.link.note(f"{source}: {cmd.get('action')} {cmd.get('pad') or ''} -> {ack['status']}"
                        + (f" ({why})" if why else ""), 6 if ok else 4)

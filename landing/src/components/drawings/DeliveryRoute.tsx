@@ -3,10 +3,10 @@
 import { useRef, type ReactNode } from "react";
 import { useDrawIn } from "@/components/home/useDrawIn";
 
-/** Figures to fill in once the first routes are flown. */
+/** Dimension labels only. The drawing is a demonstration, not to scale, so the lines carry no values. */
 const SPECS = {
-	altitude: "Altitude [TBD]",
-	distance: "A to B [TBD]",
+	altitude: "Altitude",
+	distance: "A to B",
 } as const;
 
 const LEGEND = [
@@ -160,7 +160,7 @@ export function DeliveryRoute() {
 						</li>
 					))}
 				</ol>
-				<p className="m-0 mt-4 text-[14px] leading-5">Not to scale. Altitude and distances to follow.</p>
+				<p className="m-0 mt-4 text-[14px] leading-5">Not to scale.</p>
 			</figcaption>
 		</figure>
 	);

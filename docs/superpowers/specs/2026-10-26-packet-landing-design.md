@@ -138,10 +138,10 @@ See `home-1440.png` and `home-390-sheet.png`.
   - the route, mustard dots, rising from the shop's roof, running level above the street and setting down at the doorstep;
   - the package in transit on the route, the red block inside four corner marks, as on the route in How it works;
   - the drop-off drawn as a dashed outline of the package at the doorstep;
-  - an altitude dimension line and an A-to-B dimension line, both marked `[TBD]`;
+  - an altitude dimension line and an A-to-B dimension line, labelled "Altitude" and "A to B" with no values (the drawing is a demonstration, not to scale; *Tanner, 2026-11-04*);
   - callouts 1 to 4 (pickup at the shop; the route, above the street; drop-off at your door; the street below, unchanged);
   - labels "A · Shop" and "B · Your door" under the ground line.
-- A legend sits under the drawing, then "Not to scale. Altitude and distances to follow."
+- A legend sits under the drawing, then "Not to scale."
 - The lines draw in once (stroke-dashoffset), when the figure's top passes 75% of the viewport height. The route, the package and the annotations fade in after the lines.
 - No aircraft appears in this drawing. Keep it data-driven so the altitude and distance can be filled in later.
 - Under 760px the drawing's labels and callouts scale up (CSS on `.drawing text` and `.callout`), so they stay legible at phone width.

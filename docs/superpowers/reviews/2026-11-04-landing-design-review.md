@@ -1,9 +1,11 @@
 # Packet landing page: design review, round 1
 
 Date: 2026-11-04
+Revised: 2026-11-04 (b). Tanner's correction to the framing: Packet's premise is autonomous delivery. Vehicle 01 is the first product, not the subject. University Village is the first area, not the premise. §2.3, §3.0, H-01, W-01 and P-02 are rewritten to match; X-01 to X-03 are new.
 Reviewed: `feat/landing-site` at `02d06ba`, built with `npm run build` and served with `next start`, screenshotted with Playwright (Chromium) at 390×844, 768×1024, 1280×720, 1440×900 and 1920×1080.
 Screenshots: `2026-11-04-landing-design-review/*.png`
 Spec: `../specs/2026-10-26-packet-landing-design.md`
+Page with before/after captures: Packet Landing Review artifact (private; shared from its page).
 Status: findings and a tracker. Nothing here is implemented yet.
 
 This review covers alignment, hierarchy and placement on `/` only. It also records a cold read of the page: what a visitor with no idea what Packet is sees first, and what the site feels geared toward.
@@ -15,6 +17,8 @@ This review covers alignment, hierarchy and placement on `/` only. It also recor
 Short, so the findings below can cite them by name.
 
 **Hierarchy.** The order in which the eye lands on things is set by size, weight, contrast, colour, position and the space around an element. A page should have one dominant element per screen and a ladder of sizes with consistent steps, so that bigger always means more important. The quick test is the squint test: blur the page and see what survives. What survives is what the page is actually saying. ([NN/g, Visual hierarchy](https://www.nngroup.com/articles/visual-hierarchy-ux-definition/); [NN/g, Five principles of visual design](https://www.nngroup.com/articles/principles-visual-design/))
+
+**Message order.** Hierarchy applies to the words as much as the type. A page says what it says first; everything after is read as a detail of that. If the first heading names a place and the first figure names a product, the visitor concludes the company is that place and that product.
 
 **Scanning.** On text-heavy pages people scan in an F: across the top, then down the left edge. On sparse marketing pages with a figure they move in a Z or a "layer cake", reading headings and skipping body. Either way the first fixation goes to the largest, highest-contrast or moving thing, and the top-left anchors the read. Motion pulls attention before type does. ([NN/g, F-shaped pattern](https://www.nngroup.com/articles/f-shaped-pattern-reading-web-content/); [F and Z patterns on landing pages](https://www.wordstream.com/blog/ws/2018/07/31/f-z-patterns-landing-page-design))
 
@@ -57,7 +61,7 @@ On the phone the page does explain itself in the first screen, but only because 
 
 ### 2.2 What the visitor learns in the first five seconds
 
-On every desktop size the first screen says: a thing called Packet, a globe, "is it coming to your street?", a field for an address. It never says what Packet is. The line that does ("Delivery from U Village shops to homes nearby.") starts at y=958 on a 900px-tall viewport, y=804 on a 720px one, and only its top edge shows at 1920×1080 (`fold-1280x720.png`).
+On every desktop size the first screen says: a thing called Packet, a globe, "is it coming to your street?", a field for an address. It never says what Packet is. The line that does starts at y=958 on a 900px-tall viewport, y=804 on a 720px one, and only its top edge shows at 1920×1080 (`fold-1280x720.png`).
 
 That matters more than it looks, because the shape of this first screen is an existing pattern: a name, "coming to your street?", an address check, a map. That is the fibre-internet availability page. The name "Packet" reinforces it. A visitor arriving from a friend's text with no context is as likely to read this as an ISP roll-out as a delivery service. A visitor from a flyer already knows and is fine.
 
@@ -65,11 +69,17 @@ The spec's own goal (§1: "explain what Packet is and how it works, so a visitor
 
 ### 2.3 What the site feels geared toward
 
-The visual language is confident and consistent: halftone cartography, crop marks, dimension lines, a station-sign button, condensed caps labels, hand-wobbled technical drawings. It reads as a design-literate hardware or infrastructure company. Something between a mapping firm and an aerospace startup. It does the one thing the spec most wants: it does not read as a class project.
+The visual language is confident and consistent: halftone cartography, crop marks, dimension lines, a station-sign button, condensed caps labels, hand-wobbled technical drawings. It reads as a design-literate hardware or infrastructure company. It does the one thing the spec most wants: it does not read as a class project.
 
-What it does not yet read as is "lunch to your door". Every figure above the Mission section is abstract (a dotted sphere, a dotted route, a tunnel of marks). The first concrete object on the page is the aircraft drawing, about 2,200px down. There is no shop, no bag, no door, no person. The copy is warm ("your street", "your door", "bring it in when you're ready") but the pictures are cool, and pictures are read first. The audience in §1 is students and neighbours who want things delivered. The site currently feels made for people who appreciate precision, and asks them to trust that food is involved.
+What it reads as, once scrolled, is a drone delivery pilot for U Village. That is the one reading the company does not want, and the spec says so in §1: Packet is an autonomous delivery company; the aircraft is its first product; University Village is where it starts. The page says those three things in reverse order.
 
-This is not a call to change the language. The restraint is the brand and it is working. It is a call to put one plain descriptor line and, ideally, one concrete sketch in the first screen so the precision has an obvious subject.
+- "U Village" is in the first heading, the first paragraph, the first step, the showcase's app line and the hero's result line.
+- The aircraft is the largest figure on the page and appears three times (Mission drawing, showcase slide 01, the peek before slide 01).
+- "Autonomous delivery" appears once, as the Mission heading, in the fourth section about 2,200px down.
+
+A visitor's summary after one scroll is "drones bring U Village food to nearby homes". The intended summary is "autonomous delivery to your door; the first vehicle is an aircraft; the first streets are around U Village". The fix is message order, not more or fewer drawings: the premise in the first screen, the first product named as a first step, the first area stated once as the start.
+
+The restraint of the visual language is right and should stay. It just needs the premise as its subject.
 
 ---
 
@@ -79,10 +89,34 @@ Severity: **High** hurts the page's goal (understand, check, sign up). **Medium*
 
 Each item has an ID for the tracker in §4.
 
+### 3.0 Message order
+
+**X-01 · High · The premise arrives fourth.**
+Principle: a page says what it says first. Observation: "autonomous delivery" appears once, in the Mission h2 at y≈2216 on 1440×900. Everything before it is a place (U Village), an action (check your street) and a process (three steps). Suggestion: the hero descriptor from H-01 carries the premise: "Autonomous delivery, from nearby shops to your door." The Mission h2 keeps its line; repeating the premise is wanted, since the page currently says it once.
+
+**X-02 · Medium · The first area is in the headings.**
+Observation: U Village is named in six places on `/`: the What h2, the What body, How step 1, the showcase's app line, the hero's result line and the `<meta description>`. Two of those are right: the What body ("Packet starts in University Village and the streets around it…") says it is the start, and the result line ("the first area around U Village") says it is the first area. The other four scope the whole page to one neighbourhood. Suggestion: keep those two, remove the rest. Proposed copy, for Tanner's sign-off and a spec update (§6.1 to §6.5), since the build rule is "copy exactly as the spec writes it":
+
+| Where | Current | Proposed |
+|---|---|---|
+| Hero descriptor (new, H-01) | none | Autonomous delivery, from nearby shops to your door. |
+| What h2 | Delivery from U Village shops to homes nearby. | From nearby shops to your front door. |
+| What body | …Packet starts in University Village and the streets around it, including the U District and Bryant. | unchanged: this is the one statement of the first area |
+| How, step 1 | Pick from [VENDOR]'s menu at U Village and pay in the app. | Pick from [VENDOR]'s menu and pay in the app. |
+| Mission h2 | Autonomous delivery, built around the way you live. | unchanged |
+| Mission body | Vehicle 01 is the first: a four-rotor aircraft that flies an order from U Village to your door. | Vehicle 01 is the first step: a four-rotor aircraft that flies an order from the shop to your door. |
+| Showcase 02 line (`products.ts`) | Order from U Village shops and follow each step to your door. | Order from nearby shops and follow each step to your door. |
+| Hero result, inside | That's inside the first area around U Village. | unchanged |
+| Meta description (`layout.tsx`) | Delivery from U Village shops to homes nearby, by autonomous aircraft. | Autonomous delivery, from nearby shops to your door. Starting in Seattle around University Village. |
+| `/products` (not reviewed) | "Order from U Village shops" spec row; "Delivery area" row | flag for the same pass; the Delivery area row is a fact and can stay |
+
+**X-03 · Medium · The aircraft is the largest figure and appears three times.**
+Observation: the Mission drawing takes 7/12 of the width with two views; showcase slide 01 shows the side view; the peek before slide 01 shows it again. The red block, which the design rules define as the package or delivery icon, appears only inside those drawings and the route. Suggestion: one aircraft on the landing page is enough. Either (a) keep the Mission drawing as it is and let the showcase be the second appearance, with the peek hidden on phones (S-04); or (b) make the Mission figure about delivery, the red block travelling a route from a shop to a door (the Dispatch drawing already is this), and keep the aircraft for showcase slide 01 and `/products`. (b) matches the corrected message order better; (a) is less work. Either way the Mission body line changes to "Vehicle 01 is the first step".
+
 ### 3.1 Hero and first screen
 
 **H-01 · High · The first screen never says what Packet is.**
-Principle: the first screen answers "what is this" before "what do I do". Observation: at 1280, 1440 and 1920 the fold contains the name, the question, the field and the globe; the descriptor is below the fold (§2.2). Suggestion: one line under the wordmark and above the question, in the 20px lead size: "Delivery from U Village shops to homes nearby, by autonomous aircraft." (the `<meta description>` already says this). The question then stays as the form's own label. If that line moves up, the What section's heading can shrink to the leading lines and the paragraph, or the two can merge (see W-01).
+Principle: the first screen answers "what is this" before "what do I do". Observation: at 1280, 1440 and 1920 the fold contains the name, the question, the field and the globe; the descriptor is below the fold (§2.2). Suggestion: one line under the wordmark and above the question, in the 22px size, carrying the premise: "Autonomous delivery, from nearby shops to your door." The question then stays as the form's own label. The What section's heading changes with it (W-01, X-02).
 
 **H-02 · High · The hero reserves 86vh and uses about 40% of it.**
 Principle: whitespace must be intentional; an empty half-screen reads as "the page ended". Observation: content ends at y≈383 while the hero runs to y=838 at 1440×900; on a 768×1024 tablet it is 550px of nothing beside a sliver of globe (`fold-768x1024.png`). Suggestion: either size the hero to its content plus the globe (for example `min-height: clamp(520px, 72vh, 760px)`) so the next heading rises into the fold, or fill the space with H-01's descriptor and a scroll cue. The globe's radius is tied to the hero height, so check it after resizing.
@@ -117,7 +151,7 @@ Observation: the sphere's top (y≈90) sits 70px above the wordmark's cap line (
 ### 3.2 What
 
 **W-01 · Medium · The only section with no figure on the right.**
-Principle: a consistent column structure, so a break in it means something. Observation: hero, Mission, Showcase and the closing CTA are copy-left, figure-right; What is copy-left, nothing-right, and 484px tall for about 230px of content. Suggestion: if H-01 moves the headline into the hero, cut this section to the lines and the paragraph with half the padding. If the headline stays, give the right side something concrete: one of the item sketches already built for Products (`ItemBowl`, `ItemCup`, `ItemWrap`) would also answer P-02.
+Principle: a consistent column structure, so a break in it means something. Observation: hero, Mission, Showcase and the closing CTA are copy-left, figure-right; What is copy-left, nothing-right, and 484px tall for about 230px of content. Suggestion: with the premise in the hero (H-01, X-01), this section becomes the benefit and the start: h2 "From nearby shops to your front door.", the leading lines, and the paragraph that names University Village as where Packet starts. Then either cut the padding by half, or give the right side something concrete that shows delivery rather than the vehicle: one of the item sketches already built for Products (`ItemBowl`, `ItemCup`, `ItemWrap`), or the red block at a door. That also answers P-02.
 
 **W-02 · Low · The leading lines read as a divider.**
 Observation: placed between the h2 and the paragraph, full width, they separate the two. The rules say they are never a divider. Suggestion: put them above the h2 as the section's opener, or after the paragraph as its close, so they read as a signature rather than a rule.
@@ -142,12 +176,12 @@ Observation: filled circles 1–3 here, Barlow "01 02 03" in the showcase, outli
 Principle: columns beside each other share a top; every other h2 on the page starts at the top of its section. Observation: `items-center` on the 5/7 grid (`section-mission-h-1440x900.png`). Suggestion: `items-start`, with the drawing's top dimension line on the h2's cap line. If the drawing must stay centred, give it top padding equal to the h2's offset.
 
 **M-02 · Medium · On phones the drawing's labels are illegible.**
-Observation: plan and side views share about 340px; "SPAN [TBD]", "HEIGHT [TBD]", "PLAN", "SIDE" and the callout numbers come out at roughly 6–7px (`section-mission-h-390x844.png`). Suggestion: stack plan above side under 760px, or show only the side view on phones and keep both on `/products`.
+Observation: plan and side views share about 340px; "SPAN [TBD]", "HEIGHT [TBD]", "PLAN", "SIDE" and the callout numbers come out at roughly 6–7px (`section-mission-h-390x844.png`). Suggestion: stack plan above side under 760px, or show only the side view on phones and keep both on `/products`. If X-03 option (b) is taken, this finding moves to `/products`.
 
 ### 3.5 Showcase
 
 **S-01 · High · Product names are the second-largest type on the page.**
-Principle: bigger means more important; the ladder has to hold across sections. Observation: h3 at 72px above every h2 at 44px. Skimming, "Vehicle 01", "Packet for iPhone" and "Dispatch" outrank "Delivery from U Village shops to homes nearby." (`full-1440x900.png`). The spec asks for them "set like a hero", which is why, but the page then has four heroes. Suggestion: `clamp(36px, 4vw, 56px)` for the product name so it sits one step above the h2s, not two, and let the drawing carry the scale. If the names must stay 72px, demote the section heading to a Barlow label ("PRODUCTS") so each section has exactly one big thing.
+Principle: bigger means more important; the ladder has to hold across sections. Observation: h3 at 72px above every h2 at 44px. Skimming, "Vehicle 01", "Packet for iPhone" and "Dispatch" outrank the page's own message (`full-1440x900.png`). The spec asks for them "set like a hero", which is why, but the page then has four heroes, and the first of them is the aircraft (X-03). Suggestion: `clamp(36px, 4vw, 56px)` for the product name so it sits one step above the h2s, not two, and let the drawing carry the scale. If the names must stay 72px, demote the section heading to a Barlow label ("PRODUCTS") so each section has exactly one big thing.
 
 **S-02 · Medium · The section heading is orphaned above the slide.**
 Observation: the copy is vertically centred in a 540px stage, leaving about 170px between the h2 and the "02" label (`section-system-h-1440x900.png`). Suggestion: align the slide copy to the top of the stage with 32–48px of padding, so h2 → number → name read as one column.
@@ -185,11 +219,11 @@ Harmless on `/`; it is there for the subpages. Leave it unless the nav gets crow
 **P-01 · Medium · Section padding doubles up.**
 Observation: 120px top and 120px bottom on every section, plus 48px inside, gives 250–300px of white between content blocks; the page is 4,529px tall with content in about half of it (`full-1440x900.png`). Suggestion: 88–96px on desktop and 56–64px on phones, and a fixed 40–48px from an h2 to its content, so inside-a-section is visibly tighter than between-sections. Keep the hero's generosity as the deliberate exception.
 
-**P-02 · Medium · Nothing concrete above the aircraft.**
-Observation: the three figures before Mission are a dotted sphere, a dotted route and a tunnel of marks (§2.3). Suggestion: one concrete sketch early. The item drawings built for Products (a bowl, a cup, a wrap) in the hero's lower-left space or beside the What paragraph would say "food" without a photo and without breaking the drawing rule.
+**P-02 · Medium · The first concrete figure is the product, not the service.**
+Observation: the three figures before Mission are a dotted sphere, a dotted route and a tunnel of marks; they are atmosphere, and that is fine. The first figure with a recognisable subject is the aircraft, so the first thing the page shows a visitor is the vehicle, not a delivery. Suggestion: one concrete sketch early that shows delivery, not the vehicle. The item drawings built for Products (a bowl, a cup, a wrap), or the red block set down at a door, in the hero's lower-left space or beside the What paragraph (W-01). The aircraft then arrives where the corrected message order puts it: after the premise, as the first product.
 
 **P-03 · Medium · The type ladder has a step out of order and three sizes doing one job.**
-Observation: 130 (h1) · 72 (product name) · 44 (h2) · 20 (lead) · 19 (step title) · 18 (hero question) · 17 (body) · 15 (nav, links) · 14 (captions) · 12 (labels). Suggestion: 130 · 56 · 44 · 24 · 17 · 15 · 12, with 24 doing lead, hero question and step title.
+Observation: 130 (h1) · 72 (product name) · 44 (h2) · 20 (lead) · 19 (step title) · 18 (hero question) · 17 (body) · 15 (nav, links) · 14 (captions) · 12 (labels). Suggestion: 130 · 56 · 44 · 24 · 22 (descriptor) · 17 · 15 · 12, with 24 doing lead, hero question and step title.
 
 ---
 
@@ -197,9 +231,12 @@ Observation: 130 (h1) · 72 (product name) · 44 (h2) · 20 (lead) · 19 (step t
 
 | ID | Sev | Area | Finding | Status |
 |---|---|---|---|---|
+| X-01 | High | Message | The premise (autonomous delivery) arrives fourth | open |
 | H-01 | High | Hero | First screen does not say what Packet is | open |
 | H-02 | High | Hero | Hero height leaves lower half empty | open |
 | S-01 | High | Showcase | Product names outrank section headings | open |
+| X-02 | Med | Message | The first area is in the headings; copy table in §3.0 | open |
+| X-03 | Med | Message | Aircraft is the largest figure and appears three times | open |
 | H-03 | Med | Hero | Question is 18px, one step above body | open |
 | H-04 | Med | Hero | Globe before the name on phones | open |
 | H-05 | Med | Hero | Globe is a fragment at 761–1000px | open |
@@ -213,7 +250,7 @@ Observation: 130 (h1) · 72 (product name) · 44 (h2) · 20 (lead) · 19 (step t
 | S-03 | Med | Showcase | Controls scattered; tabs look like a loading bar | open |
 | C-01 | Med | CTA | Button above field (same as H-06) | open |
 | P-01 | Med | Page | Section padding doubles up | open |
-| P-02 | Med | Page | Nothing concrete above the aircraft | open |
+| P-02 | Med | Page | First concrete figure is the product, not the service | open |
 | P-03 | Med | Page | Type ladder out of order | open |
 | H-08 | Low | Hero | Focus ring boxes the underline field | open |
 | H-09 | Low | Hero | "Inside" result has no reward | open |
@@ -230,7 +267,7 @@ Observation: 130 (h1) · 72 (product name) · 44 (h2) · 20 (lead) · 19 (step t
 | F-01 | Low | Footer | Emblem edge inside the margin | open |
 | N-01 | Low | Nav | "Get updates" duplicates the form on `/` | open |
 
-Suggested order of work: H-06/C-01 (one CSS line, visible everywhere), then H-01, H-02 and H-03 together as one hero pass, then S-01 to S-03 as one showcase pass, then P-01 and P-03 as a spacing and type pass, then the rest.
+Suggested order of work: H-06/C-01 (one CSS line, visible everywhere), then X-01, X-02, H-01, H-02 and H-03 together as one hero and copy pass (this needs Tanner's sign-off on the copy table and a spec update), then S-01 to S-03 as one showcase pass, then X-03 as a decision, then P-01 and P-03 as a spacing and type pass, then the rest.
 
 ---
 

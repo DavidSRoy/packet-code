@@ -225,6 +225,16 @@ nav a[aria-current="page"] {
 	fill: var(--color-ink);
 }
 
+/* The delivery route: mustard dots with the lighter wobble, so the dots keep their shape. */
+.drawing .route {
+	fill: none;
+	stroke: var(--color-mustard);
+	stroke-width: 4;
+	stroke-dasharray: 0.1 7;
+	stroke-linecap: round;
+	filter: url(#pen3);
+}
+
 .drawing .dim {
 	font-family: var(--font-label);
 	font-weight: 600;
@@ -238,6 +248,23 @@ nav a[aria-current="page"] {
 	font-size: 11px;
 	text-anchor: middle;
 	dominant-baseline: central;
+}
+
+/* A drawing scales down to the phone column; its labels and callouts scale up so they stay legible. After the base text rules, so these win. */
+@media (max-width: 760px) {
+	.drawing text {
+		font-size: 20px;
+	}
+
+	.drawing .dim {
+		font-size: 24px;
+	}
+
+	.drawing .callout {
+		transform: scale(1.6);
+		transform-box: fill-box;
+		transform-origin: center;
+	}
 }
 
 /*

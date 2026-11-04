@@ -1,4 +1,4 @@
-import { VehiclePlanSide } from "@/components/drawings/VehiclePlanSide";
+import { DeliveryRoute } from "@/components/drawings/DeliveryRoute";
 
 export function Mission() {
 	return (
@@ -17,10 +17,10 @@ export function Mission() {
 					From point A to point B faster than the road allows, and lighter on the streets you share.
 				</p>
 				<p className="m-0 max-w-[60ch]">
-					Vehicle 01 is the first: a four-rotor aircraft that flies an order from U Village to your door.
+					Vehicle 01 is the first step: a four-rotor aircraft that flies an order from the shop to your door.
 				</p>
 			</div>
-			<VehiclePlanSide />
+			<DeliveryRoute />
 		</section>
 	);
 }

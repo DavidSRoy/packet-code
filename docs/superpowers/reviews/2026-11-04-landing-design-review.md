@@ -2,6 +2,7 @@
 
 Date: 2026-11-04
 Revised: 2026-11-04 (b). Tanner's correction to the framing: Packet's premise is autonomous delivery. Vehicle 01 is the first product, not the subject. University Village is the first area, not the premise. §2.3, §3.0, H-01, W-01 and P-02 are rewritten to match; X-01 to X-03 are new.
+Revised: 2026-11-04 (c). X-03 decided (option B) and built: the Mission section now shows a delivery drawing (`DeliveryRoute.tsx`) and the aircraft stays in the showcase. M-02 and P-02 are closed on `/` by the same change. Spec §6.4 and §9 updated.
 Reviewed: `feat/landing-site` at `02d06ba`, built with `npm run build` and served with `next start`, screenshotted with Playwright (Chromium) at 390×844, 768×1024, 1280×720, 1440×900 and 1920×1080.
 Screenshots: `2026-11-04-landing-design-review/*.png`
 Spec: `../specs/2026-10-26-packet-landing-design.md`
@@ -74,7 +75,7 @@ The visual language is confident and consistent: halftone cartography, crop mark
 What it reads as, once scrolled, is a drone delivery pilot for U Village. That is the one reading the company does not want, and the spec says so in §1: Packet is an autonomous delivery company; the aircraft is its first product; University Village is where it starts. The page says those three things in reverse order.
 
 - "U Village" is in the first heading, the first paragraph, the first step, the showcase's app line and the hero's result line.
-- The aircraft is the largest figure on the page and appears three times (Mission drawing, showcase slide 01, the peek before slide 01).
+- The aircraft was the largest figure on the page and appeared three times (Mission drawing, showcase slide 01, the peek before slide 01). Fixed by X-03: it now appears only in the showcase.
 - "Autonomous delivery" appears once, as the Mission heading, in the fourth section about 2,200px down.
 
 A visitor's summary after one scroll is "drones bring U Village food to nearby homes". The intended summary is "autonomous delivery to your door; the first vehicle is an aircraft; the first streets are around U Village". The fix is message order, not more or fewer drawings: the premise in the first screen, the first product named as a first step, the first area stated once as the start.
@@ -111,7 +112,9 @@ Observation: U Village is named in six places on `/`: the What h2, the What body
 | `/products` (not reviewed) | "Order from U Village shops" spec row; "Delivery area" row | flag for the same pass; the Delivery area row is a fact and can stay |
 
 **X-03 · Medium · The aircraft is the largest figure and appears three times.**
-Observation: the Mission drawing takes 7/12 of the width with two views; showcase slide 01 shows the side view; the peek before slide 01 shows it again. The red block, which the design rules define as the package or delivery icon, appears only inside those drawings and the route. Suggestion: one aircraft on the landing page is enough. Either (a) keep the Mission drawing as it is and let the showcase be the second appearance, with the peek hidden on phones (S-04); or (b) make the Mission figure about delivery, the red block travelling a route from a shop to a door (the Dispatch drawing already is this), and keep the aircraft for showcase slide 01 and `/products`. (b) matches the corrected message order better; (a) is less work. Either way the Mission body line changes to "Vehicle 01 is the first step".
+Observation: the Mission drawing took 7/12 of the width with two views; showcase slide 01 shows the side view; the peek before slide 01 shows it again. The red block, which the design rules define as the package or delivery icon, appeared only inside those drawings and the route. One aircraft on the landing page is enough. Options were (a) keep the Mission drawing and let the showcase be the second appearance, or (b) make the Mission figure about delivery and keep the aircraft for the showcase and `/products`.
+
+**Decision (Tanner, 2026-11-04): option B. Built.** `src/components/drawings/DeliveryRoute.tsx` is a side elevation from A to B: the shop and the house on one ground line, the route in mustard dots rising above the street, the package in transit drawn as the red block inside corner marks (the same symbol as the route in How it works), the drop-off as a dashed outline at the doorstep, altitude and A-to-B dimension lines marked `[TBD]`, callouts 1 to 4 and a legend. No aircraft. `Mission.tsx` uses it and its body line reads "Vehicle 01 is the first step: a four-rotor aircraft that flies an order from the shop to your door." The draw-in, reduced-motion and no-JS paths work as for the vehicle drawing (the reduced-motion capture is byte-identical to the animated final state). Spec §6.4 and §9 are updated. `VehiclePlanSide.tsx` is kept for Products. Captures: `built-mission-1440x900.png`, `built-mission-390x844.png`, `built-mission-svg-2x.png`.
 
 ### 3.1 Hero and first screen
 
@@ -172,11 +175,11 @@ Observation: filled circles 1–3 here, Barlow "01 02 03" in the showcase, outli
 
 ### 3.4 Mission
 
-**M-01 · Medium · The drawing's top sits 100px above the heading's top.**
-Principle: columns beside each other share a top; every other h2 on the page starts at the top of its section. Observation: `items-center` on the 5/7 grid (`section-mission-h-1440x900.png`). Suggestion: `items-start`, with the drawing's top dimension line on the h2's cap line. If the drawing must stay centred, give it top padding equal to the h2's offset.
+**M-01 · Medium · The drawing's top sits above the heading's top.**
+Principle: columns beside each other share a top; every other h2 on the page starts at the top of its section. Observation: `items-center` on the 5/7 grid; with the vehicle drawing the offset was about 100px (`section-mission-h-1440x900.png`), with the delivery drawing it is about 50px (`built-mission-1440x900.png`). Suggestion: `items-start`, with the drawing's top on the h2's cap line (`built-mission-1440x900-m01.png`). Still open.
 
 **M-02 · Medium · On phones the drawing's labels are illegible.**
-Observation: plan and side views share about 340px; "SPAN [TBD]", "HEIGHT [TBD]", "PLAN", "SIDE" and the callout numbers come out at roughly 6–7px (`section-mission-h-390x844.png`). Suggestion: stack plan above side under 760px, or show only the side view on phones and keep both on `/products`. If X-03 option (b) is taken, this finding moves to `/products`.
+Observation (vehicle drawing): plan and side views shared about 340px; "SPAN [TBD]", "HEIGHT [TBD]", "PLAN", "SIDE" and the callout numbers came out at roughly 6–7px (`section-mission-h-390x844.png`). **Closed on `/` by X-03.** The delivery drawing scales its labels and callouts up under 760px (`.drawing text`, `.drawing .dim` and `.drawing .callout` in `globals.css`, placed after the base text rules so they win), so "A · SHOP", "ALTITUDE [TBD]" and the callout numbers read at phone width (`built-mission-390x844.png`). The vehicle drawing keeps the problem wherever it is used next; the fix for it is to split the plan and side views into two SVGs laid out with CSS, or to show only the side view on phones.
 
 ### 3.5 Showcase
 
@@ -220,7 +223,7 @@ Harmless on `/`; it is there for the subpages. Leave it unless the nav gets crow
 Observation: 120px top and 120px bottom on every section, plus 48px inside, gives 250–300px of white between content blocks; the page is 4,529px tall with content in about half of it (`full-1440x900.png`). Suggestion: 88–96px on desktop and 56–64px on phones, and a fixed 40–48px from an h2 to its content, so inside-a-section is visibly tighter than between-sections. Keep the hero's generosity as the deliberate exception.
 
 **P-02 · Medium · The first concrete figure is the product, not the service.**
-Observation: the three figures before Mission are a dotted sphere, a dotted route and a tunnel of marks; they are atmosphere, and that is fine. The first figure with a recognisable subject is the aircraft, so the first thing the page shows a visitor is the vehicle, not a delivery. Suggestion: one concrete sketch early that shows delivery, not the vehicle. The item drawings built for Products (a bowl, a cup, a wrap), or the red block set down at a door, in the hero's lower-left space or beside the What paragraph (W-01). The aircraft then arrives where the corrected message order puts it: after the premise, as the first product.
+Observation: the three figures before Mission are a dotted sphere, a dotted route and a tunnel of marks; they are atmosphere, and that is fine. The first figure with a recognisable subject was the aircraft, so the first thing the page showed a visitor was the vehicle, not a delivery. **Closed by X-03.** The first concrete figure is now the delivery drawing in Mission: a shop, a route above the street, a package set down at a door. The aircraft arrives where the corrected message order puts it, in the showcase as the first product. An item sketch earlier in the page (the bowl, cup or wrap built for Products, beside the What paragraph) stays optional under W-01.
 
 **P-03 · Medium · The type ladder has a step out of order and three sizes doing one job.**
 Observation: 130 (h1) · 72 (product name) · 44 (h2) · 20 (lead) · 19 (step title) · 18 (hero question) · 17 (body) · 15 (nav, links) · 14 (captions) · 12 (labels). Suggestion: 130 · 56 · 44 · 24 · 22 (descriptor) · 17 · 15 · 12, with 24 doing lead, hero question and step title.
@@ -235,8 +238,8 @@ Observation: 130 (h1) · 72 (product name) · 44 (h2) · 20 (lead) · 19 (step t
 | H-01 | High | Hero | First screen does not say what Packet is | open |
 | H-02 | High | Hero | Hero height leaves lower half empty | open |
 | S-01 | High | Showcase | Product names outrank section headings | open |
-| X-02 | Med | Message | The first area is in the headings; copy table in §3.0 | open |
-| X-03 | Med | Message | Aircraft is the largest figure and appears three times | open |
+| X-02 | Med | Message | The first area is in the headings; copy table in §3.0 | open, awaiting sign-off |
+| X-03 | Med | Message | Aircraft is the largest figure and appears three times | done, option B built |
 | H-03 | Med | Hero | Question is 18px, one step above body | open |
 | H-04 | Med | Hero | Globe before the name on phones | open |
 | H-05 | Med | Hero | Globe is a fragment at 761–1000px | open |
@@ -245,12 +248,12 @@ Observation: 130 (h1) · 72 (product name) · 44 (h2) · 20 (lead) · 19 (step t
 | W-01 | Med | What | Only section with no figure; 484px for 230px of content | open |
 | K-01 | Med | How | Step titles 19px over 17px body | open |
 | M-01 | Med | Mission | Drawing top above heading top | open |
-| M-02 | Med | Mission | Drawing labels illegible on phones | open |
+| M-02 | Med | Mission | Drawing labels illegible on phones | done on `/` (X-03); vehicle drawing's fix moves to Products |
 | S-02 | Med | Showcase | Heading orphaned 170px above slide | open |
 | S-03 | Med | Showcase | Controls scattered; tabs look like a loading bar | open |
 | C-01 | Med | CTA | Button above field (same as H-06) | open |
 | P-01 | Med | Page | Section padding doubles up | open |
-| P-02 | Med | Page | First concrete figure is the product, not the service | open |
+| P-02 | Med | Page | First concrete figure is the product, not the service | done (X-03) |
 | P-03 | Med | Page | Type ladder out of order | open |
 | H-08 | Low | Hero | Focus ring boxes the underline field | open |
 | H-09 | Low | Hero | "Inside" result has no reward | open |
@@ -267,7 +270,7 @@ Observation: 130 (h1) · 72 (product name) · 44 (h2) · 20 (lead) · 19 (step t
 | F-01 | Low | Footer | Emblem edge inside the margin | open |
 | N-01 | Low | Nav | "Get updates" duplicates the form on `/` | open |
 
-Suggested order of work: H-06/C-01 (one CSS line, visible everywhere), then X-01, X-02, H-01, H-02 and H-03 together as one hero and copy pass (this needs Tanner's sign-off on the copy table and a spec update), then S-01 to S-03 as one showcase pass, then X-03 as a decision, then P-01 and P-03 as a spacing and type pass, then the rest.
+Suggested order of work: H-06/C-01 (one CSS line, visible everywhere), then X-01, X-02, H-01, H-02 and H-03 together as one hero and copy pass (this needs Tanner's sign-off on the copy table and a spec update), then S-01 to S-03 as one showcase pass, then P-01 and P-03 as a spacing and type pass, then the rest. X-03 is built.
 
 ---
 

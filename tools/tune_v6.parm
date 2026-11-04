@@ -1,0 +1,46 @@
+# tune_v6: step A (tools/tune_v6_stepA.parm) + attitude, position and EKF gains, on top of tune_v5.
+# Hover simulator (tools/sim/hover, 2026-11-03): ArduCopter 4.7.2 SITL with the flown parameters and
+# Lua scripts, physics identified from logs 18-45 (IDENT.md), calibrated to logs 43/45. Results in
+# tools/sim/hover/RESULTS.md. Same Pi and Lua changes as step A.
+# - Attitude: the tune_v4 angle loop has a +4.2 dB resonance at ~2 Hz and 5 dB gain margin on the
+#   identified plant (K 77, 52 ms); with the outer loops that rings at 3.5-4.5 Hz. Rate P 0.22, D 0.006
+#   (lead) and the rate target filter at 20 Hz: angle PM 59, GM 8 dB, no resonance (+0.1 dB). Rate I
+#   0.15 -> 0.3: holds the slow disturbance torque (0.2-0.3 rad/s^2 at 0.1-1 Hz). tune_v4 lowered I
+#   from 0.45 for a 2.3 Hz rocking at ANG_P 9; at ANG_P 7.5 the sim stays stable for K -20 %..+25 %,
+#   all-pure-delay and slower motors (40 + 25 ms). Rate GM is lowest (2.8 dB) on an all-pure-delay
+#   plant: watch for a fast (8-10 Hz) buzz on the first flight.
+# - Position: with the faster attitude loop the velocity loop takes VEL_P 5 (6 is unstable in the sim),
+#   POS_P 2.5, VEL_I 4; the velocity error filter 5 -> 10 Hz and ATC_INPUT_TC 0.05 -> 0.02 take out
+#   about 40 ms of lag.
+# - EKF: EK3_ACC_P_NSE 0.35 -> 0.15 and EK3_TAU_OUTPUT 25 -> 40: less camera noise into the controller
+#   (the camera noise drives most of the remaining sway in the sim).
+# Sim, 30 s hold at 2 cm, true position: 4.1-4.9 mm rms, 7.0-7.9 mm p95, 8.9-10.1 mm max (tune_v5:
+# 9.8-12.5 / 17-24 / 21-30); tilt above 1 Hz 0.34-0.37 deg rms (0.62-0.69). Worst of 11 variants
+# (camera noise x1.5): 6.3 / 10.1 / 12.8 mm.
+# Before: ATC_RAT_RLL/PIT_P 0.18 _I 0.15 _D 0.002 _FLTT 10, ATC_INPUT_TC 0.05, PSC_NE_POS_P 1.0,
+#         PSC_NE_VEL_P 3.5, PSC_NE_VEL_I 0.5, PSC_NE_VEL_FLTE 5, EK3_ACC_P_NSE 0.35, EK3_TAU_OUTPUT 25
+INS_POS1_X,-0.007
+INS_POS1_Y,-0.001
+INS_POS1_Z,-0.058
+INS_POS2_X,-0.007
+INS_POS2_Y,-0.001
+INS_POS2_Z,-0.058
+PSC_NE_VEL_D,0
+VISO_DELAY_MS,110
+HTO_TRIM_P,0.85
+HTO_TRIM_R,0
+ATC_RAT_RLL_P,0.22
+ATC_RAT_PIT_P,0.22
+ATC_RAT_RLL_I,0.3
+ATC_RAT_PIT_I,0.3
+ATC_RAT_RLL_D,0.006
+ATC_RAT_PIT_D,0.006
+ATC_RAT_RLL_FLTT,20
+ATC_RAT_PIT_FLTT,20
+ATC_INPUT_TC,0.02
+PSC_NE_POS_P,2.5
+PSC_NE_VEL_P,5
+PSC_NE_VEL_I,4
+PSC_NE_VEL_FLTE,10
+EK3_ACC_P_NSE,0.15
+EK3_TAU_OUTPUT,40

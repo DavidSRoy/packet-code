@@ -1,0 +1,74 @@
+[
+ {
+  "name": "c5_43_d25_s1",
+  "flown": "tools/sim/hover/flown_log43.parm",
+  "set": [
+   "dist_accel=[{\"sigma\":[0.025,0.025,0.06],\"tau\":1.0},{\"sigma\":[0.012,0.012,0.02],\"tau\":0.15}]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "c5_43_d25_s2",
+  "flown": "tools/sim/hover/flown_log43.parm",
+  "set": [
+   "dist_accel=[{\"sigma\":[0.025,0.025,0.06],\"tau\":1.0},{\"sigma\":[0.012,0.012,0.02],\"tau\":0.15}]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 2
+ },
+ {
+  "name": "c5_43_d15_s1",
+  "flown": "tools/sim/hover/flown_log43.parm",
+  "set": [
+   "dist_accel=[{\"sigma\":[0.015,0.015,0.06],\"tau\":1.0},{\"sigma\":[0.012,0.012,0.02],\"tau\":0.15}]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "c5_43_d15_s2",
+  "flown": "tools/sim/hover/flown_log43.parm",
+  "set": [
+   "dist_accel=[{\"sigma\":[0.015,0.015,0.06],\"tau\":1.0},{\"sigma\":[0.012,0.012,0.02],\"tau\":0.15}]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 2
+ },
+ {
+  "name": "c5_45_d15_s1",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "dist_accel=[{\"sigma\":[0.015,0.015,0.06],\"tau\":1.0},{\"sigma\":[0.012,0.012,0.02],\"tau\":0.15}]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "c5_45_d15_s2",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "dist_accel=[{\"sigma\":[0.015,0.015,0.06],\"tau\":1.0},{\"sigma\":[0.012,0.012,0.02],\"tau\":0.15}]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 2
+ }
+]

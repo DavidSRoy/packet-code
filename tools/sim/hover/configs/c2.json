@@ -1,0 +1,96 @@
+[
+ {
+  "name": "c2_b_43",
+  "flown": "tools/sim/hover/flown_log43.parm",
+  "set": [
+   "camera.exposure_to_readout_s=0.015"
+  ]
+ },
+ {
+  "name": "c2_n_43",
+  "flown": "tools/sim/hover/flown_log43.parm",
+  "set": [
+   "camera.noise_xy_m=0.0018",
+   "camera.noise_z_m=0.0012",
+   "camera.exposure_to_readout_s=0.03"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ]
+ },
+ {
+  "name": "c2_nd_43",
+  "flown": "tools/sim/hover/flown_log43.parm",
+  "set": [
+   "camera.noise_xy_m=0.0018",
+   "camera.noise_z_m=0.0012",
+   "dist_accel=[{\"sigma\":[0.03,0.03,0.03],\"tau\":1.0},{\"sigma\":[0.02,0.02,0.02],\"tau\":0.15}]",
+   "camera.exposure_to_readout_s=0.03"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ]
+ },
+ {
+  "name": "c2_nL_43",
+  "flown": "tools/sim/hover/flown_log43.parm",
+  "set": [
+   "camera.noise_xy_m=0.0018",
+   "camera.noise_z_m=0.0012",
+   "camera.exposure_to_readout_s=0.06"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ]
+ },
+ {
+  "name": "c2_b_45",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.exposure_to_readout_s=0.015"
+  ]
+ },
+ {
+  "name": "c2_n_45",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.noise_xy_m=0.0018",
+   "camera.noise_z_m=0.0012",
+   "camera.exposure_to_readout_s=0.03"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ]
+ },
+ {
+  "name": "c2_nd_45",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.noise_xy_m=0.0018",
+   "camera.noise_z_m=0.0012",
+   "dist_accel=[{\"sigma\":[0.03,0.03,0.03],\"tau\":1.0},{\"sigma\":[0.02,0.02,0.02],\"tau\":0.15}]",
+   "camera.exposure_to_readout_s=0.03"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ]
+ },
+ {
+  "name": "c2_nL_45",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.noise_xy_m=0.0018",
+   "camera.noise_z_m=0.0012",
+   "camera.exposure_to_readout_s=0.06"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ]
+ }
+]

@@ -316,6 +316,7 @@ class Hop:
             # constant amount off the tag height (an EKF height datum, e.g. after an arming without a
             # home): it must only hold steady; the hover height is taken relative to it
             agree_t, off0 = [None], [None]
+            held_pos = []          # FC positions (x, y, z, t) while it agrees and is still: the start is their mean
 
             def settled():
                 loc, p = s.get("local"), self.pose()
@@ -328,7 +329,10 @@ class Hop:
                     ok = abs(off - off0[0]) < SETTLE_M
                 if not ok:
                     agree_t[0] = None
+                    held_pos.clear()
                     return False
+                if not held_pos or held_pos[-1][3] != loc[3]:
+                    held_pos.append(tuple(loc[:4]))
                 agree_t[0] = agree_t[0] or time.time()
                 return time.time() - agree_t[0] >= SETTLE_HOLD_S
             if not wait(settled, SETTLE_S):
@@ -343,7 +347,10 @@ class Hop:
                                  f"{loc[0] * 100:.0f}, {loc[1] * 100:.0f} cm moving "
                                  f"{math.sqrt(loc[4] ** 2 + loc[5] ** 2 + loc[6] ** 2) * 100:.0f} cm/s, height "
                                  f"offset not steady; tags {p[4] * 100:.0f}, {-p[5] * 100:.0f} cm")
-            start = s["local"][:3]
+            # the mean over the settled second, not one sample: one FC position carries 1-2 mm of
+            # camera noise, and the hover then holds that offset the whole time (sim, 2026-11-03)
+            start = ([sum(q[i] for q in held_pos) / len(held_pos) for i in range(3)] if held_pos
+                     else list(s["local"][:3]))
             # Home here, before arming: ArduCopter resets its height datum when it arms without a
             # home (indoors there is no GPS to set one), which moves the FC height under the hover
             t_home = time.time()

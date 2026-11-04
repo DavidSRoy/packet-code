@@ -24,6 +24,12 @@
 --  * Commanding a tilt the legs do not let it reach only winds up the integrators:
 --    the tilt target goes from the resting attitude (legs) to level plus the hold
 --    as the weight moves off the legs (T/W from HTO_TW_FAST to 1).
+--  * "Level" is the hover trim HTO_TRIM_R/P: the attitude at which the thrust has no
+--    sideways part. The thrust axis is not on the IMU axis: in the hovers of logs 43
+--    and 45 ArduPilot held +0.84 to +0.87 deg pitch (velocity I term -0.15 m/s^2 forward).
+--    The hold law has no integrator, so without the trim it lifts off into a steady
+--    slide of 0.15 m/s^2 / (PSC_NE_POS_P * PSC_NE_VEL_P): 37 mm at 1 and 4. This was the
+--    2-3 cm hand-over offset. Default 0 (no trim).
 --  * After liftoff it flies a climb rate, not a thrust: holding a thrust above hover
 --    kept accelerating it (10 cm/s at the handover, 17-19 cm/s after) and ArduPilot then
 --    overshot the hover height by 7 cm and swayed 10 cm while it braked (2026-11-03).
@@ -45,7 +51,7 @@
 -- 0 idle, 1 spool, 2 on the skids, 3 lifted, 4 handed over, 9 aborted.
 
 local TABLE_KEY = 80
-assert(param:add_table(TABLE_KEY, "HTO_", 9), "HTO_ param table failed")
+assert(param:add_table(TABLE_KEY, "HTO_", 11), "HTO_ param table failed")
 assert(param:add_param(TABLE_KEY, 1, "ENABLE", 1), "HTO_ENABLE")
 assert(param:add_param(TABLE_KEY, 2, "TW_FAST", 0.6), "HTO_TW_FAST")   -- T/W reached quickly (legs still hold)
 assert(param:add_param(TABLE_KEY, 3, "RAMP", 0.2), "HTO_RAMP")         -- T/W per second from TW_FAST on
@@ -55,6 +61,8 @@ assert(param:add_param(TABLE_KEY, 6, "HAND_M", 0.015), "HTO_HAND_M")   -- height
 assert(param:add_param(TABLE_KEY, 7, "TILT", 5), "HTO_TILT")           -- hold tilt limit, deg
 assert(param:add_param(TABLE_KEY, 8, "ABT_TILT", 10), "HTO_ABT_TILT")  -- actual tilt that aborts, deg
 assert(param:add_param(TABLE_KEY, 9, "ABT_M", 0.15), "HTO_ABT_M")      -- slide that aborts, m
+assert(param:add_param(TABLE_KEY, 10, "TRIM_R", 0), "HTO_TRIM_R")      -- hover trim roll, deg (right down +)
+assert(param:add_param(TABLE_KEY, 11, "TRIM_P", 0), "HTO_TRIM_P")      -- hover trim pitch, deg (nose up +)
 
 local P_ENABLE = Parameter("HTO_ENABLE")
 local P_TW_FAST = Parameter("HTO_TW_FAST")
@@ -65,6 +73,8 @@ local P_HAND = Parameter("HTO_HAND_M")
 local P_TILT = Parameter("HTO_TILT")
 local P_ABT_TILT = Parameter("HTO_ABT_TILT")
 local P_ABT_M = Parameter("HTO_ABT_M")
+local P_TRIM_R = Parameter("HTO_TRIM_R")
+local P_TRIM_P = Parameter("HTO_TRIM_P")
 local P_HOP_CH = Parameter("HOP_CH")
 local P_HOVER = Parameter("MOT_THST_HOVER")
 local P_POS_P = Parameter("PSC_NE_POS_P")
@@ -138,7 +148,7 @@ local function tilt_target(en, ee, vn, ve, w)
   local ar = -an * math.sin(yaw) + ae * math.cos(yaw)      -- right
   local pitch = -math.deg(math.atan(af / G))               -- nose down to go forward
   local roll = math.deg(math.atan(ar / G))
-  return (1 - w) * rest_r + w * roll, (1 - w) * rest_p + w * pitch
+  return (1 - w) * rest_r + w * (P_TRIM_R:get() + roll), (1 - w) * rest_p + w * (P_TRIM_P:get() + pitch)
 end
 
 local function command(roll, pitch, t_w)

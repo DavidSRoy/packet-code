@@ -468,45 +468,11 @@ nav a[aria-current="page"] {
 	overflow: hidden;
 }
 
-.sc-tab i::after {
-	content: "";
+.sc-tab i b {
 	position: absolute;
 	inset: 0;
 	background: var(--color-ink);
-	transform: scaleX(0);
 	transform-origin: left;
-}
-
-.sc-tab[data-state="done"] i::after {
-	transform: scaleX(1);
-}
-
-.sc-tab[data-state="on"] i::after {
-	animation: sc-fill linear forwards;
-	animation-duration: inherit;
-}
-
-.sc-tab[data-state="on"][data-running="false"] i::after {
-	animation: none;
-	transform: scaleX(1);
-}
-
-@keyframes sc-fill {
-	to {
-		transform: scaleX(1);
-	}
-}
-
-.sc-pp {
-	width: 44px;
-	height: 44px;
-	border: 1.5px solid var(--color-ink);
-	border-radius: 50%;
-	background: none;
-	color: var(--color-ink);
-	display: grid;
-	place-items: center;
-	cursor: pointer;
 }
 
 @media (max-width: 760px) {
@@ -542,9 +508,5 @@ nav a[aria-current="page"] {
 	.sc-slide[data-on="true"] .sc-art {
 		opacity: 1 !important;
 		transform: none !important;
-	}
-
-	.sc-tab[data-state="on"] i::after {
-		transform: scaleX(1) !important;
 	}
 }

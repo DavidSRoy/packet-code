@@ -124,6 +124,7 @@ See `home-1440.png` and `home-390-sheet.png`.
 ### 6.3 How it works
 - h2 "Three steps, all in the app."
 - A scroll-driven canvas: the red block inside its corner marks travels a dotted route, leaving a mustard trail. The three numbered bullets fill as it passes each step.
+- The section pins for 2 screen heights while the trip plays, then holds on the arrival (see `2026-11-04-pinned-sections-design.md`). *Revised 2026-11-04.*
 - Steps: Order ("Pick from [VENDOR]'s menu at U Village and pay in the app."), Follow it, At your door.
 
 ### 6.4 Mission
@@ -158,13 +159,10 @@ See `home-1440.png` and `home-390-sheet.png`.
   - the current copy fades out;
   - the incoming drawing grows from the bottom-right corner (from `translate(14%,10%) scale(.7)` to rest);
   - the copy fades in after 150ms.
-- Auto-advance: after 7s with no interaction, it moves to the next product and wraps from 03 back to 01.
-  - A pointer-down, key press or focus inside the section restarts the 7s.
-  - A horizontal swipe of more than 48px changes the product.
-- Controls under the stage:
-  - three 44px progress tabs that fill over 7s and jump to a product when tapped;
-  - a pause/play button (required for auto-moving content).
-- Reduced motion: no auto-advance, no transitions.
+- The section pins for one screen height per product, and scrolling moves through the products (see `2026-11-04-pinned-sections-design.md`). There is no timer and no pause button. *Revised 2026-11-04.*
+  - The Next arrow, the tabs and a horizontal swipe of more than 48px scroll to that product; Next wraps from 03 back to 01.
+- Controls under the stage: three 44px progress tabs; the active one fills as the reader scrolls through its product.
+- Reduced motion and screens under 600px tall: no pinning and no transitions; the controls switch products directly.
 - Inactive products are `inert`.
 - There is no marquee band and no visible carousel track. Both were tried and rejected.
 
@@ -336,7 +334,7 @@ The build ships with these as visible `[BRACKETS]`. All must be replaced before 
   - **Repeat sign-up**: the same email upserts and doesn't duplicate. It fills only fields that are still empty and keeps the values already stored.
   - **Closing form**: stores a row with null `in_area`.
   - **Bad input**: posting it directly to the API returns 400.
-  - **Showcase**: advances after 7s; the arrow, the tabs, swiping and pause work; the About links land on the right product on `/products`.
+  - **Pinned sections**: How it works and the showcase hold the screen while scrolling drives them; the arrow, the tabs and swiping scroll to a product; the About links land on the right product on `/products`.
   - **Mission drawing**: draws in on scroll.
   - **Reduced motion**: nothing moves on its own.
 - Screenshots at 375, 430, 768, 1280, 1440 and 1920 for `/`, `/products` and `/press`:

@@ -24,6 +24,7 @@ The score is on the TRUE trajectory of the simulated drone, not on the FC estima
 | `IDENT.md` | How each model value was identified, with the confidence. |
 | `RESULTS.md` | tune_v6: results, robustness, test plan. |
 | `errsplit.py`, `bands.py` | Split a run's error into estimate / control, and by frequency. |
+| `e2e/run_e2e.py`, `e2e/fake_pi.py` | End-to-end test: the real `ground_control` server and `hop.py` fly SITL; a fake Pi serves the camera (instances 20-25, speedup 1). |
 | `configs/` | Batch lists used for the calibration and the tuning. |
 
 ## Run

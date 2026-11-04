@@ -365,7 +365,15 @@ def main():
         procs.append(sitl)
         time.sleep(1.0)
         d = Driver(f"tcp:127.0.0.1:{5760 + 10 * I}", log)
-        live = {kv.split("=")[0]: float(kv.split("=")[1]) for kv in a.p if kv.startswith("HTO_")}
+        # HTO_* exist only once lua/hop_takeoff.lua made them, and AP_Param::add_param does not read
+        # the --defaults files: set them live, from the --parm files and then --p (last wins)
+        live = {}
+        for pf in a.parm:
+            for l in Path(pf).read_text().splitlines():
+                f = l.replace(",", " ").split()
+                if len(f) >= 2 and f[0].startswith("HTO_"):
+                    live[f[0]] = float(f[1])
+        live.update({kv.split("=")[0]: float(kv.split("=")[1]) for kv in a.p if kv.startswith("HTO_")})
         status = fly(d, a.height, a.hold, log, live)
         result["status"] = status
         result["events"] = d.events

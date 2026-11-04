@@ -93,7 +93,10 @@ local CLIMB_MPS = 0.05         -- climb rate from liftoff to the handover
 local LIFT_TW_MIN = 0.8        -- no liftoff counted below this T/W
 local KV, KI = 3.0, 3.0        -- climb-rate PI, 1/s and 1/s^2
 local AIR_SPAN = 0.15          -- thrust kept within this fraction of the liftoff thrust
-local AIR_TIMEOUT_S = 3.0      -- lifted but not at HTO_HAND_M this long = abort
+local AIR_TIMEOUT_S = 4.0      -- lifted but not at HTO_HAND_M this long = abort
+local TW_LIFT_MIN = 0.97       -- floor on the liftoff hover estimate: logs 33-45 read 0.96-1.02, and
+                               -- in the sim a spin-up hop read 0.95 and the climb stalled in ground
+                               -- effect until the timeout (2026-11-03)
 
 local IDLE, REST, SPOOL, SKIDS, AIR, DONE = 0, 1, 2, 3, 4, 5
 local REPORT = { [IDLE] = 0, [REST] = 1, [SPOOL] = 1, [SKIDS] = 2, [AIR] = 3, [DONE] = 4 }
@@ -224,7 +227,7 @@ local function update()
       -- hover thrust (ground effect included); that hover thrust seeds the climb-rate loop
       local r = P_RAMP:get()
       local t_rise = (6 * math.max(up, 0) / (G * r)) ^ (1 / 3)
-      tw_lift = math.max(tw - r * t_rise, tw_fast)
+      tw_lift = math.max(tw - r * t_rise, tw_fast, math.min(TW_LIFT_MIN, tw))
       tw_base = tw_lift
       set_state(AIR, t)
       gcs:send_text(6, string.format("HTO: liftoff at T/W %.2f (hover %.2f), slid %.1f cm", tw, tw_lift, slide * 100))

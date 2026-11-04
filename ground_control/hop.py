@@ -65,7 +65,9 @@ ZERO_ACK_S = 2.0             # the Pi must answer the zero this soon
 SETTLE_M = 0.03              # after the zero: FC position within this of the tags' ...
 SETTLE_V = 0.03              # ... and FC speed under this, m/s ...
 SETTLE_HOLD_S = 1.0          # ... staying there this long (it can pass through on its way) ...
-SETTLE_S = 6.0               # ... within this long, before the start point is taken and it arms
+SETTLE_SPREAD_M = 0.004      # ... with the FC x and y each inside this band over the last SETTLE_HOLD_S
+                             # (the EKF still walks for a few s after the source switch and the zero) ...
+SETTLE_S = 10.0              # ... within this long, before the start point is taken and it arms
 TAKEOFF_S = 10.0             # no handover from lua/hop_takeoff.lua this long after arming = motors off (it takes about 3 s)
 RESEND_S = 0.5               # setup commands are sent again this often until the FC confirms
 ORIGIN_ASK_S = 1.5           # the FC must answer the EKF origin request this soon (or it has none)
@@ -316,7 +318,8 @@ class Hop:
             # constant amount off the tag height (an EKF height datum, e.g. after an arming without a
             # home): it must only hold steady; the hover height is taken relative to it
             agree_t, off0 = [None], [None]
-            held_pos = []          # FC positions (x, y, z, t) while it agrees and is still: the start is their mean
+            held_pos = []          # FC positions (x, y, z, t) while it agrees and is still
+            held_tag = []          # tag positions (NED x, y, rx t) over the same window: the start x, y
 
             def settled():
                 loc, p = s.get("local"), self.pose()
@@ -330,11 +333,25 @@ class Hop:
                 if not ok:
                     agree_t[0] = None
                     held_pos.clear()
+                    held_tag.clear()
                     return False
                 if not held_pos or held_pos[-1][3] != loc[3]:
                     held_pos.append(tuple(loc[:4]))
+                if not held_tag or held_tag[-1][2] != p[0]:
+                    held_tag.append((p[4], -p[5], p[0]))
+                while held_pos[-1][3] - held_pos[0][3] > SETTLE_HOLD_S:   # keep the last SETTLE_HOLD_S only
+                    held_pos.pop(0)
+                while held_tag[-1][2] - held_tag[0][2] > SETTLE_HOLD_S:
+                    held_tag.pop(0)
                 agree_t[0] = agree_t[0] or time.time()
-                return time.time() - agree_t[0] >= SETTLE_HOLD_S
+                return (time.time() - agree_t[0] >= SETTLE_HOLD_S
+                        and held_pos[-1][3] - held_pos[0][3] >= 0.75 * SETTLE_HOLD_S
+                        and spread() < SETTLE_SPREAD_M)
+
+            def spread():
+                if not held_pos:
+                    return float("nan")
+                return max(max(q[i] for q in held_pos) - min(q[i] for q in held_pos) for i in (0, 1))
             if not wait(settled, SETTLE_S):
                 return
             if not settled():
@@ -346,11 +363,17 @@ class Hop:
                 return self.kill(f"the FC did not settle on the camera in {SETTLE_S:g} s: FC "
                                  f"{loc[0] * 100:.0f}, {loc[1] * 100:.0f} cm moving "
                                  f"{math.sqrt(loc[4] ** 2 + loc[5] ** 2 + loc[6] ** 2) * 100:.0f} cm/s, height "
-                                 f"offset not steady; tags {p[4] * 100:.0f}, {-p[5] * 100:.0f} cm")
-            # the mean over the settled second, not one sample: one FC position carries 1-2 mm of
-            # camera noise, and the hover then holds that offset the whole time (sim, 2026-11-03)
+                                 f"offset not steady or still walking ({spread() * 1000:.0f} mm in "
+                                 f"{SETTLE_HOLD_S:g} s); tags {p[4] * 100:.0f}, {-p[5] * 100:.0f} cm")
+            # x, y: the mean TAG position over the last still second; z: the mean FC height. One FC
+            # sample carries 1-2 mm of camera noise, and the EKF can sit still a few mm off the tags
+            # while it converges after the zero (6 mm in the e2e sim); the hover holds the start the
+            # whole time while the EKF walks onto the tags (sim, 2026-11-03)
             start = ([sum(q[i] for q in held_pos) / len(held_pos) for i in range(3)] if held_pos
                      else list(s["local"][:3]))
+            if len(held_tag) >= 2:
+                start[0] = sum(q[0] for q in held_tag) / len(held_tag)
+                start[1] = sum(q[1] for q in held_tag) / len(held_tag)
             # Home here, before arming: ArduCopter resets its height datum when it arms without a
             # home (indoors there is no GPS to set one), which moves the FC height under the hover
             t_home = time.time()

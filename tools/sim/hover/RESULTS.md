@@ -4,44 +4,60 @@ Goal: a 30 s box-camera hover at 1-3 cm (`hop.py` "Run test") with no visible wo
 sub-cm position. Software and parameter changes only; no hardware changes.
 
 All numbers are on the TRUE position of the simulated drone (not the FC estimate), 30 s hold at
-2 cm, from 2 s after the target height. Model and calibration: `IDENT.md`.
+2 cm. Model and calibration: `IDENT.md`. Everything below uses the shipped files as they are:
+`tools/tune_v6.parm` (loaded with run.py `--parm`), the new `lua/hop_takeoff.lua`, and the Pi
+settings of `companion/systemd/packet-cam.service` (sim: `camera.tilt_attitude_lag_s=0.06`, which is
+the Pi's 0.053 s plus the 7 ms age of its attitude, and `camera.pi_cam_pos_err=[0,0,0]`).
 
 ## Result
 
-| Metric | tune_v5 (flown now) | tune_v6 |
+| Metric | tune_v5 (flown now) | tune_v6 (shipped) |
 |---|---|---|
-| Horizontal error rms | 9.8-12.5 mm | 4.1-4.9 mm |
-| Horizontal error p95 | 17-24 mm | 7.0-7.9 mm |
-| Horizontal error max (30 s) | 21-30 mm | 8.9-10.1 mm |
-| Height error max | 4-8 mm | 5-8 mm |
-| Tilt above 1 Hz, rms (wobble) | 0.62-0.69 deg | 0.34-0.37 deg |
-| Tilt above 1 Hz, p99 | 1.2-1.6 deg | 0.8-0.9 deg |
-| Error in the first 3 s after the hand-over, max | 29-44 mm | 6-7 mm |
+| Horizontal error rms | 9.8-12.5 mm | 4.0-5.7 mm |
+| Horizontal error p95 | 17-24 mm | 6.8-10.1 mm |
+| Horizontal error max (30 s) | 21-30 mm | 7.9-12.5 mm |
+| Tilt above 1 Hz, rms (wobble) | 0.62-0.69 deg | 0.30-0.33 deg |
+| Hand-over slide | 1.4-2.8 cm (real logs 33-45) | 0-0.5 cm |
 
-Three seeds at nominal values. The sim tilt is 1.4-2x the real log-43 tilt with the same
-parameters (IDENT.md), so the real wobble is probably lower than these numbers.
+run.py, 12 seeds. The sim tilt is 1.4-2x the real log-43 tilt with the same parameters (IDENT.md),
+so the real wobble is probably lower.
 
-Not reached: a hard 10 mm limit in every second of every run. The max over 30 s is 8.9-10.1 mm at
-nominal and 11-13 mm with 1.5x the disturbance or the camera noise. In the sim the remaining sway
-(0.3-0.7 Hz) comes mostly from the camera noise in the loop: with zero camera noise the hold is
-3.4 mm rms and 7.7-8.9 mm max; with zero disturbance it is 3.6 mm rms. The limit under it is the
-52 ms motor and propeller delay: a velocity gain of 6 is unstable in the sim.
+**Real ground-control code, end to end** (`e2e/run_e2e.py`: the real `server.py` + `hop.py` drive
+SITL, a fake Pi serves the camera; 6 seeds): 6 of 6 runs take off, hold and land. Hold 4.0-5.4 mm
+rms, 6.7-8.9 mm p95, 7.6-12.2 mm max; start point 0.1-1.4 mm from the true position. tune_v5 on the
+same harness: 10.2-12.7 mm rms, 20-29 mm max.
 
-## Robustness (11 variants, max horizontal error in mm)
+Not reached: a hard 10 mm limit in every second of every run. The 30 s max is about 10 mm (8-12.5).
+The remaining sway (0.3-0.7 Hz) comes mostly from the camera noise in the loop; the limit under it
+is the 52 ms motor and propeller delay.
 
-| Variant | tune_v5 | step A | tune_v6 |
-|---|---|---|---|
-| Nominal, seeds 1 / 2 / 3 | 30 / 22 / 21 | 26 / 41 / 40 | 10 / 10 / 9 |
-| Roll/pitch authority K -20 % | tipped over | 28 | 10 |
-| K +25 % | diverged (270) | 22 | 9 |
-| Motor response all pure delay (52 ms) | tipped over | 25 | 10 |
-| Slower motors (40 ms + 25 ms lag) | tipped over | 23 | 10 |
-| Camera latency 30 ms (Pi assumes 60) | 26 | 22 | 8 |
-| Camera latency 90 ms | diverged (222) | 35 | 12 |
-| Disturbance x1.5 | 41 | 38 | 12 |
-| Camera noise x1.5 | 34 | 28 | 13 |
+## Robustness (shipped tune_v6, max horizontal error in mm)
 
-tune_v5 sits close to instability: that is the growing 4.4 Hz ring of log 45.
+| Variant | max | Note |
+|---|---|---|
+| Roll/pitch authority K -20 % | 11.5 | |
+| K +25 % | 10.8 | |
+| Motors all pure delay (52 ms) | 9.6 | |
+| Slower motors (40 ms + 25 ms lag) | 11.4 | |
+| Camera latency 90 ms (Pi assumes 60) | 12.9 | |
+| K -20 % + slower motors | 10.7 | VEL_P 5 here: 42 mm, 4.8 deg wobble |
+| K -20 % + slower motors + latency 90 ms | 14.2 | VEL_P 5 here: tipped over |
+| K -20 % + latency 90 + noise and disturbance x1.5 | 18.6 | VEL_P 5 here: tipped over |
+| K -10 % + slower motors + latency 90 + noise/dist x1.5 | 19.8 | VEL_P 5 here: tipped over |
+| All four slow-side errors at once, K -20 % | 23-44 | rocks 1.3-3.1 deg, does not tip (VEL_P 5 tipped) |
+| K +25 % + all-pure-delay motors | 12-14 | 3.2 Hz roll limit cycle, 1.5 deg: see below |
+| Hover at 1 cm / 3 cm | 9.7 / 9.5 | |
+| East disturbance x2 (real logs: East 2x North) | 13.2 | |
+| Gyro noise on (SIM_VIB_MOT_MASK 15, SIM_GYR_RND 3) | 11.3 | no 8-12 Hz component |
+| 1 s camera blackout mid-hold | 11.8 | EKF height steps +4.5 cm, drone dips onto the box |
+| Gust 0.3 m/s^2 for 1 s | 24 peak | under 10 mm again after 2-5 s |
+| IMU position +-1 cm z, +-2 cm x; Pi mount +-1 cm; thrust axis +-0.5 deg; hover thrust +-5 % | 9.8-10.4 | (VEL_P 5 runs) |
+| Camera frame drops 15 % / 30 % | 11.9 / 11.1 | (VEL_P 5 runs) |
+
+The fast-plant corner (K +25 % with all the delay as pure delay) gives a 3.2 Hz roll rocking with the
+rate D 0.006. Rate D 0.004 removes it but makes the slow-plant corners much worse, so D stays 0.006.
+Both corners are outside the identified ranges (K 70-83, delay 45-55 ms). On the first flight, look
+for a steady 3 Hz roll rocking and a fast buzz.
 
 ## What changed and why (each one was a separate sim test)
 
@@ -49,19 +65,20 @@ tune_v5 sits close to instability: that is the growing 4.4 Hz ring of log 45.
 |---|---|---|
 | Pi uses the attitude at the exposure, not at t_cap (`--imu-lag 0.053`) | `companion/systemd/packet-cam.service` | 4 Hz wobble about -25 % |
 | Pi reports the CG, not a point 8.1 cm below it (`--mount-fwd 0.127 --mount-down 0.101`) | same | removes a 0.08 m x tilt position error |
-| INS_POS1/2 = (-0.007, -0.001, -0.058) | `tools/tune_v6_stepA.parm` | removes the lever-arm drive of the 4.4 Hz ring |
+| INS_POS1/2 = (-0.007, -0.001, -0.058) | `tools/tune_v6.parm` | removes the lever-arm drive of the 4.4 Hz ring |
 | PSC_NE_VEL_D 0 | same | REQUIRED with INS_POS: with VEL_D 1.0 the sim tipped over in 2 s |
-| VISO_DELAY_MS 60 -> 110 | same | fixes dated at the real exposure time (117 ms before arrival) |
-| Takeoff script hover trim HTO_TRIM_P 0.85 | `lua/hop_takeoff.lua` (new HTO_TRIM_R/P, default 0) + parm | hand-over slide 21 mm -> 10 mm |
-| Start point = mean FC position over the settled second | `ground_control/hop.py` | one sample carried 1-2 mm of camera noise into the whole hover |
-| Rate P 0.22, I 0.3, D 0.006, FLTT 20 (roll, pitch) | `tools/tune_v6.parm` | angle-loop resonance +4.2 dB -> +0.1 dB; wobble -40 % |
+| VISO_DELAY_MS 60 -> 110 | same | fixes dated at the exposure time (about 117 ms before arrival). The hold does not change between 100 and 135 in the sim |
+| Takeoff hover trim HTO_TRIM_P 0.85, HTO_TRIM_R 0 | `lua/hop_takeoff.lua` (new params) + parm | hand-over slide 2-3 cm -> under 0.5 cm. TRIM_R -0.23 gave no difference |
+| Rate P 0.22, I 0.3, D 0.006, FLTT 20 (roll, pitch) | `tools/tune_v6.parm` | angle-loop resonance +4.2 dB -> +0.1 dB; wobble -50 % |
 | ATC_INPUT_TC 0.02, PSC_NE_VEL_FLTE 10 | same | about 40 ms less lag in the velocity loop |
-| PSC_NE_POS_P 2.5, VEL_P 5, VEL_I 4 | same | hold rms 11 -> 5 mm |
+| PSC_NE_POS_P 2.5, VEL_P 4, VEL_I 4 | same | hold rms 11 -> 5 mm. VEL_P 5 is 1 mm tighter at nominal but tipped over on combined slow-plant errors |
 | EK3_ACC_P_NSE 0.15, EK3_TAU_OUTPUT 40 | same | less camera noise into the controller: max -10 % |
+| Start point x, y = mean tag position over the last still second; the FC must stay inside 4 mm for that second; settle limit 6 -> 10 s | `ground_control/hop.py` | with the real hop.py the start was 3-6 mm off (the EKF still walks after the zero) and the whole hold sat there; now 0.1-1.4 mm |
+| Liftoff hover estimate floored at 0.97 T/W; climb timeout 3 -> 4 s | `lua/hop_takeoff.lua` | 2-6 of 9 takeoffs aborted "lifted but no climb" after a 0.95 estimate (real logs: 0.96-1.02); now 0 of 12 |
 
-Tried, no gain: higher camera rate (20, 30 Hz) in the sim; no camera velocity (EK3_SRC2_VELXY 0);
-VISO_POS_M_NSE 0.03; EK3_TAU_OUTPUT 10 (worse); VEL_I 6; acceleration feed-forward through the
-Lua position offset (ArduPilot shapes the offset as a trajectory, so it moves the target).
+Tried, no gain: higher camera rate (20, 30 Hz); no camera velocity (EK3_SRC2_VELXY 0);
+VISO_POS_M_NSE 0.03; EK3_TAU_OUTPUT 10 (worse); VEL_I 6; VEL_P 6 (unstable); acceleration
+feed-forward through the Lua position offset (ArduPilot shapes the offset as a trajectory).
 
 ## The camera latency (exposure -> FC)
 
@@ -69,31 +86,43 @@ About 117 ms: exposure -> t_cap 60 ms (+-15) and t_cap -> FC 57 ms. Fitted from 
 error in logs 41-45 and checked against the ring in the sim (IDENT.md). The FC dated the fixes
 45 ms late. A light-toggle test on the Pi would measure the 60 ms directly; it is not done.
 
+## Known limits (not fixed here)
+
+- A camera outage of 0.5 s or more makes EKF3 step its height by about 4.5 cm (it falls back to the
+  baro) and the drone dips onto the box. Real gaps of 300-400 ms are in the logs.
+- The sim has no frame or motor vibration: the buzz risk of the 3x rate D can only be checked in
+  flight. With the JSON backend, SIM_ACC/GYR_RND act only with SIM_VIB_MOT_MASK set.
+- run.py's landing is not scored and differs from hop.py's stop rule; the e2e harness runs the real one.
+
 ## Test plan (not loaded on the drone)
 
 CAUTION: INS_POS and PSC_NE_VEL_D 0 must be loaded together. INS_POS with VEL_D 0.75-1.0 tipped the
-sim drone over.
+sim drone over. `tune_v6.parm` has VEL_D first.
 
-1. Deploy: `lua/hop_takeoff.lua` to the FC SD card (APM/scripts), reboot the FC. The Pi service
-   file, then `systemctl daemon-reload` and restart packet-cam. Restart the ground control server
-   (new `hop.py`).
-2. Bench, disarmed, on the box: the camera height goes up by about 8 cm (the CG, not 8.1 cm below
-   it). Tilt the drone by hand about 10 deg: the reported x/y moves by less than 3 mm (before:
-   about 14 mm). Check that HTO_TRIM_P and HTO_TRIM_R exist.
-3. Load `tools/tune_v6_stepA.parm`. Fly the 2 cm, 30 s test. Expect: no 4 Hz ring, no 2-2.5 Hz growth,
-   "slid" in the HTO message under 1 cm. The hold may not be tighter than tune_v5.
-4. Load `tools/tune_v6.parm`. Fly the same test. Expect: hold about 5 mm rms, under 10 mm most of
-   the time. Listen for a fast (8-10 Hz) buzz: the rate D gain is 3x tune_v5. Check the motor
-   temperatures after the flight.
-5. Compare the logs with the sim: `python tools/sim/hover/compare.py LOG.BIN` and the runs
-   `r2_v6_nom1..3` (same hold window).
+1. Deploy: `lua/hop_takeoff.lua` to the FC SD card (APM/scripts), then REBOOT the FC (the HTO_ table
+   grows from 9 to 11; a scripting restart alone stops the script). Check that HTO_TRIM_P and
+   HTO_TRIM_R exist. Copy the Pi service file, `systemctl daemon-reload`, restart packet-cam. Restart
+   the ground control server (new `hop.py`).
+2. Load `tools/tune_v6.parm`. REBOOT the FC again (EKF3 sizes its buffer from VISO_DELAY_MS at boot).
+   Read back every value in the file.
+3. Bench, disarmed, on the box: the page's "Above lid" (drone_m z) goes up by about 8 cm (79-81 mm)
+   against before; "Cam height" (camera_m z) does not change.
+4. Fly the 2 cm, 30 s test. Expect: hand-over slide under 1 cm in the HTO message, hold about 5 mm
+   rms, about 10 mm max, no visible wobble. Watch for a fast buzz or a steady 1-3 Hz rocking; check
+   the motor temperatures after the flight.
+5. Compare the log with the sim: `python tools/sim/hover/compare.py LOG.BIN` and the `fin_nom*` runs.
 
 ## Reproduce
 
 ```bash
-python tools/sim/hover/batch.py tools/sim/hover/configs/r2.json --jobs 11
+python tools/sim/hover/batch.py tools/sim/hover/configs/fin.json --jobs 10
 ```
 
-Configs: `configs/c*.json` calibration, `b*.json` / `d*.json` / `f1.json` tuning steps,
-`r1.json` (tune_v5, v6a, v6b x 11 variants), `r2.json` (tune_v6), `r3.json` (step A).
-Tools: `errsplit.py` (estimate vs control error), `bands.py` (error by frequency).
+```bash
+python tools/sim/hover/e2e/run_e2e.py --name e2e1 --seed 1 --out /tmp/e2e --parm tools/tune_v6.parm --set camera.tilt_attitude_lag_s=0.06 --set 'camera.pi_cam_pos_err=[0,0,0]'
+```
+
+Configs: `configs/c*.json` calibration, `b*.json` / `d*.json` / `f1.json` tuning steps, `r1-r3.json`
+first robustness set (r3 used the removed step-A file), `s1-s7.json` stress tests (VEL_P 5),
+`fin.json` / `fin2.json` the shipped tune. Tools: `errsplit.py`, `bands.py`.
+New model options (off unless set): `gust`, `thrust_ramp`, `camera.blackout` (physics.py).

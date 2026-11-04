@@ -41,6 +41,7 @@ os.environ.setdefault("MAVLINK20", "1")
 from pymavlink import mavutil  # noqa: E402
 
 G = 9.80665
+LIFTOFF_H = 0.008                  # m: true CG height above rest that times the stress-test events
 SERVO16 = struct.Struct("<HHI16H")
 SERVO32 = struct.Struct("<HHI32H")
 
@@ -105,6 +106,16 @@ class Drone:
         self.zp_rest = -(self.skid[:, 2].max() - M["motor_z"])     # prop height (z, NED) resting on the box
         bf = M["battery_v"] / M["battery_v_max"]
         self.bf = bf
+        # stress-test events (default off: absent from model.json, no random numbers drawn). Times are
+        # in s after the liftoff (true CG first LIFTOFF_H above its resting height), so that t ~ 15 is
+        # the middle of a 30 s hold at 2 cm (hold window ~ liftoff + 3 s .. + 33 s).
+        #   gust:        {"t": 15, "dur": 1.0, "accel": [0.3, 0, 0]}  world NED acceleration step, m/s^2
+        #   thrust_ramp: {"t": 0, "dur": 30, "scale_end": 0.95}  thrust x 1 -> scale_end (held after)
+        #   camera.blackout: {"t": 15, "dur": 1.0}  no camera frame exposed in the window
+        self.gust = M.get("gust")
+        self.thrust_ramp = M.get("thrust_ramp")
+        self.events_on = bool(self.gust or self.thrust_ramp or M["camera"].get("blackout"))
+        self.t_lift = None
 
     def thrust_of(self, act):
         M = self.M
@@ -135,6 +146,10 @@ class Drone:
             self.cmd_hist.popleft()
         act = self.cmd_hist[0][1]
         T_cmd = self.thrust_of(act)
+        if self.thrust_ramp and self.t_lift is not None:
+            r_ = self.thrust_ramp
+            f = min(max((t - self.t_lift - r_["t"]) / r_["dur"], 0.0), 1.0)
+            T_cmd = T_cmd * (1.0 + f * (r_["scale_end"] - 1.0))
         a = 1.0 - math.exp(-dt / M["motor_tau"])
         self.T += a * (T_cmd - self.T)
 
@@ -157,6 +172,8 @@ class Drone:
         accel_d = sum(o.step(dt) for o in self.daccel) * gain * airborne_frac
         F_w = R @ F_b + self.m * accel_d
         F_w = F_w - np.array(M["drag_lin"]) * self.v
+        if self.gust and self.t_lift is not None and 0.0 <= t - self.t_lift - self.gust["t"] < self.gust["dur"]:
+            F_w = F_w + self.m * np.array(self.gust["accel"], float)
 
         # skid contact with the box top (z = 0)
         cp = self.p + (R @ self.skid.T).T
@@ -180,6 +197,9 @@ class Drone:
         dq = np.r_[1.0, 0.5 * self.w * dt]
         self.q = quat_mul(self.q, dq)
         self.q /= np.linalg.norm(self.q)
+        if self.events_on and self.t_lift is None and -self.p[2] - self.skid[:, 2].max() > LIFTOFF_H:
+            self.t_lift = t
+            print(f"physics: liftoff at t={t:.4f} (stress-test events are timed from here)", flush=True)
 
     def imu(self):
         """Gyro and specific force at the IMU position (lever arm: wdot x r + w x (w x r))."""
@@ -226,7 +246,9 @@ class Camera:
             self.next_exp += 1.0 / C["rate_hz"] + self.rng.normal(0, C["rate_jitter_s"])
             t_cap = t_exp + C["exposure_to_readout_s"]
             t_send = t_cap + C["detect_s"] + abs(self.rng.normal(0, C["detect_jitter_s"])) + C["link_s"]
-            if self.rng.random() >= C["drop_frac"]:
+            bo = C.get("blackout")
+            dark = bool(bo) and d.t_lift is not None and bo["t"] <= t_exp - d.t_lift < bo["t"] + bo["dur"]
+            if self.rng.random() >= C["drop_frac"] and not dark:
                 self.pending.append([t_send, t_exp, t_cap, d.p.copy(), d.q.copy()])
         out = []
         while self.pending and self.pending[0][0] <= t:

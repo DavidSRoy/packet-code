@@ -34,7 +34,9 @@ progress = clamp01(-outerTop / (outerHeight - viewportHeight))
 
 The section gets `{ progress, isPinned, scrollToProgress }` through a render prop. `scrollToProgress(p)` scrolls the window so the section sits at `p` (used by controls such as the showcase tabs).
 
-Pinning is on only when both hold: `prefers-reduced-motion: no-preference` and `min-height: 600px`. Otherwise the section renders in normal flow with `progress = 1` (its finished state), so short landscape phones and reduced-motion readers get a plain page. The server render is unpinned; the switch happens on hydration, below the fold.
+Pinning is on only when both hold: `prefers-reduced-motion: no-preference` and `min-height: 600px`. Otherwise the section renders in normal flow with `progress = 1` (its finished state), so short landscape phones and reduced-motion readers get a plain page.
+
+The pinned layout is CSS (`.pin` / `.pin-stage` in `globals.css`, height from `--pin-length`), so page height is right in the server render and anchor links land correctly before hydration. `usePinProgress` reads the same media query (`PIN_QUERY`) for progress; the two must stay identical.
 
 `svh` keeps the stage from jumping as mobile browser bars show and hide.
 
@@ -42,7 +44,7 @@ Pinning is on only when both hold: `prefers-reduced-motion: no-preference` and `
 
 ## Rules for a pinned section
 
-1. Its content must fit in one stage: `100svh` at 600px tall and up. Size art with `svh`-aware limits, not fixed pixel heights.
+1. Its content must fit in one stage: `100svh` at 600px tall and up, down to 320px wide. Size art with `svh`-aware limits, not fixed pixel heights (the showcase caps its drawing at `min(380px, 38svh)`, and at `min(220px, 26svh)` on phones).
 2. `length` is one screen height per beat of the story. Leave the last ~15% of progress as a hold on the finished state, so the reader sees it before the section scrolls away.
 3. Map progress to the animation in the section, not in `PinnedSection`.
 4. Interactive controls move the reader by scrolling (`scrollToProgress`), so scroll position and what's shown never disagree.

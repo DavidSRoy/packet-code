@@ -15,6 +15,7 @@ interface Props {
  * A section whose stage stays on screen while the reader scrolls through it, so its
  * animation plays out before the page moves on. Scrolling stays native. Under reduced
  * motion or on short screens it renders in normal flow at progress 1.
+ * The pinned layout is CSS (`.pin` in globals.css), so it is right before hydration.
  * See docs/superpowers/specs/2026-11-04-pinned-sections-design.md.
  */
 export function PinnedSection(props: Props) {
@@ -22,21 +23,8 @@ export function PinnedSection(props: Props) {
 	const pin = usePinProgress(ref);
 
 	return (
-		<section
-			ref={ref}
-			aria-labelledby={props.labelledBy}
-			className="relative"
-			style={pin.isPinned ? { height: `${(1 + props.length) * 100}svh` } : undefined}
-		>
-			<div
-				className={
-					pin.isPinned
-						? "pad sticky top-0 flex h-svh flex-col justify-center overflow-hidden py-[clamp(24px,6svh,72px)]"
-						: "pad py-[clamp(72px,10vw,120px)]"
-				}
-			>
-				{props.children(pin)}
-			</div>
+		<section ref={ref} aria-labelledby={props.labelledBy} className="pin" style={{ "--pin-length": props.length }}>
+			<div className="pin-stage pad">{props.children(pin)}</div>
 		</section>
 	);
 }

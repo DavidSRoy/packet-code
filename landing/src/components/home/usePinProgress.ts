@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState, useSyncExternalStore, type RefObject } from "react";
 import { pinProgress } from "@/lib/pin";
 
-/** Pinning needs motion allowed and room for a full stage. Otherwise sections render in normal flow. */
+/**
+ * Pinning needs motion allowed and room for a full stage. Otherwise sections render in normal flow.
+ * Must match the `.pin` media query in globals.css, which owns the pinned layout.
+ */
 const PIN_QUERY = "(prefers-reduced-motion: no-preference) and (min-height: 600px)";
 
 function subscribePin(onChange: () => void): () => void {

@@ -3,6 +3,7 @@
 Date: 2026-11-04
 Revised: 2026-11-04 (b). Tanner's correction to the framing: Packet's premise is autonomous delivery. Vehicle 01 is the first product, not the subject. University Village is the first area, not the premise. §2.3, §3.0, H-01, W-01 and P-02 are rewritten to match; X-01 to X-03 are new.
 Revised: 2026-11-04 (c). X-03 decided (option B) and built: the Mission section now shows a delivery drawing (`DeliveryRoute.tsx`) and the aircraft stays in the showcase. M-02 and P-02 are closed on `/` by the same change. Spec §6.4 and §9 updated.
+Revised: 2026-11-04 (d). Hero pass built with the copy signed off by Tanner: X-01, X-02, H-01 to H-08, C-01 and C-04 are done. Spec §6.1 to §6.3 and §6.5 updated. Captures: `built-fold-*.png`, `built-hero-*.png`, `built-cta-*.png`, `built-what-1440x900.png`.
 Reviewed: `feat/landing-site` at `02d06ba`, built with `npm run build` and served with `next start`, screenshotted with Playwright (Chromium) at 390×844, 768×1024, 1280×720, 1440×900 and 1920×1080.
 Screenshots: `2026-11-04-landing-design-review/*.png`
 Spec: `../specs/2026-10-26-packet-landing-design.md`
@@ -93,7 +94,7 @@ Each item has an ID for the tracker in §4.
 ### 3.0 Message order
 
 **X-01 · High · The premise arrives fourth.**
-Principle: a page says what it says first. Observation: "autonomous delivery" appears once, in the Mission h2 at y≈2216 on 1440×900. Everything before it is a place (U Village), an action (check your street) and a process (three steps). Suggestion: the hero descriptor from H-01 carries the premise: "Autonomous delivery, from nearby shops to your door." The Mission h2 keeps its line; repeating the premise is wanted, since the page currently says it once.
+Principle: a page says what it says first. Observation: "autonomous delivery" appears once, in the Mission h2 at y≈2216 on 1440×900. Everything before it is a place (U Village), an action (check your street) and a process (three steps). Suggestion: the hero descriptor from H-01 carries the premise: "Autonomous delivery, from nearby shops to your door." The Mission h2 keeps its line; repeating the premise is wanted, since the page currently says it once. **Built 2026-11-04**: the line is in `Hero.tsx` (`built-fold-1440x900.png`).
 
 **X-02 · Medium · The first area is in the headings.**
 Observation: U Village is named in six places on `/`: the What h2, the What body, How step 1, the showcase's app line, the hero's result line and the `<meta description>`. Two of those are right: the What body ("Packet starts in University Village and the streets around it…") says it is the start, and the result line ("the first area around U Village") says it is the first area. The other four scope the whole page to one neighbourhood. Suggestion: keep those two, remove the rest. Proposed copy, for Tanner's sign-off and a spec update (§6.1 to §6.5), since the build rule is "copy exactly as the spec writes it":
@@ -111,6 +112,8 @@ Observation: U Village is named in six places on `/`: the What h2, the What body
 | Meta description (`layout.tsx`) | Delivery from U Village shops to homes nearby, by autonomous aircraft. | Autonomous delivery, from nearby shops to your door. Starting in Seattle around University Village. |
 | `/products` (not reviewed) | "Order from U Village shops" spec row; "Delivery area" row | flag for the same pass; the Delivery area row is a fact and can stay |
 
+**Built 2026-11-04**, every row above except `/products`, with the spec updated to match (§6.1 to §6.3 and §6.5).
+
 **X-03 · Medium · The aircraft is the largest figure and appears three times.**
 Observation: the Mission drawing took 7/12 of the width with two views; showcase slide 01 shows the side view; the peek before slide 01 shows it again. The red block, which the design rules define as the package or delivery icon, appeared only inside those drawings and the route. One aircraft on the landing page is enough. Options were (a) keep the Mission drawing and let the showcase be the second appearance, or (b) make the Mission figure about delivery and keep the aircraft for the showcase and `/products`.
 
@@ -119,28 +122,28 @@ Observation: the Mission drawing took 7/12 of the width with two views; showcase
 ### 3.1 Hero and first screen
 
 **H-01 · High · The first screen never says what Packet is.**
-Principle: the first screen answers "what is this" before "what do I do". Observation: at 1280, 1440 and 1920 the fold contains the name, the question, the field and the globe; the descriptor is below the fold (§2.2). Suggestion: one line under the wordmark and above the question, in the 22px size, carrying the premise: "Autonomous delivery, from nearby shops to your door." The question then stays as the form's own label. The What section's heading changes with it (W-01, X-02).
+Principle: the first screen answers "what is this" before "what do I do". Observation: at 1280, 1440 and 1920 the fold contains the name, the question, the field and the globe; the descriptor is below the fold (§2.2). Suggestion: one line under the wordmark and above the question, in the 22px size, carrying the premise: "Autonomous delivery, from nearby shops to your door." The question then stays as the form's own label. The What section's heading changes with it (W-01, X-02). **Built.**
 
 **H-02 · High · The hero reserves 86vh and uses about 40% of it.**
-Principle: whitespace must be intentional; an empty half-screen reads as "the page ended". Observation: content ends at y≈383 while the hero runs to y=838 at 1440×900; on a 768×1024 tablet it is 550px of nothing beside a sliver of globe (`fold-768x1024.png`). Suggestion: either size the hero to its content plus the globe (for example `min-height: clamp(520px, 72vh, 760px)`) so the next heading rises into the fold, or fill the space with H-01's descriptor and a scroll cue. The globe's radius is tied to the hero height, so check it after resizing.
+Principle: whitespace must be intentional; an empty half-screen reads as "the page ended". Observation: content ends at y≈383 while the hero runs to y=838 at 1440×900; on a 768×1024 tablet it is 550px of nothing beside a sliver of globe (`fold-768x1024.png`). Suggestion: either size the hero to its content plus the globe (for example `min-height: clamp(520px, 72vh, 760px)`) so the next heading rises into the fold, or fill the space with H-01's descriptor and a scroll cue. The globe's radius is tied to the hero height, so check it after resizing. **Built**: `min-h-[clamp(520px,72vh,760px)]`; the What heading enters the fold at 1440×900 (`built-fold-1440x900.png`).
 
 **H-03 · Medium · The question is the page's main ask and is set one pixel above body.**
-Principle: a ladder of sizes with consistent steps. Observation: h1 130px → question 18px → body 17px. The 7:1 drop means the eye goes name → button and skips the words that give the button its meaning. Suggestion: set the question and the result lines ("That's inside the first area…", "You're on the list.") at 24–26px, or make them the hero's h2. Keep them Atkinson bold.
+Principle: a ladder of sizes with consistent steps. Observation: h1 130px → question 18px → body 17px. The 7:1 drop means the eye goes name → button and skips the words that give the button its meaning. Suggestion: set the question and the result lines ("That's inside the first area…", "You're on the list.") at 24–26px, or make them the hero's h2. Keep them Atkinson bold. **Built** at 24px.
 
 **H-04 · Medium · On phones the globe comes before the name.**
-Principle: top-left anchors the read; the first 60% of a phone screen should carry name, descriptor and action. Observation: 300px of dots, then "Packet" at y=380, the button at y=508. Suggestion: 200–220px for the globe, or move it behind the top-right of the wordmark as a partial sphere bleeding off the right edge, so name, line and form sit in the top 60%.
+Principle: top-left anchors the read; the first 60% of a phone screen should carry name, descriptor and action. Observation: 300px of dots, then "Packet" at y=380, the button at y=508. Suggestion: 200–220px for the globe, or move it behind the top-right of the wordmark as a partial sphere bleeding off the right edge, so name, line and form sit in the top 60%. **Built**: the globe is `clamp(220px, 42vw, 320px)` tall under 900px (`built-fold-390x844.png`).
 
 **H-05 · Medium · Between 761px and about 1000px the globe is a fragment.**
-Observation: the 440px copy column plus the 40px gap and the 160px fade leave the sphere a thin crescent on the right (`fold-768x1024.png`). Suggestion: use the stacked (phone) layout up to about 900px, or let the globe sit lower and lighter under the copy in that range.
+Observation: the 440px copy column plus the 40px gap and the 160px fade leave the sphere a thin crescent on the right (`fold-768x1024.png`). Suggestion: use the stacked (phone) layout up to about 900px, or let the globe sit lower and lighter under the copy in that range. **Built**: the hero stacks under 900px and the globe centres (`isNarrow = w < 900`); `built-fold-768x1024.png`.
 
 **H-06 · Medium · After a check, the button sits above the field.**
-Principle: controls in a row share a bottom edge. Observation: in the email step the "Get updates" button is top-aligned with the "EMAIL" label; its bottom is about 27px above the field's underline (`hero-inside-1440x900.png`). The same happens in the closing form (`section-cta-h-1440x900.png`). Cause: `.sign { align-self: flex-start }` in `globals.css` overrides the row's `items-end`; it only looks right in the address step because that label is visually hidden. Suggestion: drop `align-self` from `.sign` and let the row align it, or set `align-self: flex-end` on the button inside form rows.
+Principle: controls in a row share a bottom edge. Observation: in the email step the "Get updates" button is top-aligned with the "EMAIL" label; its bottom is about 27px above the field's underline (`hero-inside-1440x900.png`). The same happens in the closing form (`section-cta-h-1440x900.png`). Cause: `.sign { align-self: flex-start }` in `globals.css` overrides the row's `items-end`; it only looks right in the address step because that label is visually hidden. Suggestion: drop `align-self` from `.sign` and let the row align it, or set `align-self: flex-end` on the button inside form rows. **Built**: the `align-self` line is gone (`built-hero-inside-1440x900.png`, `built-cta-1440x900.png`).
 
 **H-07 · Medium · Errors look like hints.**
-Principle: a state change has to look different. Observation: "Enter a street address or cross streets." and "We couldn't find that address…" are 17px regular ink, identical to "Get an email when Packet launches." (`hero-notfound-1440x900.png`). `aria-invalid` is set but nothing styles it. Suggestion: errors in Packet Red, and a 2px red underline on the invalid field (`input[aria-invalid="true"]`). Hints stay ink.
+Principle: a state change has to look different. Observation: "Enter a street address or cross streets." and "We couldn't find that address…" are 17px regular ink, identical to "Get an email when Packet launches." (`hero-notfound-1440x900.png`). `aria-invalid` is set but nothing styles it. Suggestion: errors in Packet Red, and a 2px red underline on the invalid field (`input[aria-invalid="true"]`). Hints stay ink. **Built** (`built-hero-error-1440x900.png`).
 
 **H-08 · Low · The focus ring boxes an underline field.**
-Observation: a 2px rectangular outline with a 3px offset around an input whose only edge is a bottom rule makes the focused field look like a different component. Suggestion: on focus, thicken the underline to 2.5–3px and keep the rectangular ring for buttons and links.
+Observation: a 2px rectangular outline with a 3px offset around an input whose only edge is a bottom rule makes the focused field look like a different component. Suggestion: on focus, thicken the underline to 2.5–3px and keep the rectangular ring for buttons and links. **Built** at 3px.
 
 **H-09 · Low · The "inside" result has no reward.**
 Observation: the result line has the same size and weight as the question; the globe's marks are the only signal and they are off to the right. The one mustard tag the rules allow per screen is unused on `/`. Option: a small mustard tag beside the result ("IN THE FIRST AREA"). Judgment call; H-03 may be enough.
@@ -154,7 +157,7 @@ Observation: the sphere's top (y≈90) sits 70px above the wordmark's cap line (
 ### 3.2 What
 
 **W-01 · Medium · The only section with no figure on the right.**
-Principle: a consistent column structure, so a break in it means something. Observation: hero, Mission, Showcase and the closing CTA are copy-left, figure-right; What is copy-left, nothing-right, and 484px tall for about 230px of content. Suggestion: with the premise in the hero (H-01, X-01), this section becomes the benefit and the start: h2 "From nearby shops to your front door.", the leading lines, and the paragraph that names University Village as where Packet starts. Then either cut the padding by half, or give the right side something concrete that shows delivery rather than the vehicle: one of the item sketches already built for Products (`ItemBowl`, `ItemCup`, `ItemWrap`), or the red block at a door. That also answers P-02.
+Principle: a consistent column structure, so a break in it means something. Observation: hero, Mission, Showcase and the closing CTA are copy-left, figure-right; What is copy-left, nothing-right, and 484px tall for about 230px of content. Suggestion: with the premise in the hero (H-01, X-01), this section becomes the benefit and the start: h2 "From nearby shops to your front door.", the leading lines, and the paragraph that names University Village as where Packet starts. Then either cut the padding by half, or give the right side something concrete that shows delivery rather than the vehicle: one of the item sketches already built for Products (`ItemBowl`, `ItemCup`, `ItemWrap`), or the red block at a door. That also answers P-02. **Partly built**: the h2 now reads "From nearby shops to your front door." (`built-what-1440x900.png`). The padding and the figure stay open.
 
 **W-02 · Low · The leading lines read as a divider.**
 Observation: placed between the h2 and the paragraph, full width, they separate the two. The rules say they are never a divider. Suggestion: put them above the h2 as the section's opener, or after the paragraph as its close, so they read as a signature rather than a rule.
@@ -165,7 +168,7 @@ Observation: Mission opens with a 20px lead then 17px body; What goes straight f
 ### 3.3 How it works
 
 **K-01 · Medium · Step titles barely outrank their text.**
-Observation: 19px bold over 17px regular; the numbered circle does all the work. Suggestion: titles at 22px, or body at 16px within the steps. Keep the circle.
+Observation: 19px bold over 17px regular; the numbered circle does all the work. Suggestion: titles at 22px, or body at 16px within the steps. Keep the circle. Step 1's copy is built (X-02); the title size stays open.
 
 **K-02 · Low · 200px of canvas for a route that uses two thirds of the width, then a 300px gap.**
 Suggestion: 160px canvas on desktop and tighter section padding (see P-01). The route already runs through the bullet centres, which is right; keep that.
@@ -198,7 +201,7 @@ Observation: the 56px circle sits on the dispatch grid's dotted lines on desktop
 ### 3.6 Closing call to action
 
 **C-01 · Medium · Same button misalignment as H-06.**
-Observation: "Get updates" is top-aligned with the "EMAIL" label; its bottom is 25px above the field's underline (`section-cta-h-1440x900.png`). Same fix.
+Observation: "Get updates" is top-aligned with the "EMAIL" label; its bottom is 25px above the field's underline (`section-cta-h-1440x900.png`). Same fix. **Built** with H-06.
 
 **C-02 · Low · The App Store line floats.**
 Observation: "Packet for iPhone is coming to the App Store [LAUNCH DATE]." sits about 80px under the form at 14px, tied to nothing. Suggestion: 16–24px under the form's message line, or move it into the footer next to the copyright.
@@ -207,7 +210,7 @@ Observation: "Packet for iPhone is coming to the App Store [LAUNCH DATE]." sits 
 Observation: 300px of scattered marks begin about 60px under the tabs and read as showcase debris. Suggestion: more top padding before the tunnel on phones, or put the tunnel after the heading on phones so the heading marks the boundary.
 
 **C-04 · Low · The two sign-up forms wrap differently on phones.**
-Observation: the hero's address row fits on one line (field 213px + 16px + "Check" 110px = 339px); the email rows need about 366px because "Get updates" is wider, so the button drops to its own line. Suggestion: decide once. Either both rows stack on phones (field full width, button under it) or the email button narrows. Stacked is the better phone pattern.
+Observation: the hero's address row fits on one line (field 213px + 16px + "Check" 110px = 339px); the email rows need about 366px because "Get updates" is wider, so the button drops to its own line. Suggestion: decide once. Either both rows stack on phones (field full width, button under it) or the email button narrows. Stacked is the better phone pattern. **Built**: both rows stack under 760px, the field full width and the button under it (`built-cta-390x844.png`).
 
 ### 3.7 Footer and nav
 
@@ -234,28 +237,28 @@ Observation: 130 (h1) · 72 (product name) · 44 (h2) · 20 (lead) · 19 (step t
 
 | ID | Sev | Area | Finding | Status |
 |---|---|---|---|---|
-| X-01 | High | Message | The premise (autonomous delivery) arrives fourth | open |
-| H-01 | High | Hero | First screen does not say what Packet is | open |
-| H-02 | High | Hero | Hero height leaves lower half empty | open |
+| X-01 | High | Message | The premise (autonomous delivery) arrives fourth | done |
+| H-01 | High | Hero | First screen does not say what Packet is | done |
+| H-02 | High | Hero | Hero height leaves lower half empty | done |
 | S-01 | High | Showcase | Product names outrank section headings | open |
-| X-02 | Med | Message | The first area is in the headings; copy table in §3.0 | open, awaiting sign-off |
+| X-02 | Med | Message | The first area is in the headings; copy table in §3.0 | done, spec updated |
 | X-03 | Med | Message | Aircraft is the largest figure and appears three times | done, option B built |
-| H-03 | Med | Hero | Question is 18px, one step above body | open |
-| H-04 | Med | Hero | Globe before the name on phones | open |
-| H-05 | Med | Hero | Globe is a fragment at 761–1000px | open |
-| H-06 | Med | Hero | Button above field in the email step (`align-self`) | open |
-| H-07 | Med | Hero | Errors styled like hints | open |
-| W-01 | Med | What | Only section with no figure; 484px for 230px of content | open |
-| K-01 | Med | How | Step titles 19px over 17px body | open |
+| H-03 | Med | Hero | Question is 18px, one step above body | done |
+| H-04 | Med | Hero | Globe before the name on phones | done |
+| H-05 | Med | Hero | Globe is a fragment at 761–1000px | done |
+| H-06 | Med | Hero | Button above field in the email step (`align-self`) | done |
+| H-07 | Med | Hero | Errors styled like hints | done |
+| W-01 | Med | What | Only section with no figure; 484px for 230px of content | open; h2 copy done |
+| K-01 | Med | How | Step titles 19px over 17px body | open; step 1 copy done |
 | M-01 | Med | Mission | Drawing top above heading top | open |
 | M-02 | Med | Mission | Drawing labels illegible on phones | done on `/` (X-03); vehicle drawing's fix moves to Products |
 | S-02 | Med | Showcase | Heading orphaned 170px above slide | open |
 | S-03 | Med | Showcase | Controls scattered; tabs look like a loading bar | open |
-| C-01 | Med | CTA | Button above field (same as H-06) | open |
+| C-01 | Med | CTA | Button above field (same as H-06) | done |
 | P-01 | Med | Page | Section padding doubles up | open |
 | P-02 | Med | Page | First concrete figure is the product, not the service | done (X-03) |
 | P-03 | Med | Page | Type ladder out of order | open |
-| H-08 | Low | Hero | Focus ring boxes the underline field | open |
+| H-08 | Low | Hero | Focus ring boxes the underline field | done |
 | H-09 | Low | Hero | "Inside" result has no reward | open |
 | H-10 | Low | Hero | Done state is empty | open |
 | H-11 | Low | Hero | Globe and copy do not share a top | open |
@@ -266,11 +269,11 @@ Observation: 130 (h1) · 72 (product name) · 44 (h2) · 20 (lead) · 19 (step t
 | S-04 | Low | Showcase | Next arrow overlaps the peek; peek is a glitch on phones | open |
 | C-02 | Low | CTA | App Store line floats | open |
 | C-03 | Low | CTA | Tunnel right after showcase controls on phones | open |
-| C-04 | Low | CTA | Forms wrap differently on phones | open |
+| C-04 | Low | CTA | Forms wrap differently on phones | done |
 | F-01 | Low | Footer | Emblem edge inside the margin | open |
 | N-01 | Low | Nav | "Get updates" duplicates the form on `/` | open |
 
-Suggested order of work: H-06/C-01 (one CSS line, visible everywhere), then X-01, X-02, H-01, H-02 and H-03 together as one hero and copy pass (this needs Tanner's sign-off on the copy table and a spec update), then S-01 to S-03 as one showcase pass, then P-01 and P-03 as a spacing and type pass, then the rest. X-03 is built.
+Suggested order of work: H-06/C-01 (one CSS line, visible everywhere), then X-01, X-02, H-01, H-02 and H-03 together as one hero and copy pass (this needs Tanner's sign-off on the copy table and a spec update), then S-01 to S-03 as one showcase pass, then P-01 and P-03 as a spacing and type pass, then the rest. The hero and copy pass and X-03 are built; the showcase pass is next.
 
 ---
 

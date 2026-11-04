@@ -97,7 +97,7 @@ The mockup fakes the subpages as hash views. The build uses real routes. The nav
 See `home-1440.png` and `home-390-sheet.png`.
 
 ### 6.1 Hero: sign-up over a turning globe
-- Left: h1 "Packet" (Libre Franklin 600, `clamp(64px, 9vw, 136px)`). Under it, the sign-up form in two steps that share one slot:
+- Left: h1 "Packet" (Libre Franklin 600, `clamp(64px, 9vw, 136px)`). Under it, the premise line, 22px Atkinson, at most 28ch wide: "Autonomous delivery, from nearby shops to your door." Under that, the sign-up form in two steps that share one slot:
   1. "Is Packet coming to your street?" One field, labeled "Street address or cross streets" for screen readers only (no visible label), with placeholder "NE 45th St and 25th Ave NE", and a station-sign button, "Check".
   2. After the check, the result line plus an email field and "Get updates". A "Check another address" text button returns to step 1.
 - The mockup still shows a ZIP field. The field changes as described here; the layout and button do not.
@@ -114,17 +114,21 @@ See `home-1440.png` and `home-390-sheet.png`.
   - On a check, the globe turns so the found point lands on the globe's front face, and four corner marks close in on it. The service-area boundary is drawn on the globe as a dotted outline, so inside and outside are visible.
   - The anchor-solving approach is in the mockup's `aim()` function.
   - Use real U Village streets (§6.9).
-- On phones the globe sits above the copy, 300px tall.
+- Under 900px the globe sits above the copy, centred: 220px tall on phones and up to 320px on tablets (`clamp(220px, 42vw, 320px)`).
+- The hero is `min-height: clamp(520px, 72vh, 760px)`, so the next heading rises into the first screen on desktop.
+- The question and result lines are 24px Atkinson bold. Errors are set in Packet Red and the invalid field's underline turns red; hints stay black. Focus thickens a field's underline to 3px instead of drawing a box around it.
+- The button sits on the field's bottom edge. On phones each form row stacks: the field full width, the button under it. The same holds for the closing form (§6.6).
+- *Revised 2026-11-04 (hero pass; copy signed off by Tanner).*
 
 ### 6.2 What
-- h2 "Delivery from U Village shops to homes nearby."
+- h2 "From nearby shops to your front door." (*was "Delivery from U Village shops to homes nearby."; revised 2026-11-04: the first area is stated once, in the body copy, as where Packet starts*)
 - The leading lines.
 - Body copy: "Order in the Packet app, follow it as it comes, and find it at your front door. Packet starts in University Village and the streets around it, including the U District and Bryant." This replaces the mockup's "[RADIUS]".
 
 ### 6.3 How it works
 - h2 "Three steps, all in the app."
 - A scroll-driven canvas: the red block inside its corner marks travels a dotted route, leaving a mustard trail. The three numbered bullets fill as it passes each step.
-- Steps: Order ("Pick from [VENDOR]'s menu at U Village and pay in the app."), Follow it, At your door.
+- Steps: Order ("Pick from [VENDOR]'s menu and pay in the app."), Follow it, At your door.
 
 ### 6.4 Mission
 - The section is about the delivery, not the vehicle. The aircraft is the first product and belongs to the showcase (§6.5) and Products (§7). *Revised 2026-11-04, Tanner's call.*
@@ -150,7 +154,7 @@ See `home-1440.png` and `home-390-sheet.png`.
   - that product's sketched drawing on the right.
 - Products:
   - 01 Vehicle 01: "The four-rotor aircraft that carries each order. Payload [TBD]."
-  - 02 Packet for iPhone: "Order from U Village shops and follow each step to your door."
+  - 02 Packet for iPhone: "Order from nearby shops and follow each step to your door."
   - 03 Dispatch: "Plans each flight and follows it from pickup to drop-off."
 - Bottom right: a round 56px arrow button, labeled "Next" over the next product's name (only the arrow shows on phones).
 - Past it, a faded (50%), mostly off-screen slice of the next product's drawing peeks from the corner.

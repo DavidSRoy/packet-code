@@ -7,7 +7,7 @@ export function WhatSection() {
 				id="what"
 				className="m-0 max-w-[20ch] text-balance font-display text-[clamp(30px,3.4vw,44px)] font-semibold leading-[1.12]"
 			>
-				Delivery from U Village shops to homes nearby.
+				From nearby shops to your front door.
 			</h2>
 			<LeadingLines />
 			<p className="m-0 mt-8 max-w-[60ch]">

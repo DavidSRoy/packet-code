@@ -39,10 +39,21 @@ a {
 }
 
 a:focus-visible,
-button:focus-visible,
-input:focus-visible {
+button:focus-visible {
 	outline: 2px solid var(--color-ink);
 	outline-offset: 3px;
+}
+
+/* Fields are underlines, so focus thickens the underline instead of boxing the field. */
+input:focus-visible {
+	outline: none;
+	border-bottom-width: 3px;
+}
+
+/* An invalid field and its message use the red ink; hints stay black. */
+input[aria-invalid="true"] {
+	border-bottom-color: var(--color-red);
+	border-bottom-width: 2px;
 }
 
 /* Side margin plus safe-area insets. */
@@ -78,7 +89,6 @@ nav a[aria-current="page"] {
 /* Station-sign button: band across the top, arrow module first, label flush left. */
 .sign {
 	display: inline-flex;
-	align-self: flex-start;
 	align-items: stretch;
 	height: var(--control-h);
 	background: var(--color-ink);

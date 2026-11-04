@@ -27,7 +27,8 @@ const FADE_PX = 160;
 
 /** Globe placement: right of the copy, small enough that its rim shows, bleeding off the right edge. */
 function heroView(w: number, h: number): Omit<SphereView, "rot"> {
-	const isNarrow = w < 700;
+	// Matches the stacked layout in Hero.tsx: under 900px the globe sits above the copy, centred.
+	const isNarrow = w < 900;
 	const R = isNarrow ? h * 0.46 : Math.min(h * 0.47, w * 0.36);
 	return {
 		cx: isNarrow ? w * 0.5 : w - R * 0.7,
@@ -120,7 +121,7 @@ export function HeroGlobe(props: Props) {
 			ref={canvasRef}
 			role="img"
 			aria-label="Dotted street grid around University Village on a slowly turning globe"
-			className="absolute inset-0 block h-full w-full max-[760px]:relative max-[760px]:inset-auto max-[760px]:order-first max-[760px]:h-[300px]"
+			className="absolute inset-0 block h-full w-full max-[900px]:relative max-[900px]:inset-auto max-[900px]:order-first max-[900px]:h-[clamp(220px,42vw,320px)]"
 		/>
 	);
 }

@@ -31,7 +31,7 @@ const NO_JS_DRAWING = ".drawing{--dash:0px!important}.drawing .late,.drawing .hi
 
 export const metadata: Metadata = {
 	title: "Packet",
-	description: "Delivery from U Village shops to homes nearby, by autonomous aircraft.",
+	description: "Autonomous delivery, from nearby shops to your door. Starting in Seattle around University Village.",
 };
 
 export default function RootLayout({

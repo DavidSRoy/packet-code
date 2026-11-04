@@ -5,7 +5,7 @@ import { TripCanvas } from "./TripCanvas";
 import { useScrollProgress } from "./useScrollProgress";
 
 const STEPS = [
-	{ title: "Order", text: "Pick from [VENDOR]'s menu at U Village and pay in the app.", at: 0 },
+	{ title: "Order", text: "Pick from [VENDOR]'s menu and pay in the app.", at: 0 },
 	{ title: "Follow it", text: "See each step as it happens, with the time it will arrive.", at: 0.5 },
 	{ title: "At your door", text: "It's left at your front door. Bring it in when you're ready.", at: 0.999 },
 ] as const;

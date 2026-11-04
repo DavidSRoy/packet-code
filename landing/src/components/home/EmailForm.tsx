@@ -18,7 +18,12 @@ export function EmailForm() {
 
 	return (
 		<>
-			<form id="updates-2" noValidate onSubmit={onFormSubmit} className="flex flex-wrap items-end gap-4">
+			<form
+				id="updates-2"
+				noValidate
+				onSubmit={onFormSubmit}
+				className="flex flex-wrap items-end gap-4 max-[760px]:flex-col max-[760px]:items-start"
+			>
 				<TextField
 					id="email-2"
 					label="Email"
@@ -33,7 +38,7 @@ export function EmailForm() {
 				/>
 				<SignButton label="Get updates" type="submit" isBusy={signup.status === "sending"} busyLabel="Sending…" />
 			</form>
-			<p id={MSG_ID} role="status" aria-live="polite" className="m-0 min-h-6 text-[14px]">
+			<p id={MSG_ID} role="status" aria-live="polite" className={`m-0 min-h-6 text-[14px]${signup.isError ? " text-red" : ""}`}>
 				{signup.message}
 			</p>
 		</>

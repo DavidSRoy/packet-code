@@ -10,16 +10,19 @@ export function Hero() {
 	return (
 		<header
 			id="top"
-			className="relative min-h-[clamp(620px,86vh,880px)] overflow-hidden max-[760px]:flex max-[760px]:min-h-0 max-[760px]:flex-col"
+			className="relative min-h-[clamp(520px,72vh,760px)] overflow-hidden max-[900px]:flex max-[900px]:min-h-0 max-[900px]:flex-col"
 		>
 			<HeroGlobe target={flow.target} />
 			<div
 				data-hero-copy
-				className="pad relative z-[1] box-content flex max-w-[440px] flex-col gap-6 pb-16 pt-[clamp(40px,9vh,112px)] max-[760px]:max-w-none max-[760px]:pb-14 max-[760px]:pt-4"
+				className="pad relative z-[1] box-content flex max-w-[440px] flex-col gap-6 pb-16 pt-[clamp(40px,9vh,112px)] max-[900px]:max-w-none max-[900px]:pb-14 max-[900px]:pt-4"
 			>
 				<h1 className="m-0 font-display text-[clamp(64px,9vw,136px)] font-semibold leading-none tracking-[-0.02em]">
 					Packet
 				</h1>
+				<p className="m-0 max-w-[28ch] text-[22px] leading-[1.35]">
+					Autonomous delivery, from nearby shops to your door.
+				</p>
 				<AddressForm flow={flow} />
 			</div>
 		</header>

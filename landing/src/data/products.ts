@@ -36,7 +36,7 @@ export const PRODUCTS: readonly Product[] = [
 		id: "app",
 		no: "02",
 		name: "Packet for iPhone",
-		line: "Order from U Village shops and follow each step to your door.",
+		line: "Order from nearby shops and follow each step to your door.",
 		linkLabel: "About the app",
 		description:
 			"Where you order and follow it. Choose from U Village shops, pay, and see each step from pickup to your door, with the time it will arrive.",

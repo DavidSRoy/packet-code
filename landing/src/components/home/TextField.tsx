@@ -18,7 +18,7 @@ const INPUT = "h-[var(--control-h)] w-full border-0 border-b-[1.5px] border-ink 
 export function TextField(props: Props) {
 	const { id, label, inputRef, isInvalid, describedBy, isLabelHidden, ...rest } = props;
 	return (
-		<label className="flex flex-1 basis-[200px] flex-col gap-2" htmlFor={id}>
+		<label className="flex flex-1 basis-[200px] flex-col gap-2 max-[760px]:flex-none max-[760px]:self-stretch" htmlFor={id}>
 			<span className={isLabelHidden ? "sr-only" : "lbl text-[length:var(--field-label)]"}>{label}</span>
 			<input
 				id={id}

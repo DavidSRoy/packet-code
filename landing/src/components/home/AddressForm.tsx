@@ -54,19 +54,19 @@ export function AddressForm(props: Props) {
 	}
 
 	const msg = (
-		<p id={MSG_ID} role="status" aria-live="polite" className="m-0 min-h-6">
+		<p id={MSG_ID} role="status" aria-live="polite" className={`m-0 min-h-6${hasError ? " text-red" : ""}`}>
 			{flow.error || flow.hint}
 		</p>
 	);
 
 	return (
 		<form id="updates" noValidate onSubmit={onFormSubmit} className="flex flex-col gap-4">
-			<p role="status" aria-live="polite" className="m-0 text-[18px] font-bold leading-[1.35]">
+			<p role="status" aria-live="polite" className="m-0 text-[24px] font-bold leading-[1.3]">
 				{flow.heading}
 			</p>
 			{flow.step === "address" && (
 				<>
-				<div className="flex flex-wrap items-end gap-4">
+				<div className="flex flex-wrap items-end gap-4 max-[760px]:flex-col max-[760px]:items-start">
 					<TextField
 						id="address"
 						label="Street address or cross streets"
@@ -88,7 +88,7 @@ export function AddressForm(props: Props) {
 			)}
 			{flow.step === "email" && (
 				<>
-					<div className="flex flex-wrap items-end gap-4">
+					<div className="flex flex-wrap items-end gap-4 max-[760px]:flex-col max-[760px]:items-start">
 						<TextField
 							id="email"
 							label="Email"

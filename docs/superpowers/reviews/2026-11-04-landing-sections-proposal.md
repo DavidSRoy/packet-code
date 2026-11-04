@@ -2,7 +2,8 @@
 
 Date: 2026-11-04
 Builds on: `2026-11-04-landing-design-review.md` (alignment, hierarchy, placement). This document is about content: what the page says and shows, section by section.
-Status: proposal. Nothing here is built. The copy drafts use `[BRACKETS]` wherever the team has to supply a fact, per spec §14.
+Status: proposal. Nothing here is built. The copy drafts use `[BRACKETS]` only where a fact cannot be worded generically yet, per spec §14.
+Revised 2026-11-04 after Tanner's review of the mockup (the Packet Landing Mockup canvas): no proof strip in the hero; an intro sequence; the items copy, with the first-area line as a smaller disclaimer; the map section as plain text about the university area; an up arrow on "Check your street"; the route given headroom so the package is not clipped; generic wording in place of placeholders wherever generic wording still works.
 Page with the current-state gallery: Packet Landing Sections artifact (private; shared from its page).
 
 ## 1. The problem
@@ -38,24 +39,24 @@ Landing-page guidance converges on the same order: a specific, outcome-driven he
 
 Eleven blocks instead of seven. Each adds one thing a visitor did not have. Order follows the visitor's questions: what is it, what do I get, is it for my street, how does it work, why is it better, what is the vehicle, is it safe, who are you, when, sign up.
 
-### A. Hero (keep) plus a proof strip
-Under the form, three facts in Barlow labels: **First area** University Village and the streets around it · **Deliveries begin** [LAUNCH DATE] · **Orders** in the Packet app. The hero stays as built.
+### A. Hero (keep) plus an intro sequence
+The hero stays as built, with no proof strip (Tanner, 2026-11-04: those facts do not earn their place). Add an intro: the globe appears first, then the wordmark, then the premise line and the form, about two seconds in all. Under reduced motion everything shows at once.
 
 ### B. What you can get (replaces "What")
-- h2 "Lunch, coffee, the thing you forgot."
-- Lead: "Whatever a shop near you sells, as long as Vehicle 01 can carry it (up to [PAYLOAD])."
-- Figure: the four item sketches already built for Products (bowl, wrap, cup, box) in a row, each with its `[SHOP]` tag and `[PRICE]`. The leading lines sit under the h2, their one use on the page.
-- Body: "Packet starts in University Village and the streets around it, including the U District and Bryant." (the first-area statement stays here)
+- h2 "Lunch, coffee, and anything in-between."
+- Lead: "Whatever a shop near you sells, Packet can bring it to you wherever you are."
+- Figure: the four item sketches already built for Products (bowl, wrap, cup, box) in a row, each with a one-word kind under its name (Lunch, Lunch, Coffee, In-between) until shops and prices are real. The leading lines sit under the h2, their one use on the page.
+- A smaller disclaimer line after the lead: "Packet starts in University Village and the streets around it, including the U District and Bryant."
 - Reference: Manna's item grid; Zipline's use-case panels.
 
 ### C. Where Packet flies first (new)
 - h2 "Where Packet flies first."
-- Figure: a plan map of the first area as a technical drawing. Dotted streets from `streets.json`, the service-area boundary from `service-area.ts` as a dashed line, the red block at the U Village hub, labels for University Village, the U District, Bryant, Mercer Court and the UW north campus, a north arrow, `SCALE [TBD]`.
-- Beside it, a list in Manna's shape: **Now** sign-ups open across the first area · **Next** [NEIGHBOURHOOD], [DATE] · **Then** [NEIGHBOURHOOD]. A text link "Check your street" returns to the hero form (one station-sign button per screen).
+- Figure: a plan map of the first area as a technical drawing. Dotted streets from `streets.json`, the service-area boundary from `service-area.ts` as a dashed line, the red block at the U Village hub, labels for University Village, the U District, Bryant, Mercer Court and the UW north campus, a north arrow.
+- Beside it, plain text, no placeholders: "Packet is running in the university area first. The first flights cover University Village, the U District, Bryant, Mercer Court and the north campus. The streets around them come next, and the map grows as each one is added." A text link "Check your street" with an up arrow returns to the hero form (one station-sign button per screen).
 - This is the section a neighbour recognises. The globe is atmosphere; this is a map.
 
 ### D. How it works (keep, add the spot)
-Four steps instead of three: **Order** · **Pick your spot** · **Follow it** · **At your door**. New step: "A front step, a yard or a balcony with open sky above it [TBD]. Packet remembers it." Wing's second step; it answers the landing question before the FAQ does. The route animation gets a fourth stop.
+Four steps instead of three: **Order** · **Pick your spot** · **Follow it** · **At your door**. Step 1: "Pick from a nearby shop's menu and pay in the app." New step 2: "A front step, a yard or a balcony with open sky above it. Packet remembers it." Wing's second step; it answers the landing question before the FAQ does. The route animation gets a fourth stop, with headroom so the package and its marks are not clipped.
 
 ### E. Why (Mission, as benefits)
 Keep the h2 and the delivery drawing. Replace the lead and body with three benefits, each one line:

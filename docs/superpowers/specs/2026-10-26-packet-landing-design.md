@@ -128,22 +128,23 @@ See `home-1440.png` and `home-390-sheet.png`.
 - Four item cards (two columns on phones), each a sketched drawing, the name and its kind: U Village Bowl / Lunch, Drumstick Wrap / Lunch, Cold Brew / Coffee, Anything that fits / In-between. The data lives in one typed array (`landing-items.ts`). Shops and prices stay on Products until they are real.
 - A smaller line, 14px, under the cards: "Packet starts in University Village and the streets around it, including the U District and Bryant." The first area is named once on the page before the map.
 
-### 6.3 Where Packet flies first (scroll-locked)
+### 6.3 Where Packet flies first (pinned)
 - Left: the **plan of the first area**, a flat projection of the baked streets (§6.12) in a 640 by 460 sheet: dotted streets (main darker than minor), the service-area boundary, the red block inside its corner marks at the U Village hub, a north arrow, and the places named in Barlow caps on white: University Village, U District, UW north campus, Bryant, Mercer Court inside the area; Ravenna and Laurelhurst outside it, fainter. Caption: "First area" and "Sheet 1". No pen filter on the plan, so it repaints cheaply while pinned.
 - Right: h2 "Where Packet flies first." Then: "Packet is running in the university area first. The first flights cover University Village, the U District, Bryant, Mercer Court and the north campus." Then: "The streets around them come next, and the map grows as each one is added." Then the text link "Check your street" with an up arrow, to `#updates` (it sends the reader back to the hero form).
-- The lock, 2.4 screens: the boundary draws itself (0.04 to 0.42); the hub's block fades in and its corner marks close in from three times their size (0.3 to 0.58); the five first-area places name themselves in that order (0.5 to 0.8); the second paragraph and the link rise last (0.84 to 0.93).
+- Pinned, `length` 1.4: the boundary draws itself (0.04 to 0.42); the hub's block fades in and its corner marks close in from three times their size (0.3 to 0.58); the five first-area places name themselves in that order (0.5 to 0.8); the second paragraph and the link rise last (0.84 to 0.93).
 - Under 900px the plan sits above the copy. On phones the labels shrink to 11px and the two places outside the area are hidden.
 
 ### 6.4 How it works
 - h2 "Four steps, all in the app."
 - A scroll-driven canvas: the red block inside its corner marks travels a dotted route past the steps, climbing a little at each stop and leaving a mustard trail. The numbered bullets fill as it passes each one. The route takes its stops from the bullets' positions; when they stack (two columns under 760px, one under 480px) it spaces them evenly instead.
+- Pinned, `length` 2: the trip plays over the first 85% of the pin, then holds on the arrival (see `2026-11-04-pinned-sections-design.md`).
 - Steps, each a 22px title and one line:
   1. Order: "Pick from a nearby shop's menu and pay in the app."
   2. Pick your spot: "A front step, a yard or a balcony with open sky above it. Packet remembers it."
   3. Follow it: "See each step as it happens, with the time it will arrive."
   4. At your door: "It's set down at your spot. Bring it in when you're ready."
 
-### 6.5 Delivery (scroll-locked)
+### 6.5 Delivery (pinned)
 - The section is about the delivery, not the vehicle. The aircraft is the first product and gets its own section after this one (§6.6) and Products (§7). *Tanner's call, 2026-11-04.*
 - Left: h2 "Autonomous delivery, built around the way you live." Three benefits, each a 22px title and one line:
   1. "Minutes, not an hour." "From the shop to your door, straight over the street."
@@ -158,7 +159,7 @@ See `home-1440.png` and `home-390-sheet.png`.
   - an altitude dimension line and an A-to-B dimension line, labelled "Altitude" and "A to B" with no values (the drawing is a demonstration, not to scale; *Tanner, 2026-11-04*);
   - labels "A · Shop" and "B · Your door" under the ground line; "Not to scale." under the drawing. No callouts and no legend: the benefits beside it do that work.
 - The lines draw in once (stroke-dashoffset) when the figure enters; the route and the package fade in after them.
-- The lock, 3 screens: the package rests at the shop, lifts off and crosses above the street (0.06 to 0.86 of the lock, along the route itself), and sets down on the pad. Benefit 1 arrives as it lifts off (0.12), 2 as it crosses the street (0.38), 3 and the pad as it comes down (0.64), and the Vehicle 01 line once it has landed (0.86).
+- Pinned, `length` 2: the package rests at the shop, lifts off and crosses above the street (0.06 to 0.86 of the pin, along the route itself), and sets down on the pad. Benefit 1 arrives as it lifts off (0.12), 2 as it crosses the street (0.38), 3 and the pad as it comes down (0.64), and the Vehicle 01 line once it has landed (0.86).
 - No aircraft appears in this drawing. Under 900px the drawing sits above the copy. The Vehicle 01 plan-and-side drawing from the first build (`VehiclePlanSide`) is kept for Products.
 
 ### 6.6 The first product
@@ -184,17 +185,18 @@ See `home-1440.png` and `home-390-sheet.png`.
   7. "Who is flying it?" "Packet's own team in Seattle, with Dispatch watching every flight."
 - The data lives in one typed array (`questions.ts`). **Tanner to confirm** each answer before the site is promoted.
 
-### 6.9 Closing piece: the call to action and the footer in one frame (scroll-locked)
+### 6.9 Closing piece: the call to action and the footer in one frame (pinned)
 - One full-screen stage with four crop-mark corners, like the emblem's, at its corners. Behind it the **crop-mark tunnel**, a canvas of dotted corner marks rushing toward a vanishing point (rings at `D0·q^(i+f)`, a slight twist per ring, fading near the center), masked so it is faint under the copy and full on the right. **No square or icon at the center.**
 - Left, centred: h2 "Hear when Packet reaches your street." An email field and "Get updates" (this screen's one station-sign button). Then: "Sign up now and you will be first in line when Packet reaches your street." Then: "Know a neighbor who would want this? Send them the link." Then, 14px: "Packet for iPhone is coming to the App Store."
 - This form has no address step. It posts with only the email, so `in_area` is null.
 - The footer sits inside the same frame, at the bottom: the emblem, "© [YEAR] Packet. Seattle, Washington.", the line "For shops  Run a shop near U Village? Get in touch." (linking to the Press contact section), and the links Products, Press, Privacy at the right. The other pages render the footer on its own, as before.
-- The lock, 1.8 screens: the tunnel grows toward the reader (scale 0.55 to 1) and the copy rises (0.15 to 0.5), then the footer (0.45 to 0.75).
+- Pinned, `length` 0.8: the tunnel grows toward the reader (scale 0.55 to 1) and the copy rises (0.15 to 0.5), then the footer (0.45 to 0.75).
 
-### 6.10 Scroll-locked sections: how they work
-- A locked section is `--screens` viewports tall; its stage sticks to the top (`position: sticky`, `100svh`) while the reader scrolls through, and the section's `--p` custom property runs 0 to 1 over that distance (`useLockProgress`, one scroll listener per section, `requestAnimationFrame`). Everything that moves is CSS from `--p`: a ramp `--t` runs 0 to 1 while `--p` crosses `[--a, --b]`, and `.rise` elements fade and lift with it. The one thing CSS cannot do, moving the package along the route, uses `getPointAtLength` from the same value.
+### 6.10 Pinned sections: how they work
+- One building block, `PinnedSection` with `usePinProgress`, agreed on 2026-11-04 (`2026-11-04-pinned-sections-design.md`). The section is `1 + length` viewports tall; its stage sticks to the top (`position: sticky`, `100svh`) while the reader scrolls through, and progress runs 0 to 1 over that distance. Four sections use it: How it works (§6.4), the first area (§6.3), the delivery (§6.5) and the closing piece (§6.9).
+- The section carries its progress as the `--p` custom property, and the CSS stages everything from it: a ramp `--t` runs 0 to 1 while `--p` crosses `[--a, --b]`, and `.rise` elements fade and lift with it. The one thing CSS cannot do, moving the package along the route, reads the same progress in `DeliveryStage`.
 - The CSS default is `--p: 1`, the end state, so the page is complete before JavaScript runs and without it.
-- Under reduced motion nothing pins and `--p` stays at 1. When the stage's content would not fit the viewport (small phones with large text), nothing pins either; `--p` then runs 0 to 1 as the section scrolls into view, so the same motion plays, unpinned.
+- Nothing pins under reduced motion or on screens under 600px tall (the CSS media query owns that, so the layout is right before hydration). A stage whose content would not fit the viewport, measured on mount and on resize, gets `.pin-flow` and renders in flow at the end state, so nothing is ever hidden behind the stage's edge. *Added 2026-11-05.*
 
 ### 6.11 Removed from the mockup for the build
 - The "Working notes" disclosure.
@@ -234,7 +236,7 @@ See `press-1440.png`. Laid out like a corporate manual: numbered sections (1.0 t
 ## 9. Rule changes to write back into Figma
 
 - 0.2 "Never show the drone" becomes: the aircraft appears only as a technical drawing (Products, Press and the landing page's first-product section). The landing page's delivery section shows the delivery, not the aircraft.
-- Scroll-locked sections (§6.10): three on the landing page, each with a reduced-motion path and a no-JavaScript end state.
+- Pinned sections (§6.10, `2026-11-04-pinned-sections-design.md`): four on the landing page, each with a reduced-motion path and a no-JavaScript end state.
 - Sketched-line technique for drawings (the two-pass pen filter).
 
 ## 10. Sign-ups: Worker and D1
@@ -353,7 +355,7 @@ The build ships with these as visible `[BRACKETS]`. All must be replaced before 
   - **Repeat sign-up**: the same email upserts and doesn't duplicate. It fills only fields that are still empty and keeps the values already stored.
   - **Closing form**: stores a row with null `in_area`.
   - **Bad input**: posting it directly to the API returns 400.
-  - **Scroll-locked sections**: the plan draws and names its places, the package travels the route and lands, the closing frame arrives; each unpins at its end. The About and "See the app and Dispatch" links land on the right places on `/products`.
+  - **Pinned sections**: How it works, the plan, the delivery and the closing frame hold the screen while scrolling drives them: the trip arrives, the plan draws and names its places, the package travels the route and lands, the closing frame arrives; each unpins at its end. The About and "See the app and Dispatch" links land on the right places on `/products`.
   - **Questions**: rows open and close with the pointer and the keyboard.
   - **Reduced motion**: nothing moves on its own and nothing pins; every section shows its end state.
 - Screenshots at 375, 430, 768, 1280, 1440 and 1920 for `/`, `/products` and `/press`:

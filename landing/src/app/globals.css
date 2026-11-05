@@ -420,41 +420,47 @@ nav a[aria-current="page"] {
 }
 
 /*
- * Scroll-locked sections. With .is-locked the section is --screens viewports tall and its stage
- * sticks to the top while the reader scrolls through it; --p runs 0 to 1 over that distance
- * (useLockProgress). The default is the end state, so the page is complete before JavaScript
- * runs and without it, and under reduced motion.
+ * Pinned sections (PinnedSection, usePinProgress): a tall section with a stage that stays on screen
+ * while scroll drives it. The media query must match PIN_QUERY in usePinProgress.ts. The section's
+ * --p runs 0 to 1 through the pin; its default is the end state, so the page is complete before
+ * JavaScript runs, without it, and wherever nothing pins. A stage whose content would not fit the
+ * viewport gets .pin-flow from the hook and renders in flow at the end state.
  */
-.lock {
+.pin {
 	--p: 1;
-	--screens: 1;
 }
 
-.lock.is-locked {
-	height: calc(var(--screens) * 100svh);
+.pin-stage {
+	position: relative;
+	padding-block: var(--spacing-section);
 }
 
-.lock-stage {
-	padding-top: clamp(40px, 6vh, 80px);
-	padding-bottom: clamp(40px, 6vh, 80px);
-}
+@media (prefers-reduced-motion: no-preference) and (min-height: 600px) {
+	.pin:not(.pin-flow) {
+		height: calc((1 + var(--pin-length)) * 100svh);
+	}
 
-.lock.is-locked .lock-stage {
-	position: sticky;
-	top: 0;
-	height: 100svh;
-	align-content: center;
+	.pin:not(.pin-flow) .pin-stage {
+		position: sticky;
+		top: 0;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		height: 100svh;
+		overflow: hidden;
+		padding-block: clamp(24px, 6svh, 72px);
+	}
 }
 
 /* A ramp: --t runs 0 to 1 while --p crosses [--a, --b]. What rises fades and lifts in with it. */
-.lock .ramp,
-.lock .rise {
+.pin .ramp,
+.pin .rise {
 	--a: 0;
 	--b: 1;
 	--t: clamp(0, calc((var(--p) - var(--a)) / (var(--b) - var(--a))), 1);
 }
 
-.lock .rise {
+.pin .rise {
 	opacity: var(--t);
 	transform: translateY(calc((1 - var(--t)) * 16px));
 }
@@ -483,7 +489,7 @@ nav a[aria-current="page"] {
 	stroke-width: 1.2;
 }
 
-.lock .plan-bound {
+.pin .plan-bound {
 	--a: 0.04;
 	--b: 0.42;
 	fill: none;
@@ -494,13 +500,13 @@ nav a[aria-current="page"] {
 	stroke-dashoffset: calc(1 - var(--t));
 }
 
-.lock .plan-block {
+.pin .plan-block {
 	--a: 0.3;
 	--b: 0.42;
 	opacity: var(--t);
 }
 
-.lock .plan-marks {
+.pin .plan-marks {
 	--a: 0.32;
 	--b: 0.58;
 	fill: none;
@@ -551,53 +557,53 @@ nav a[aria-current="page"] {
 	}
 }
 
-.lock [data-plan-step="1"] {
+.pin [data-plan-step="1"] {
 	--a: 0.5;
 	--b: 0.56;
 }
 
-.lock [data-plan-step="2"] {
+.pin [data-plan-step="2"] {
 	--a: 0.56;
 	--b: 0.62;
 }
 
-.lock [data-plan-step="3"] {
+.pin [data-plan-step="3"] {
 	--a: 0.62;
 	--b: 0.68;
 }
 
-.lock [data-plan-step="4"] {
+.pin [data-plan-step="4"] {
 	--a: 0.68;
 	--b: 0.74;
 }
 
-.lock [data-plan-step="5"] {
+.pin [data-plan-step="5"] {
 	--a: 0.74;
 	--b: 0.8;
 }
 
-.lock [data-plan-step="6"] {
+.pin [data-plan-step="6"] {
 	--a: 0.84;
 	--b: 0.93;
 }
 
 /* The delivery: each benefit arrives at the moment on the route that proves it. */
-.lock [data-benefit="1"] {
+.pin [data-benefit="1"] {
 	--a: 0.12;
 	--b: 0.22;
 }
 
-.lock [data-benefit="2"] {
+.pin [data-benefit="2"] {
 	--a: 0.38;
 	--b: 0.48;
 }
 
-.lock [data-benefit="3"] {
+.pin [data-benefit="3"] {
 	--a: 0.64;
 	--b: 0.74;
 }
 
-.lock [data-benefit="4"] {
+.pin [data-benefit="4"] {
 	--a: 0.86;
 	--b: 0.94;
 }
@@ -757,8 +763,18 @@ nav a[aria-current="page"] {
 /* The closing piece: the form and the footer in one frame, the tunnel rushing toward its vanishing point behind them. */
 .closing-stage {
 	--frame-x: calc(max(var(--spacing-margin), env(safe-area-inset-left, 0px)) * 0.45);
+	display: flex;
+	flex-direction: column;
 	min-height: 100svh;
 	overflow: hidden;
+}
+
+/* The frame fills the stage: the copy centred in it, the footer along its bottom. */
+.closing-frame {
+	position: relative;
+	flex: 1;
+	display: grid;
+	grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .closing-tunnel {
@@ -770,12 +786,12 @@ nav a[aria-current="page"] {
 	mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.14) 0%, rgba(0, 0, 0, 0.14) 40%, #000 70%);
 }
 
-.lock .closing-copy {
+.pin .closing-copy {
 	--a: 0.15;
 	--b: 0.5;
 }
 
-.lock .closing-foot {
+.pin .closing-foot {
 	--a: 0.45;
 	--b: 0.75;
 }

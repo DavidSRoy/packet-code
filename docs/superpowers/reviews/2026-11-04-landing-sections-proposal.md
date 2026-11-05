@@ -58,8 +58,8 @@ The hero stays as built, with no proof strip (Tanner, 2026-11-04: those facts do
 ### D. How it works (keep, add the spot)
 Four steps instead of three: **Order** · **Pick your spot** · **Follow it** · **At your door**. Step 1: "Pick from a nearby shop's menu and pay in the app." New step 2: "A front step, a yard or a balcony with open sky above it. Packet remembers it." Wing's second step; it answers the landing question before the FAQ does. The route animation gets a fourth stop, with headroom so the package and its marks are not clipped.
 
-### E. Why (Mission, as benefits)
-Keep the h2 and the delivery drawing. Replace the lead and body with three benefits, each one line:
+### E. Why (Mission, as benefits), scroll-locked
+Keep the h2 and the delivery drawing, and lock the section (§5): the package travels the route as the visitor scrolls, and the three benefits arrive one by one. The callouts and legend come off the drawing here; the benefits do their job. Replace the lead and body with three benefits, each one line:
 1. **Minutes, not an hour.** From the shop to your door in about [TBD] minutes.
 2. **Nothing on your street.** No car, no bike, no double-parking. One aircraft above it.
 3. **Set down, not handed off.** Left at your spot. Bring it in when you're ready.
@@ -113,7 +113,21 @@ Add [EMAIL].
 
 Suggested order of work: B and C first (they change what the page is), then G, then E and I, then F, H and the rest. Each section is a spec §6 addition before it is built, per the "copy exactly as the spec writes it" rule.
 
-## 5. What stays within the rules
+## 5. Scroll-locked sections
+
+Three blocks pin to the viewport while the visitor scrolls through them, and the scroll drives what happens on the stage. The rule for choosing them: the scroll has to perform the point of the section, not just hold a picture still.
+
+| Block | What the scroll does | Why there |
+|---|---|---|
+| C. Where Packet flies first | The boundary draws itself around the university area, the hub's marks close in on U Village, then the neighbourhoods name themselves one at a time: University Village, the U District, the north campus, Bryant, Mercer Court. The "next" line and "Check your street" arrive last. | A neighbour watches their own street get named. The section is about place, so the scroll adds places. |
+| E. Why (the delivery) | The package lifts off at the shop, crosses above the street and sets down at the door, with each benefit arriving at its moment: "Minutes, not an hour" at lift-off, "Nothing on your street" over the street, "Set down, not handed off" at the door. | The scroll performs the delivery. Each benefit is tied to the instant that proves it. This is the premise, so it gets the longest lock. |
+| J. Closing | The crop-mark tunnel rushes toward the visitor as the form comes in. | Momentum into the one action, using the brand's own motion motif. |
+
+Not locked, on purpose: the hero (the address check has to be reachable at once; it keeps its load-time intro instead), How it works (the mechanics of the app, kept short and scannable; its route still draws in on scroll as built), the questions (read, not watched), the timeline and the team note.
+
+Technique, in the mockup and for the build: a tall section (2 to 3 screens) with a `position: sticky` stage, and CSS scroll-driven animations (`view-timeline-name` on the section, `animation-timeline` and `animation-range: contain …` on the moving parts) so no JavaScript is needed. The package follows the route with `offset-path`. Browsers without scroll-driven animations get the section at its normal height showing the end state; reduced motion shows the end state too. The map's boundary and hub move out of the map image into an inline layer so they can draw.
+
+## 6. What stays within the rules
 
 Four inks, drawings not photos, one station-sign button and one mustard tag per screen, the leading lines once, no startup-marketing words, no invented specs, no university or class, the aircraft only as a technical drawing. The new sections add three drawings in the house style (items row, first-area map, timeline route) and reuse the existing ones.
 

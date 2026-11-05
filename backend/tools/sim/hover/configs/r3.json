@@ -1,0 +1,266 @@
+[
+ {
+  "name": "r3_stepA_nom1",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "PSC_NE_VEL_D=0",
+   "VISO_DELAY_MS=120",
+   "HTO_TRIM_P=0.88",
+   "HTO_TRIM_R=-0.23"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "r3_stepA_nom2",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "PSC_NE_VEL_D=0",
+   "VISO_DELAY_MS=120",
+   "HTO_TRIM_P=0.88",
+   "HTO_TRIM_R=-0.23"
+  ],
+  "seed": 2
+ },
+ {
+  "name": "r3_stepA_nom3",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "PSC_NE_VEL_D=0",
+   "VISO_DELAY_MS=120",
+   "HTO_TRIM_P=0.88",
+   "HTO_TRIM_R=-0.23"
+  ],
+  "seed": 3
+ },
+ {
+  "name": "r3_stepA_Kminus20",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]",
+   "inertia=[0.193, 0.2035, 0.1288]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "PSC_NE_VEL_D=0",
+   "VISO_DELAY_MS=120",
+   "HTO_TRIM_P=0.88",
+   "HTO_TRIM_R=-0.23"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "r3_stepA_Kplus25",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]",
+   "inertia=[0.1235, 0.1302, 0.0824]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "PSC_NE_VEL_D=0",
+   "VISO_DELAY_MS=120",
+   "HTO_TRIM_P=0.88",
+   "HTO_TRIM_R=-0.23"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "r3_stepA_puredelay",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]",
+   "motor_delay=0.052",
+   "motor_tau=0.002"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "PSC_NE_VEL_D=0",
+   "VISO_DELAY_MS=120",
+   "HTO_TRIM_P=0.88",
+   "HTO_TRIM_R=-0.23"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "r3_stepA_slowmotor",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]",
+   "motor_delay=0.040",
+   "motor_tau=0.025"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "PSC_NE_VEL_D=0",
+   "VISO_DELAY_MS=120",
+   "HTO_TRIM_P=0.88",
+   "HTO_TRIM_R=-0.23"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "r3_stepA_L30",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]",
+   "camera.exposure_to_readout_s=0.03"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "PSC_NE_VEL_D=0",
+   "VISO_DELAY_MS=120",
+   "HTO_TRIM_P=0.88",
+   "HTO_TRIM_R=-0.23"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "r3_stepA_L90",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]",
+   "camera.exposure_to_readout_s=0.09"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "PSC_NE_VEL_D=0",
+   "VISO_DELAY_MS=120",
+   "HTO_TRIM_P=0.88",
+   "HTO_TRIM_R=-0.23"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "r3_stepA_dist15",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]",
+   "dist_accel=[{\"sigma\":[0.0375,0.0375,0.09],\"tau\":1.0},{\"sigma\":[0.018,0.018,0.03],\"tau\":0.15}]",
+   "dist_alpha=[{\"sigma\":[0.375,0.375,0.12],\"tau\":0.25},{\"sigma\":[0.6,0.6,0.15],\"tau\":0.025}]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "PSC_NE_VEL_D=0",
+   "VISO_DELAY_MS=120",
+   "HTO_TRIM_P=0.88",
+   "HTO_TRIM_R=-0.23"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "r3_stepA_noise15",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]",
+   "camera.noise_xy_m=0.0015"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "PSC_NE_VEL_D=0",
+   "VISO_DELAY_MS=120",
+   "HTO_TRIM_P=0.88",
+   "HTO_TRIM_R=-0.23"
+  ],
+  "seed": 1
+ }
+]

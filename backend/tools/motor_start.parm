@@ -1,0 +1,8 @@
+# Motor start and takeoff (2026-11-02). At MOT_SPIN_ARM 0.10 (1100 us, PWM) a motor sometimes
+# did not start on arming, a different one each time; the takeoff then tipped the drone.
+# Idle higher so every ESC clears its start threshold (MOT_SPIN_MIN must stay above it),
+# and a short takeoff ramp so the drone spends less time pivoting on its legs.
+# Before: MOT_SPIN_ARM 0.1, MOT_SPIN_MIN 0.15, TKOFF_SLEW_TIME 2
+MOT_SPIN_ARM,0.13
+MOT_SPIN_MIN,0.16
+TKOFF_SLEW_TIME,1.0

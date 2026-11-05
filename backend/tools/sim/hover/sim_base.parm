@@ -1,0 +1,28 @@
+# Base SITL settings for the hover simulator (loaded before flown_log45.parm and any candidate).
+# The airframe is physics.py (JSON backend); these only set up the simulated FC.
+FRAME_CLASS 1
+FRAME_TYPE 1
+AHRS_ORIENTATION 0
+# indoors: no GPS; the camera (VISION_POSITION_ESTIMATE on SERIAL1) is the position source
+GPS1_TYPE 0
+SERIAL1_PROTOCOL 2
+SERIAL1_BAUD 921
+SCR_ENABLE 1
+SCR_HEAP_SIZE 204800
+# the lever arm is in physics.py (accel at the IMU position for every IMU)
+SIM_IMU_POS_X 0
+SIM_IMU_POS_Y 0
+SIM_IMU_POS_Z 0
+SIM_RATE_HZ 1200
+# sensor noise (to be set from the logs)
+SIM_ACC1_RND 0.3
+SIM_ACC2_RND 0.3
+SIM_GYR1_RND 0.3
+SIM_GYR2_RND 0.3
+SIM_BARO_RND 0.05
+LOG_DISARMED 0
+LOG_FILE_DSRMROT 1
+# the scripted ground station paces by sim time; keep the RC override and GCS failsafe out of its way
+RC_OVERRIDE_TIME 3
+FS_GCS_ENABLE 0
+FS_EKF_ACTION 1

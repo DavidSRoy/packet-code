@@ -1,0 +1,14 @@
+# Position loop for the measured plant (logs 00000031, 00000033, 2026-11-03).
+# Re-identified at 25 Hz (EKF velocity vs commanded acceleration): gain ~0.6, delay 0.2-0.33 s
+# (the 10 Hz estimate of 0.92 / 0.2 s was optimistic). On that model the tune_v2 gains have a
+# x1.35 resonance at 0.26 Hz (pos PM 44 deg) = the sway still seen (0.26-0.35 Hz). The push the
+# drone gets is small (0.017 m/s^2) and the camera jitter is 2-3 mm: the loop amplified the sway.
+# These gains: worst over delay 0.23-0.33 s and gain 0.5-0.75: PM 49 deg, no resonance (x1.01);
+# sway for the same push x0.35-0.38 of the old defaults (tune_v2: x0.47).
+# ATC_INPUT_TC 0.1 -> 0.05: half the smoothing on attitude commands, about 0.07 s less delay.
+# Before: PSC_NE_POS_P 1.5, PSC_NE_VEL_P 3.0, PSC_NE_VEL_I 0.5, PSC_NE_VEL_D 0.5, ATC_INPUT_TC 0.1
+PSC_NE_POS_P,1.0
+PSC_NE_VEL_P,4.0
+PSC_NE_VEL_I,0.5
+PSC_NE_VEL_D,0.75
+ATC_INPUT_TC,0.05

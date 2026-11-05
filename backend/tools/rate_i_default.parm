@@ -1,0 +1,5 @@
+# Undo tools/rate_i.parm: ArduCopter's default rate I gains (2026-11-03). With the untuned
+# rate loop the higher I may have added to a slow (~1.5 s) rocking; AUTOTUNE sets these properly.
+ATC_RAT_RLL_I,0.135
+ATC_RAT_PIT_I,0.135
+ATC_RAT_YAW_I,0.018

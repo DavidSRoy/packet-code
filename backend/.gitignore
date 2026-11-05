@@ -1,0 +1,20 @@
+__pycache__/
+.venv/
+*.pyc
+.DS_Store
+
+# Wi-Fi passwords for the Pi companion live on the SD card only
+companion/wifi.txt
+**/wifi.txt
+
+# airspace downloads (ground, buildings, FAA, TFR) and operator entries
+airspace/cache/
+
+# Flight logs stay out of this repo
+logs/bin/
+logs/tlog/
+logs/rec/
+logs/track/
+
+# The repo root ignores build/ (for Xcode); the three.js vendor copy needs its build/ folder
+!ground_control/static/vendor/three/build/

@@ -1,0 +1,102 @@
+[
+ {
+  "name": "s1_vm_g03",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "parm": [
+   "tools/tune_v6.parm"
+  ],
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "VISO_DELAY_MS=117",
+   "SIM_VIB_MOT_MASK=15",
+   "SIM_GYR1_RND=0.3",
+   "SIM_GYR2_RND=0.3"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "s1_vm_g10",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "parm": [
+   "tools/tune_v6.parm"
+  ],
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "VISO_DELAY_MS=117",
+   "SIM_VIB_MOT_MASK=15",
+   "SIM_GYR1_RND=1.0",
+   "SIM_GYR2_RND=1.0"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "s1_vm_g30",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "parm": [
+   "tools/tune_v6.parm"
+  ],
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "VISO_DELAY_MS=117",
+   "SIM_VIB_MOT_MASK=15",
+   "SIM_GYR1_RND=3.0",
+   "SIM_GYR2_RND=3.0"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "s1_vm_g60",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "parm": [
+   "tools/tune_v6.parm"
+  ],
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "VISO_DELAY_MS=117",
+   "SIM_VIB_MOT_MASK=15",
+   "SIM_GYR1_RND=6.0",
+   "SIM_GYR2_RND=6.0"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "s1_vm_g30_A",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "parm": [
+   "tools/tune_v6_stepA.parm"
+  ],
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "VISO_DELAY_MS=117",
+   "SIM_VIB_MOT_MASK=15",
+   "SIM_GYR1_RND=3.0",
+   "SIM_GYR2_RND=3.0"
+  ],
+  "seed": 1
+ }
+]

@@ -1,0 +1,38 @@
+# SITL model of the Packet V0 drone (Holybro X650, 6S), for --model x:tools/sim/x650.json
+# Values from the real flight logs (logs/bin/00000014.BIN, 00000015.BIN, 2026-10-25/log16.bin)
+# and logs/ANALYSIS_2026-10-22_log14_hover.md. Drag: SITL defaults (not enough forward flight in the logs).
+{
+    # flight weight, kg (kit 2.0 kg + battery, no shell)
+    "mass" : 2.92,
+
+    # motor-to-motor diagonal, m (X650: 650 mm wheelbase)
+    "diagonal_size" : 0.65,
+
+    # hover power: SITL uses refCurrent x refVoltage as the hover power (log 14 hover: 17.7 A at 21.8 V)
+    "refVoltage" : 21.8,
+    "refCurrent" : 17.7,
+    "refAlt" : 20,
+    "refTempC" : 15,
+
+    # BAT.Res median in logs 14 and 16
+    "refBatRes" : 0.03,
+
+    # 6S 6500 mAh
+    "maxVoltage" : 25.2,
+    "battCapacityAh" : 6.5,
+
+    # FC parameters in the logs
+    "propExpo" : 0.65,
+    "pwmMin" : 1000,
+    "pwmMax" : 2000,
+    "spin_min" : 0.15,
+    "spin_max" : 0.95,
+
+    # median throttle out in steady hover, logs 14, 15 and 16 (0.25 to 0.27)
+    "hoverThrOut" : 0.26,
+
+    # 4 x 15 inch props: 4 x pi x 0.1905^2
+    "disc_area" : 0.456,
+
+    "num_motors" : 4
+}

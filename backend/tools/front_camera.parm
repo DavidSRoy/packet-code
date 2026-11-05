@@ -1,0 +1,25 @@
+# Front of the drone = the box camera side (2026-11-02). The camera sits at the old back;
+# it tilts up into a forward view in flight, so that side becomes the nose. A 180 deg yaw
+# remap of the airframe on a quad X: each motor takes its diagonal partner's place, and
+# the spin directions still match (1, 2 CCW; 3, 4 CW). Undo: tools/front_original.parm.
+# Needs an FC reboot (AHRS_ORIENTATION). Then a motor test with the props off.
+AHRS_ORIENTATION,4
+SERVO1_FUNCTION,33
+SERVO2_FUNCTION,34
+SERVO3_FUNCTION,35
+SERVO4_FUNCTION,36
+# external compass (GPS mast): relative to the airframe, so it turns with it (Yaw90 -> Yaw270)
+COMPASS_ORIENT,6
+# level trims are in the airframe: they change sign
+AHRS_TRIM_X,-0.00514956
+AHRS_TRIM_Y,-0.0113179
+# compass calibration: ArduPilot adds the offsets after turning the field into the airframe, so
+# they turn with it (180 deg yaw: x, y and the xz, yz cross terms change sign; z, xy stay)
+COMPASS_OFS_X,11.8442
+COMPASS_OFS_Y,31.0582
+COMPASS_ODI_Y,0.0350648
+COMPASS_ODI_Z,0.0336983
+COMPASS_OFS2_X,-99.3126
+COMPASS_OFS2_Y,-146.369
+COMPASS_ODI2_Y,0.00465493
+COMPASS_ODI2_Z,0.00547559

@@ -1,0 +1,1446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Packet Ground Control</title>
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+<script type="importmap">{ "imports": {
+  "three": "/static/vendor/three/build/three.module.js",
+  "three/addons/": "/static/vendor/three/examples/jsm/" } }</script>
+<style>
+  :root {
+    --bg: #07080a;
+    --glass: rgba(12, 14, 17, 0.84);
+    --glass-2: rgba(20, 23, 28, 0.9);
+    --line: rgba(255, 255, 255, 0.08);
+    --line-2: rgba(255, 255, 255, 0.16);
+    --text: #e9ebee;
+    --muted: #7d848e;
+    --dim: #4b515a;
+    --friendly: #5ad1ff;
+    --ok: #4fd68a;
+    --warn: #ffb020;
+    --bad: #ff4d4d;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    --sans: -apple-system, "Inter", "Helvetica Neue", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.35 var(--sans); overflow: hidden; user-select: none; }
+
+  #map { position: fixed; inset: 0; background: #0b0d10; }
+  .leaflet-tile-pane { filter: grayscale(0.55) brightness(0.62) contrast(1.12) saturate(0.8); }
+  .leaflet-container { font: inherit; background: #0b0d10; }
+  .leaflet-control-attribution { background: rgba(0,0,0,.5) !important; color: var(--dim) !important; font-size: 9px; }
+  .leaflet-control-attribution a { color: var(--muted) !important; }
+  .leaflet-control-zoom { display: none; }
+  /* faint grid over the map */
+  #grid { position: fixed; inset: 0; pointer-events: none; z-index: 400;
+    background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size: 64px 64px; }
+
+  .panel { position: fixed; z-index: 500; background: var(--glass); border: 1px solid var(--line); border-radius: 4px;
+    backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2); }
+  .lbl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* top bar */
+  #top { top: 12px; left: 12px; right: 12px; height: 40px; display: flex; align-items: center; gap: 18px; padding: 0 14px; }
+  #brand { font-weight: 700; letter-spacing: .22em; font-size: 11px; white-space: nowrap; }
+  #brand i { font-style: normal; color: var(--dim); font-weight: 500; }
+  .stat-row { display: flex; gap: 0; flex: 1; min-width: 0; overflow: hidden; align-self: stretch; }
+  /* status cells: flat, hairline dividers, colour only when something is wrong */
+  .st { display: flex; align-items: center; gap: 8px; white-space: nowrap; padding: 0 11px; border-left: 1px solid var(--line);
+    font-size: 9.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+  .st:last-child { border-right: 1px solid var(--line); }
+  .st b { color: var(--text); font-weight: 500; font-size: 11.5px; font-family: var(--mono); letter-spacing: .02em; text-transform: none; }
+  .dot { width: 6px; height: 6px; border-radius: 0; background: transparent; border: 1px solid var(--dim); flex: none; }
+  .dot.ok { background: #c9ced6; border-color: #c9ced6; }
+  .dot.warn { background: var(--warn); border-color: var(--warn); }
+  .dot.bad { background: var(--bad); border-color: var(--bad); }
+  .st:has(.dot.warn) b { color: var(--warn); }
+  .st:has(.dot.bad) { background: rgba(255, 77, 77, .08); box-shadow: inset 0 -2px 0 var(--bad); }
+  .st:has(.dot.bad) b { color: var(--bad); }
+  .st:has(.dot.warn) { box-shadow: inset 0 -2px 0 var(--warn); }
+  #clock { font-family: var(--mono); color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .stat-row.tight .opt { display: none; }
+  #top.tight #brand i { display: none; }
+  @media (max-height: 780px) {
+    .tele div { padding: 6px 14px; } .tele b { font-size: 15px; } .card-h { padding: 9px 14px 8px; }
+    #mode { font-size: 17px; } .mode-row { margin-top: 6px; }
+  }
+
+  /* left: asset card */
+  #left { position: fixed; z-index: 500; top: 64px; left: 12px; width: 300px; display: flex; flex-direction: column; gap: 8px;
+    max-height: calc(100vh - 76px); }
+  #asset { flex: none; }
+  #left > .panel { position: relative; }
+  #pos { padding: 9px 14px; color: var(--muted); font-size: 11px; }
+
+  /* vehicle attitude view (SpaceX style) */
+  #att3d { flex: 0 1 300px; min-height: 120px; display: flex; flex-direction: column; overflow: hidden;
+    background: radial-gradient(120% 90% at 50% 35%, rgba(26,34,44,.92), rgba(6,8,11,.95)); }
+  #att3d.big { position: fixed !important; inset: 64px 320px 112px 324px; height: auto; }
+  .att-h { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px 0; }
+  .att-h .lbl { color: #cfd6de; }
+  .att-h button { background: none; border: 1px solid var(--line-2); color: var(--muted); font: 600 9px var(--sans);
+    letter-spacing: .14em; padding: 3px 7px; border-radius: 2px; cursor: pointer; margin-left: 4px; }
+  .att-h button:hover { color: var(--text); }
+  #att-canvas { flex: 1; width: 100%; min-height: 0; display: block; }
+  .att-f { display: grid; grid-template-columns: 64px 1fr 64px; align-items: center; padding: 0 8px 8px; gap: 6px; }
+  #att3d.big .att-f { grid-template-columns: 120px 1fr 120px; padding: 0 24px 20px; }
+  .gauge svg { width: 100%; display: block; }
+  .gauge .num { fill: #fff; font: 300 17px var(--sans); }
+  .gauge .unit { fill: var(--muted); font: 500 6.5px var(--sans); letter-spacing: .14em; text-transform: uppercase; }
+  .rpy { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; }
+  .rpy b { display: block; font: 300 15px var(--sans); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+  #att3d.big .rpy b { font-size: 34px; }
+  .rpy span { font-size: 8.5px; letter-spacing: .18em; color: var(--muted); }
+  .card-h { padding: 12px 14px 10px; border-bottom: 1px solid var(--line); }
+  .asset-name { display: flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: .12em; font-size: 12px; }
+  .asset-name svg { flex: none; }
+  .asset-sub { color: var(--muted); font-size: 11px; margin-top: 3px; }
+  .mode-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; }
+  #mode { font-family: var(--mono); font-size: 20px; font-weight: 600; letter-spacing: .04em; }
+  #armed { font-size: 10px; letter-spacing: .16em; padding: 3px 7px; border: 1px solid var(--line-2); border-radius: 2px; color: var(--muted); }
+  #armed.on { color: var(--bad); border-color: var(--bad); background: rgba(255,77,77,.1); }
+  #mode-hint { display: none; margin-top: 6px; font-size: 11px; line-height: 1.4; color: var(--warn); }
+  #mode-hint.on { display: block; }
+  .tele { display: grid; grid-template-columns: 1fr 1fr; }
+  .battbar { margin: 2px 12px 8px; }
+  .battbar .track { height: 6px; background: rgba(255,255,255,.08); border-radius: 3px; overflow: hidden; }
+  .battbar .fill { height: 100%; width: 0; background: var(--friendly); transition: width .4s; }
+  .battbar .fill.warn { background: #f5b83d; } .battbar .fill.bad { background: #ff5a4f; }
+  .battbar .sub { display: flex; justify-content: space-between; color: var(--muted); font-size: 10px; margin-top: 3px; letter-spacing: .04em; }
+  .tele div { padding: 9px 14px; border-bottom: 1px solid var(--line); }
+  .tele div:nth-child(odd) { border-right: 1px solid var(--line); }
+  .tele b { display: block; font-family: var(--mono); font-size: 17px; font-weight: 500; margin-top: 2px; }
+  .tele b small { font-size: 11px; color: var(--muted); margin-left: 3px; }
+  #att { display: flex; align-items: center; gap: 12px; padding: 10px 14px; }
+  #att svg { flex: none; }
+
+  /* right: actions + log */
+  #actions { top: 64px; right: 12px; width: 252px; padding: 12px; max-height: calc(100vh - 84px - var(--air-h, 190px)); overflow-y: auto; }
+  /* trips (backend pad-to-pad) */
+  #trips, #lights, #flyto { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  #lights .row2 { margin-bottom: 0; grid-template-columns: repeat(5, auto); }
+  #lights .mini { padding: 0 2px; }
+  .trip-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .badge { font: 600 10px var(--mono); padding: 2px 6px; border-radius: 2px; border: 1px solid var(--line-2); color: var(--muted); }
+  .badge.on { color: #001018; background: var(--ok); border-color: var(--ok); }
+  #trip-state { font: 11px/1.5 var(--mono); color: var(--text); margin-bottom: 6px; }
+  #trip-state small { color: var(--muted); display: block; white-space: normal; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 6px; }
+  .mini { height: 28px; background: var(--glass-2); border: 1px solid var(--line-2); border-radius: 3px; color: var(--text);
+    font: 600 10px var(--sans); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+  .mini:disabled, .btn:disabled { opacity: .35; cursor: default; }
+  .btn:disabled:hover { border-color: var(--line-2); }
+  .mini.go { color: var(--ok); border-color: rgba(79,214,138,.55); }
+  .route { font: 11px var(--mono); padding: 5px 0; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .route small { color: var(--muted); display: block; }
+  .route .warn { color: var(--warn); }
+  .rec { display: grid; grid-template-columns: 1fr auto 1fr; gap: 4px; align-items: center; margin-top: 8px; }
+  .rec input { width: 100%; height: 26px; background: rgba(0,0,0,.35); border: 1px solid var(--line-2); border-radius: 3px; color: var(--text);
+    font: 11px var(--mono); padding: 0 6px; text-transform: lowercase; }
+  .pad-lbl { font: 700 10px var(--mono); color: #001018; background: var(--friendly); padding: 1px 4px; border-radius: 2px; white-space: nowrap; }
+  .alt-row { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 10px; }
+  .stepper { display: flex; align-items: center; border: 1px solid var(--line-2); border-radius: 3px; }
+  .stepper button { width: 28px; height: 28px; background: none; border: 0; color: var(--text); font-size: 15px; cursor: pointer; }
+  .stepper span { width: 54px; text-align: center; font-family: var(--mono); }
+  .btn { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 38px; padding: 0 12px; margin-bottom: 6px;
+    background: var(--glass-2); border: 1px solid var(--line-2); border-radius: 3px; color: var(--text);
+    font: 600 11px var(--sans); letter-spacing: .14em; text-transform: uppercase; cursor: pointer; position: relative; overflow: hidden; }
+  .btn:hover { border-color: rgba(255,255,255,.35); }
+  .btn kbd { font: 10px var(--mono); color: var(--muted); letter-spacing: 0; }
+  .btn.go { border-color: rgba(79,214,138,.55); color: var(--ok); }
+  .btn.land { border-color: rgba(255,176,32,.55); color: var(--warn); }
+  .btn.kill { border-color: rgba(255,77,77,.6); color: var(--bad); margin-top: 10px; }
+  .btn.kill .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: rgba(255,77,77,.35); }
+  .btn > span { position: relative; }
+  #log { max-height: 190px; overflow-y: auto; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 8px; font: 11px/1.55 var(--mono); }
+  #log div { color: var(--muted); overflow-wrap: anywhere; padding: 1px 0; }
+  #log div b { color: var(--dim); font-weight: 400; margin-right: 6px; }
+  #log .s0, #log .s1, #log .s2, #log .s3 { color: var(--bad); } #log .s4 { color: var(--warn); } #log .s5, #log .s6 { color: var(--text); }
+
+  /* bottom: flight controls */
+  #fly { left: 324px; right: var(--rcol, 276px); bottom: 12px; width: fit-content; max-width: calc(100vw - 324px - var(--rcol, 276px));
+    margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px 18px; padding: 12px 16px; }
+  .pad { display: grid; grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(2, 46px); gap: 5px; }
+  .vpad { display: grid; grid-template-rows: repeat(2, 46px); gap: 5px; }
+  .k { width: 46px; height: 46px; border: 1px solid var(--line-2); border-radius: 3px; background: var(--glass-2);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; touch-action: none; }
+  .k b { font: 600 14px var(--mono); } .k span { font-size: 8px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; margin-top: 1px; }
+  .k.on { background: var(--friendly); border-color: var(--friendly); color: #001018; } .k.on span { color: #003040; }
+  #keys-state { width: 150px; }
+  #keys-state .big { font-weight: 700; letter-spacing: .16em; font-size: 11px; margin-top: 4px; }
+  #keys-state .big.live { color: var(--friendly); }
+  #keys-state p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
+  .sliders { display: grid; gap: 6px; width: 190px; }
+  .sl { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 8px; }
+  .sl input { grid-column: 1 / -1; width: 100%; accent-color: var(--friendly); height: 14px; margin: 0; }
+  .sl .num { font-size: 11px; }
+  .sep { width: 1px; align-self: stretch; background: var(--line); }
+
+  /* map buttons */
+  #mapctl { right: 276px; top: 64px; display: flex; flex-direction: column; }
+  #mapctl button { width: 34px; height: 34px; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--text); cursor: pointer; font: 600 13px var(--mono); }
+  #mapctl button:last-child { border-bottom: 0; }
+  #mapctl button.on { color: var(--friendly); }
+
+  /* map icons */
+  .drone-ico { width: 44px; height: 44px; }
+  .ft-ico { width: 20px; height: 20px; border: 2px solid #c58bff; border-radius: 50%; background: rgba(197,139,255,.18);
+    color: #e6d4ff; font: 700 11px/16px var(--mono); text-align: center; }
+  #ft-state { font: 11px/1.5 var(--mono); color: var(--text); margin-bottom: 4px; }
+  #ft-state small { color: var(--muted); display: block; white-space: normal; }
+  #flyto .rec { grid-template-columns: 1fr 1fr; margin: 0 0 6px; }
+  #flyto .alt-row { margin: 0 0 6px; }
+  #hop { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  #hop .alt-row { margin: 0 0 6px; }
+  #hop-arm { display: flex; align-items: center; gap: 6px; font: 11px var(--sans); color: var(--muted); margin-bottom: 6px; cursor: pointer; }
+  #b-hop-stop { margin-top: 6px; }
+  #hop-state { font: 11px/1.5 var(--mono); color: var(--muted); margin-top: 4px; white-space: normal; }
+  .home-ico { width: 18px; height: 18px; border: 1.5px solid var(--text); background: rgba(0,0,0,.5); color: var(--text);
+    font: 700 10px var(--mono); display: flex; align-items: center; justify-content: center; }
+  .leaflet-div-icon { background: none; border: 0; }
+  /* GPS quality: chip, accuracy circle, dimmed marker */
+  #gpsq { top: 64px; right: 322px; padding: 9px 12px 9px 11px; display: none; width: 236px;
+    border-left: 2px solid var(--warn); transition: border-color .3s; }
+  #gpsq.bad { border-left-color: var(--bad); }
+  #gpsq .head { display: flex; align-items: center; gap: 8px; }
+  #gpsq .head b { font: 600 11px var(--mono); letter-spacing: .14em; color: var(--warn); }
+  #gpsq.bad .head b { color: var(--bad); }
+  #gpsq .facts { margin-top: 5px; font: 11px var(--mono); color: var(--text); letter-spacing: .04em; }
+  #gpsq .note { margin-top: 4px; font-size: 10.5px; color: var(--muted); }
+  #gpsq .bars { display: inline-flex; gap: 2px; align-items: flex-end; height: 11px; margin-left: auto; }
+  #gpsq .bars i { width: 3px; background: var(--line-2); border-radius: 1px; }
+  #gpsq .bars i.on { background: var(--warn); } #gpsq.bad .bars i.on { background: var(--bad); }
+  .acc { transition: stroke .4s, fill .4s; }
+  .acc.bad { animation: acc-breathe 2.4s ease-in-out infinite; }
+  @keyframes acc-breathe { 50% { fill-opacity: .26; stroke-opacity: 1; } }
+  .drone-ico path, .drone-ico circle { transition: fill .4s, stroke .4s; }
+  .gps-poor .drone-ico path { fill: var(--warn); } .gps-poor .drone-ico circle { stroke: rgba(255,176,32,.55); }
+  .gps-bad .drone-ico path { fill: var(--bad); } .gps-bad .drone-ico circle { stroke: rgba(255,77,77,.6); stroke-dasharray: 3 3; }
+  .drone-ico { filter: drop-shadow(0 0 3px rgba(0,0,0,.8)); }
+  #offline { position: fixed; z-index: 450; left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--dim); font-size: 11px; letter-spacing: .16em; display: none; }
+
+  /* box camera (Pi companion) */
+  #cam { top: 64px; left: 324px; width: clamp(240px, calc(100vw - 324px - 322px - 236px), 400px); overflow: hidden auto;
+    max-height: calc(100vh - 88px - var(--fly-h, 130px)); }
+  #cam.min .cam-view, #cam.min .cam-f, #cam.min .cam-url { display: none; }
+  #cam.min .att-h { padding-bottom: 9px; }
+  #cam.big { inset: 64px 280px 112px 324px; width: auto; max-height: none; display: flex; flex-direction: column; }
+  #cam .att-h { padding: 9px 12px 7px; }
+  .cam-view { position: relative; background: #000; aspect-ratio: 16 / 9; }
+  #cam.big .cam-view { flex: 1; aspect-ratio: auto; }
+  .cam-view img, .cam-view canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  #cam-snap { display: none; image-rendering: auto; filter: contrast(1.05); }
+  #cam-snap-tag { position: absolute; left: 8px; bottom: 8px; display: none; padding: 3px 7px; border-radius: 3px;
+    background: rgba(0,0,0,.65); border: 1px solid var(--line-2); font: 600 10px var(--mono); letter-spacing: .1em; color: var(--warn); }
+  .cam-view .none { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--dim); font-size: 11px; letter-spacing: .16em; }
+  .cam-f { display: grid; grid-template-columns: 1fr 116px; gap: 10px; padding: 9px 12px 10px; }
+  .cam-f .tele { grid-template-columns: 1fr 1fr 1fr; }
+  .cam-box { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .cam-box b { font: 700 18px var(--mono); color: var(--friendly); }
+  .cam-box span { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+  #cam-top { width: 116px; height: 116px; border: 1px solid var(--line); border-radius: 2px; }
+  .cam-url { display: flex; gap: 6px; align-items: center; padding: 0 12px 10px; }
+  .cam-url input { flex: 1; min-width: 0; background: rgba(0,0,0,.35); border: 1px solid var(--line-2); color: var(--text);
+    font: 11px var(--mono); padding: 4px 6px; border-radius: 2px; user-select: text; }
+
+
+  /* legal ceiling / airspace */
+  #air { right: 12px; bottom: 12px; width: 252px; padding: 10px 12px 10px; }
+  #air .air-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  #air .air-v { display: flex; align-items: baseline; gap: 8px; }
+  #air .air-v b { font: 600 22px var(--mono); letter-spacing: -.01em; }
+  #air .air-v small { color: var(--muted); font: 11px var(--mono); }
+  #air .air-r { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 2px 0 7px; }
+  #air .air-f { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; font: 11px var(--mono); color: var(--text); margin-bottom: 8px; }
+  #air .air-f span { color: var(--muted); }
+  #air .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
+  #air.nofly { border-color: rgba(255,77,77,.7); box-shadow: 0 0 0 1px rgba(255,77,77,.35), 0 0 24px rgba(255,77,77,.18); }
+  #air.nofly .air-v b { color: var(--bad); }
+  #air.over .air-v b { color: var(--warn); }
+  .badge.warn { color: #1a1000; background: var(--warn); border-color: var(--warn); }
+  .badge.bad { color: #fff; background: var(--bad); border-color: var(--bad); }
+  .mini.on { color: var(--friendly); border-color: rgba(90,209,255,.6); }
+  #air-pop { right: calc(var(--rcol, 276px) + 46px); bottom: calc(var(--fly-h, 130px) + 24px); width: 300px;
+    max-height: calc(100vh - 88px - var(--fly-h, 130px)); overflow-y: auto; padding: 12px; display: none; }
+  #air-pop.open { display: block; }
+  #air-pop h4 { margin: 10px 0 6px; font: 600 10px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  #air-pop h4:first-child { margin-top: 0; }
+  #air-pop label.chk { display: flex; align-items: center; justify-content: flex-start; gap: 8px; font-size: 12px; padding: 3px 0; cursor: pointer; }
+  #air-pop label.chk input { width: 14px; height: 14px; flex: none; margin: 0; padding: 0; accent-color: var(--friendly); }
+  #air-pop label.chk i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+  #air-pop .ages { font: 10.5px/1.6 var(--mono); color: var(--muted); }
+  #air-pop .ages b { color: var(--text); font-weight: 500; }
+  #air-pop .frm { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  #air-pop .frm .full { grid-column: 1 / -1; }
+  #air-pop input, #air-pop select { width: 100%; height: 28px; background: var(--glass-2); border: 1px solid var(--line-2); border-radius: 3px;
+    color: var(--text); font: 11px var(--mono); padding: 0 6px; color-scheme: dark; }
+  #air-pop .lst div { display: flex; justify-content: space-between; gap: 6px; font: 11px/1.7 var(--mono); color: var(--text); }
+  #air-pop .lst button { background: none; border: 0; color: var(--bad); cursor: pointer; font: 600 12px var(--mono); }
+  #air-pop .err { color: var(--bad); font-size: 11px; min-height: 14px; }
+  .air-tip { font: 11px/1.45 var(--sans); }
+  .air-tip b { font-family: var(--mono); }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--glass-2); color: var(--text); border: 1px solid var(--line-2); }
+  .leaflet-popup-content { margin: 10px 12px; font: 12px/1.45 var(--sans); }
+  .leaflet-tooltip { background: var(--glass-2); color: var(--text); border: 1px solid var(--line-2); box-shadow: none; }
+  .leaflet-tooltip-top:before { border-top-color: var(--line-2); }
+  @media (max-width: 1100px) {
+    :root { --rcol: 244px; }
+    #cam.big { inset: 64px 292px 112px 324px; width: auto; }
+    .cam-f { grid-template-columns: 1fr; } #cam-top { display: none; }
+    .cam-f .tele { grid-template-columns: 1fr 1fr; }
+    #fly .sep, #keys-state p { display: none; }
+    #actions, #air { width: 220px; } #mapctl { right: 244px; } #gpsq { right: 290px; }
+    .stat-row .opt { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="grid"></div>
+<div id="offline">MAP TILES OFFLINE</div>
+
+<div id="top" class="panel">
+  <div id="brand">PACKET <i>// GROUND CONTROL</i></div>
+  <div class="stat-row">
+    <div class="st"><span class="dot" id="d-link"></span>Link <b id="t-link">—</b></div>
+    <div class="st"><span class="dot" id="d-rc"></span>Boxer <b id="t-rc">—</b></div>
+    <div class="st"><span class="dot" id="d-gps"></span>GPS <b id="t-gps">—</b></div>
+    <div class="st"><span class="dot" id="d-batt"></span>Batt <b id="t-batt">—</b></div>
+    <div class="st opt"><span class="dot" id="d-fence"></span>Fence <b id="t-fence">—</b></div>
+    <div class="st"><span class="dot" id="d-ceil"></span>Ceiling <b id="t-ceil">—</b></div>
+    <div class="st opt"><span class="dot" id="d-log"></span>Rec <b id="t-log">—</b></div>
+    <div class="st opt"><span class="dot" id="d-cloud"></span>Cloud <b id="t-cloud">—</b></div>
+  </div>
+  <div id="clock">—</div>
+</div>
+
+<div id="left">
+<div id="asset" class="panel">
+  <div class="card-h">
+    <div class="asset-name">
+      <svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 1 L12 12 L7 9.5 L2 12 Z" fill="var(--friendly)"/></svg>
+      PACKET V0
+    </div>
+    <div class="asset-sub">X650 · Pixhawk 6X · ArduCopter 4.7.2</div>
+    <div class="mode-row"><span id="mode">—</span><span id="armed">SAFE</span></div>
+    <div id="mode-hint"></div>
+  </div>
+  <div class="tele">
+    <div><span class="lbl">Height</span><b id="v-alt">—<small>m</small></b></div>
+    <div><span class="lbl">Climb</span><b id="v-vz">—<small>m/s</small></b></div>
+    <div><span class="lbl">Gnd speed</span><b id="v-gs">—<small>m/s</small></b></div>
+    <div><span class="lbl">Heading</span><b id="v-hdg">—<small>°</small></b></div>
+    <div><span class="lbl">From home</span><b id="v-home">—<small>m</small></b></div>
+    <div><span class="lbl">Cell</span><b id="v-cell">—<small>V</small></b></div>
+    <div><span class="lbl">Current</span><b id="v-amp">—<small>A</small></b></div>
+    <div><span class="lbl">Sats</span><b id="v-sats">—</b></div>
+    <div><span class="lbl">Battery</span><b id="v-pct">—<small>%</small></b></div>
+    <div><span class="lbl">Time left</span><b id="v-tleft">—<small>min</small></b></div>
+  </div>
+  <div class="battbar"><div class="track"><div class="fill" id="b-fill"></div></div>
+    <div class="sub"><span id="b-used">— mAh used</span><span id="b-basis">to 20% reserve</span></div></div>
+  <div id="pos" class="num">—</div>
+</div>
+<div id="att3d" class="panel">
+  <div class="att-h"><span class="lbl">Attitude · EKF</span>
+    <span><button id="att-cam">CHASE</button><button id="att-big">EXPAND</button></span></div>
+  <canvas id="att-canvas"></canvas>
+  <div class="att-f">
+    <div class="gauge" id="g-spd"></div>
+    <div class="rpy">
+      <div><b id="a-roll">—</b><span>ROLL</span></div>
+      <div><b id="a-pitch">—</b><span>PITCH</span></div>
+      <div><b id="a-yaw">—</b><span>YAW</span></div>
+    </div>
+    <div class="gauge" id="g-alt"></div>
+  </div>
+</div>
+</div>
+
+<div id="cam" class="panel">
+  <div class="att-h"><span class="lbl">Box camera</span>
+    <span><span class="lbl" id="cam-rate">—</span><button id="cam-min" title="Hide or show the camera">HIDE</button><button id="cam-big">EXPAND</button></span></div>
+  <div class="cam-view"><canvas id="cam-vid"></canvas><img id="cam-snap" alt=""><canvas id="cam-ov"></canvas><div class="none" id="cam-none">NO CAMERA</div>
+    <div id="cam-snap-tag"></div></div>
+  <div class="cam-f">
+    <div>
+      <div class="cam-box"><span class="lbl">Box</span><b id="cam-id">—</b><span id="cam-tags"></span></div>
+      <div class="tele">
+        <div><span class="lbl">Along box</span><b id="cam-x">—<small>m</small></b></div>
+        <div><span class="lbl">Across</span><b id="cam-y">—<small>m</small></b></div>
+        <div><span class="lbl">Above lid</span><b id="cam-z">—<small>m</small></b></div>
+        <div><span class="lbl">Yaw to box</span><b id="cam-yaw">—<small>°</small></b></div>
+        <div><span class="lbl">Cam height</span><b id="cam-ch">—<small>m</small></b></div>
+        <div><span class="lbl">Tilt</span><b id="cam-tilt">—<small>°</small></b></div>
+      </div>
+    </div>
+    <canvas id="cam-top" width="232" height="232" title="Top view: lid (grey), drone centre and nose (blue), camera (white)"></canvas>
+  </div>
+  <div class="cam-url"><span class="lbl">Pi</span><input id="cam-url" spellcheck="false"></div>
+</div>
+
+<div id="gpsq" class="panel">
+  <div class="head"><span class="dot" id="gq-dot"></span><b id="gq-title">GPS POOR</b>
+    <span class="bars" title="Satellites"><i style="height:3px"></i><i style="height:5px"></i><i style="height:7px"></i><i style="height:9px"></i><i style="height:11px"></i></span></div>
+  <div class="facts" id="gq-facts">—</div>
+  <div class="note" id="gq-note"></div>
+</div>
+
+<div id="mapctl" class="panel">
+  <button id="m-follow" class="on" title="Follow the drone">◎</button>
+  <button id="m-in" title="Zoom in">+</button>
+  <button id="m-out" title="Zoom out">−</button>
+  <button id="m-clear" title="Clear the track">⌫</button>
+</div>
+
+<div id="actions" class="panel">
+  <div class="lbl">Command</div>
+  <div class="alt-row">
+    <span class="lbl" style="color:var(--text)">Takeoff height</span>
+    <div class="stepper"><button id="alt-dn">−</button><span id="alt">1.0 m</span><button id="alt-up">+</button></div>
+  </div>
+  <button class="btn go" id="b-takeoff"><span>Auto takeoff</span><kbd>GUIDED</kbd></button>
+  <button class="btn land" id="b-land" data-air="1"><span>Auto land</span><kbd>LAND</kbd></button>
+  <button class="btn" id="b-rtl" data-air="1"><span>Return home</span><kbd>RTL</kbd></button>
+  <button class="btn" id="b-hold" data-air="1"><span>Hold</span><kbd>SPACE</kbd></button>
+  <button class="btn kill" id="b-kill"><span class="fill" id="kill-fill"></span><span>Kill motors</span><kbd>HOLD 1 S</kbd></button>
+  <div id="hop">
+    <div class="trip-h"><span class="lbl">Test hover · no GPS</span><span class="badge" id="hop-badge">IDLE</span></div>
+    <div class="alt-row">
+      <span class="lbl" style="color:var(--text)">Height</span>
+      <div class="stepper"><button id="hop-dn">−</button><span id="hop-h">2 cm</span><button id="hop-up">+</button></div>
+    </div>
+    <div class="alt-row">
+      <span class="lbl" style="color:var(--text)">Hold for</span>
+      <div class="stepper"><button id="hop-tdn">−</button><span id="hop-t">30 s</span><button id="hop-tup">+</button></div>
+    </div>
+    <label id="hop-arm"><input type="checkbox" id="hop-ok"> Props on, area clear, at the SD switch: unlock</label>
+    <button class="btn go" id="b-hop" disabled><span>Run test</span><kbd>TAKEOFF · HOLD · LAND</kbd></button>
+    <button class="btn kill" id="b-hop-stop"><span>Stop</span><kbd>MOTORS OFF</kbd></button>
+    <div id="hop-state">Takes off on the box camera, holds over the start point for the set time, descends and stops the motors. Boxer SD or Stop = motors off. Tags out of view, drift or a lost link also stop the motors.</div>
+  </div>
+  <div id="flyto">
+    <div class="trip-h"><span class="lbl">Fly to point</span><span class="badge" id="ft-badge">IDLE</span></div>
+    <div id="ft-state">Pick a point on the map<small>or type lat, lon</small></div>
+    <div class="rec"><input id="ft-lat" placeholder="lat" inputmode="decimal" maxlength="14"><input id="ft-lon" placeholder="lon" inputmode="decimal" maxlength="14"></div>
+    <div class="alt-row">
+      <span class="lbl" style="color:var(--text)">Height</span>
+      <div class="stepper"><button id="ft-alt-dn">−</button><span id="ft-alt">5 m</span><button id="ft-alt-up">+</button></div>
+    </div>
+    <div class="row2">
+      <button class="mini" id="ft-pick" title="Click the map to set the point">Pick</button>
+      <button class="mini on" id="ft-land" title="Land at the point, or hover there">Land</button>
+      <button class="mini" id="ft-cancel" title="Stop and hover where it is">Stop</button>
+    </div>
+    <button class="btn go" id="ft-go"><span>Fly to point</span><kbd>GUIDED</kbd></button>
+  </div>
+  <div id="lights">
+    <div class="trip-h"><span class="lbl">Arm lights</span><span class="lbl" id="lights-note"></span></div>
+    <div class="row2">
+      <button class="mini" data-lights="status" title="ArduPilot status colours (SB up)">Status</button>
+      <button class="mini" data-lights="aviation" title="Red left, green right, white tail, strobe (SB middle)">Nav</button>
+      <button class="mini" data-lights="landing" title="Landing: all arms steady white, for the box camera at night (ground control only)">Land</button>
+      <button class="mini" data-lights="off" title="All lights off (SB down)">Off</button>
+      <button class="mini" id="b-show">Show</button>
+    </div>
+  </div>
+  <div id="trips">
+    <div class="trip-h"><span class="lbl">Trips · pad to pad</span><span class="badge" id="sa-badge">SA —</span></div>
+    <div id="trip-state">—</div>
+    <div id="trip-go" class="row2"></div>
+    <div class="row2">
+      <button class="mini" id="t-hold">Hold</button><button class="mini" id="t-resume">Resume</button><button class="mini" id="t-return">Return</button>
+    </div>
+    <div id="routes"></div>
+    <div class="rec"><input id="rec-from" value="qfc" maxlength="32"><span class="lbl">→</span><input id="rec-to" value="uplace" maxlength="32"></div>
+    <button class="btn" id="b-rec" style="margin-top:6px"><span>Record route</span><kbd>TEACH</kbd></button>
+  </div>
+  <div id="log"></div>
+</div>
+
+<div id="fly" class="panel">
+  <div id="keys-state">
+    <div class="lbl">Manual · Earth frame</div>
+    <div class="big" id="keys-big">OFFLINE</div>
+    <p id="keys-p">—</p>
+  </div>
+  <div class="sep"></div>
+  <div class="pad">
+    <div class="k" data-k="q"><b>Q</b><span>Yaw L</span></div>
+    <div class="k" data-k="w"><b>W</b><span>North</span></div>
+    <div class="k" data-k="e"><b>E</b><span>Yaw R</span></div>
+    <div class="k" data-k="a"><b>A</b><span>West</span></div>
+    <div class="k" data-k="s"><b>S</b><span>South</span></div>
+    <div class="k" data-k="d"><b>D</b><span>East</span></div>
+  </div>
+  <div class="vpad">
+    <div class="k" data-k="z"><b>Z</b><span>Up</span></div>
+    <div class="k" data-k="x"><b>X</b><span>Down</span></div>
+  </div>
+  <div class="sep"></div>
+  <div class="sliders">
+    <div class="sl"><span class="lbl">Horizontal</span><span class="num" id="o-h">1.0 m/s</span><input id="sp-h" type="range" min="0.2" max="3" step="0.1" value="1.0"></div>
+    <div class="sl"><span class="lbl">Vertical</span><span class="num" id="o-v">0.5 m/s</span><input id="sp-v" type="range" min="0.1" max="1" step="0.1" value="0.5"></div>
+    <div class="sl"><span class="lbl">Yaw</span><span class="num" id="o-y">30 °/s</span><input id="sp-y" type="range" min="5" max="45" step="5" value="30"></div>
+  </div>
+</div>
+
+<div id="air" class="panel">
+  <div class="air-h"><span class="lbl">Legal ceiling · here</span><span class="badge" id="air-badge">—</span></div>
+  <div class="air-v"><b id="air-ft">—</b><small id="air-m">ft above ground</small></div>
+  <div class="air-r" id="air-reason">ceiling map loading</div>
+  <div class="air-f">
+    <span>Fence sent</span><b id="air-sent">—</b>
+    <span>Fence on FC</span><b id="air-fc">—</b>
+    <span>No-fly edge</span><b id="air-nf">—</b>
+  </div>
+  <div class="row3">
+    <button class="mini" id="air-layers">Layers</button>
+    <button class="mini" id="air-probe" title="Click the map to see the ceiling at a point">Probe</button>
+    <button class="mini" id="air-edit">Events</button>
+  </div>
+</div>
+<div id="air-pop" class="panel">
+  <div id="air-pop-layers">
+    <h4>Map layers</h4>
+    <label class="chk"><input type="checkbox" data-l="ceil"><i style="background:linear-gradient(90deg,#c81e3a,#e9d04a,#4caf8f,#4096dc)"></i>Ceiling above ground</label>
+    <label class="chk"><input type="checkbox" data-l="cls"><i style="border:1.5px solid #4d8dff"></i>Class B / C / D / E2</label>
+    <label class="chk"><input type="checkbox" data-l="laanc"><i style="background:rgba(243,146,51,.6)"></i>LAANC grid (auto approval)</label>
+    <label class="chk"><input type="checkbox" data-l="tfr"><i style="background:rgba(255,77,77,.6)"></i>TFRs (FAA, live)</label>
+    <label class="chk"><input type="checkbox" data-l="stad"><i style="border:1.5px dashed #ff9d4d"></i>Stadiums (3 NM)</label>
+    <label class="chk"><input type="checkbox" data-l="auth"><i style="background:rgba(79,214,138,.5)"></i>ATC authorizations</label>
+    <label class="chk"><input type="checkbox" data-l="zone"><i style="border:1.5px dashed #ff4d4d;background:rgba(255,77,77,.18)"></i>Keep-out zones</label>
+    <h4>Data</h4>
+    <div class="ages" id="air-ages">—</div>
+  </div>
+  <div id="air-pop-edit">
+    <h4>Stadium event (blanket TFR, FDC 4/3621)</h4>
+    <div class="frm">
+      <select id="ev-st" class="full"><option value="husky">Husky Stadium</option><option value="lumen">Lumen Field</option><option value="tmobile">T-Mobile Park</option></select>
+      <input id="ev-start" type="datetime-local" title="game start"><input id="ev-end" type="datetime-local" title="game end">
+      <button class="mini full" id="ev-add">Add event (no-fly 1 h before to 1 h after)</button>
+    </div>
+    <div class="lst" id="ev-list"></div>
+    <h4>ATC authorization (LAANC / DroneZone)</h4>
+    <div class="frm">
+      <input id="au-name" class="full" placeholder="name or LAANC reference" maxlength="60">
+      <input id="au-ft" type="number" min="1" max="400" step="1" placeholder="max ft AGL">
+      <input id="au-r" type="number" min="50" max="20000" step="10" placeholder="radius m">
+      <input id="au-start" type="datetime-local"><input id="au-end" type="datetime-local">
+      <button class="mini full" id="au-add">Add, centred on the map centre</button>
+    </div>
+    <div class="lst" id="au-list"></div>
+    <h4>Keep-out zone (the drone stops at the edge)</h4>
+    <div class="frm">
+      <input id="zo-name" placeholder="name" maxlength="60">
+      <input id="zo-r" type="number" min="10" max="20000" step="5" placeholder="radius m">
+      <button class="mini full" id="zo-add">Add, centred on the map centre</button>
+    </div>
+    <div class="lst" id="zo-list"></div>
+  </div>
+  <div class="err" id="air-err"></div>
+</div>
+
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const KEYS = ["w", "a", "s", "d", "q", "e", "z", "x"];
+const held = new Set();
+let ws, state = {};
+
+/* ---------- map ---------- */
+const map = L.map("map", { zoomControl: false, attributionControl: true, zoomSnap: 0.5 }).setView([47.6062, -122.3321], 4);
+const tiles = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  { maxZoom: 20, maxNativeZoom: 19, attribution: "Imagery © Esri" }).addTo(map);
+let tileErrors = 0;
+tiles.on("tileerror", () => { if (++tileErrors > 6) $("offline").style.display = "block"; });
+tiles.on("tileload", () => { tileErrors = 0; $("offline").style.display = "none"; });
+
+const droneIcon = L.divIcon({ className: "", iconSize: [44, 44], iconAnchor: [22, 22],
+  html: `<svg class="drone-ico" viewBox="-22 -22 44 44"><g id="drone-rot">
+    <circle r="19" fill="none" stroke="rgba(90,209,255,.35)" stroke-width="1"/>
+    <path d="M0 -15 L9 11 L0 6 L-9 11 Z" fill="#5ad1ff" stroke="#001018" stroke-width="1.2"/></g></svg>` });
+const drone = L.marker([0, 0], { icon: droneIcon, interactive: false, zIndexOffset: 1000 });
+const home = L.marker([0, 0], { icon: L.divIcon({ className: "", iconSize: [18, 18], html: '<div class="home-ico">H</div>' }), interactive: false });
+const fence = L.circle([0, 0], { radius: 50, color: "#ffb020", weight: 1, dashArray: "6 6", fill: false, interactive: false });
+const trail = L.polyline([], { color: "#5ad1ff", weight: 2, opacity: 0.7, interactive: false }).addTo(map);
+const lead = L.polyline([], { color: "#4fd68a", weight: 2, dashArray: "3 5", interactive: false }).addTo(map);
+// GPS accuracy circle (radius = the GPS horizontal accuracy), coloured by quality
+const acc = L.circle([0, 0], { radius: 1, weight: 1.5, color: "#5ad1ff", fillColor: "#5ad1ff", fillOpacity: 0.14,
+  opacity: 0.8, interactive: false, className: "acc" });
+const GQ = { good: "#5ad1ff", poor: "#ffb020", bad: "#ff4d4d" };
+
+function updateGps(s) {
+  const q = s.gps_q || "bad", box = $("gpsq");
+  // map: accuracy circle and marker style
+  if (s.lat != null && s.gps_hacc != null && !(s.lat === 0 && s.lon === 0)) {
+    if (!map.hasLayer(acc)) acc.addTo(map);
+    acc.setLatLng([s.lat, s.lon]).setRadius(Math.max(1, Math.min(s.gps_hacc, 200)));
+    acc.setStyle({ color: GQ[q], fillColor: GQ[q], dashArray: q === "bad" ? "4 4" : null });
+    const el = acc.getElement(); if (el) el.classList.toggle("bad", q === "bad");
+  } else if (map.hasLayer(acc)) map.removeLayer(acc);
+  const de = drone.getElement();
+  if (de) { de.classList.toggle("gps-poor", q === "poor"); de.classList.toggle("gps-bad", q === "bad"); }
+  // chip: only when the GPS is not good
+  if (s.gps_q == null || q === "good") { box.style.display = "none"; return; }
+  box.style.display = "block";
+  box.classList.toggle("bad", q === "bad");
+  dot("gq-dot", q === "bad" ? "bad" : "warn");
+  const gpsOk = (s.gps_why || []).every(w => /^FC: no position|accuracy unknown|jump filtered/.test(w));
+  $("gq-title").textContent = q !== "bad" ? "GPS POOR" : gpsOk && s.gps_fix >= 3 ? "NO POSITION" : "GPS BAD";
+  const n = s.sats || 0;
+  box.querySelectorAll(".bars i").forEach((b, i) => b.classList.toggle("on", n >= [1, 4, 6, 8, 10][i]));
+  const facts = [`${n} SATS`];
+  if (s.gps_hacc != null) facts.push(`±${s.gps_hacc < 10 ? s.gps_hacc.toFixed(1) : Math.round(s.gps_hacc)} M`);
+  if (s.gps_hdop != null) facts.push(`HDOP ${s.gps_hdop.toFixed(1)}`);
+  $("gq-facts").textContent = facts.join(" · ");
+  const why = (s.gps_why || []).filter(w => !/sats|^±|HDOP|jump filtered/.test(w));
+  const notes = [];
+  if (s.pos_filtered) notes.push("Map holds the drone: FC position jumps hidden");
+  else if (why.length) notes.push(why.join(" · "));
+  else notes.push(s.armed ? "Position may drift" : "Expect drift indoors and near buildings");
+  if (q === "bad" && gpsOk && s.gps_fix >= 3) notes.unshift("GPS is good; the FC has no position estimate yet");
+  $("gq-note").textContent = notes.join(" · ");
+}
+let follow = true, firstFix = true, lastTrail = null;
+
+$("m-follow").onclick = () => { follow = !follow; $("m-follow").classList.toggle("on", follow); };
+$("m-in").onclick = () => map.zoomIn();
+$("m-out").onclick = () => map.zoomOut();
+$("m-clear").onclick = () => trail.setLatLngs([]);
+map.on("dragstart", () => { follow = false; $("m-follow").classList.remove("on"); });
+
+// offset in metres -> lat/lon
+function offset(lat, lon, dn, de) {
+  return [lat + dn / 111320, lon + de / (111320 * Math.cos(lat * Math.PI / 180))];
+}
+function distM(a, b, c, d) {
+  const R = 6371000, r = Math.PI / 180, x = (d - b) * r * Math.cos((a + c) / 2 * r), y = (c - a) * r;
+  return Math.hypot(x, y) * R;
+}
+
+function updateMap(s) {
+  updateGps(s);
+  if (s.lat == null || (s.lat === 0 && s.lon === 0)) return;
+  const p = [s.lat, s.lon];
+  if (!map.hasLayer(drone)) drone.addTo(map);
+  drone.setLatLng(p);
+  const rot = document.getElementById("drone-rot");
+  if (rot) rot.setAttribute("transform", `rotate(${s.hdg || 0})`);
+  if (firstFix) { map.setView(p, 19); firstFix = false; }
+  else if (follow) map.panTo(p, { animate: true, duration: 0.25 });
+  if (!lastTrail || distM(lastTrail[0], lastTrail[1], p[0], p[1]) > 0.3) {
+    trail.addLatLng(p); lastTrail = p;
+    const pts = trail.getLatLngs(); if (pts.length > 3000) trail.setLatLngs(pts.slice(-3000));
+  }
+  lead.setLatLngs([p, offset(s.lat, s.lon, (s.vn || 0) * 5, (s.ve || 0) * 5)]);  // 5 s ahead
+  if (s.home_lat != null) {
+    const h = [s.home_lat, s.home_lon];
+    if (!map.hasLayer(home)) home.addTo(map);
+    home.setLatLng(h);
+    const circle = ((s.ceil && s.ceil.fc && s.ceil.fc.fence_type) & 2) !== 0;   // FENCE_TYPE bit 1 = circle
+    if (s.fence_on && s.fence_r && circle) { if (!map.hasLayer(fence)) fence.addTo(map); fence.setLatLng(h).setRadius(s.fence_r); }
+    else if (map.hasLayer(fence)) map.removeLayer(fence);
+  }
+}
+
+/* ---------- link to the server ---------- */
+function connect() {
+  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onmessage = ev => { state = JSON.parse(ev.data); render(); };
+  ws.onclose = () => { state = {}; render(true); setTimeout(connect, 1000); };
+  ws.onopen = sendSpeeds;
+}
+const send = obj => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); };
+
+/* ---------- trips: pads, routes, record, approve, go ---------- */
+const padLayer = L.layerGroup().addTo(map), routeLayer = L.layerGroup().addTo(map);
+let tripKey = "";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function renderTrips(a) {
+  if (!a) return;
+  const sab = $("sa-badge");
+  sab.textContent = !a.sa_ch ? "SA NOT SET" : a.sa_on ? "SA ON" : "SA OFF";
+  sab.className = "badge" + (a.sa_on ? " on" : "");
+  const m = a.mission || {};
+  const where = a.pad ? `on pad ${a.pad.toUpperCase()}` : "not on a pad";
+  const rec = a.recording;
+  $("trip-state").innerHTML = rec
+    ? `REC ${esc(rec.from)} → ${esc(rec.to)} · ${esc(rec.phase)}<small>${rec.samples} points. Arm on pad ${esc(rec.from).toUpperCase()}, fly, land on ${esc(rec.to).toUpperCase()}.</small>`
+    : m.state && m.state !== "idle"
+      ? `${esc(m.state).toUpperCase()} ${esc(m.from)} → ${esc(m.to)}${m.items ? ` · ${m.item}/${m.items}` : ""}<small>${esc(m.reason || where)}</small>`
+      : `IDLE<small>${where}</small>`;
+  // go buttons: one per pad with an approved route from here
+  const ready = new Set(a.routes.filter(r => r.approved && r.from === a.pad).map(r => r.to));
+  const goKey = Object.keys(a.pads).join() + "|" + [...ready].join() + "|" + a.sa_on;
+  if (goKey !== $("trip-go").dataset.k) {
+    $("trip-go").dataset.k = goKey;
+    $("trip-go").innerHTML = Object.keys(a.pads).map(p =>
+      `<button class="mini go" data-pad="${esc(p)}" ${ready.has(p) && a.sa_on ? "" : "disabled"}>Go ${esc(p)}</button>`).join("");
+  }
+  const active = ["starting", "uploading", "enroute", "landing"].includes(m.state);
+  $("t-hold").disabled = !active; $("t-resume").disabled = m.state !== "holding" || !a.sa_on; $("t-return").disabled = !state.armed || !a.sa_on;
+  $("b-rec").firstElementChild.textContent = rec ? "Cancel recording" : "Record route";
+  // routes list + map (redraw only on change)
+  const key = JSON.stringify([a.pads, a.routes.map(r => [r.from, r.to, r.approved, r.path])]);
+  if (key === tripKey) return;
+  tripKey = key;
+  $("routes").innerHTML = a.routes.map(r => `<div class="route"><span>${esc(r.from)} → ${esc(r.to)}
+      <small>${r.length_m} m · ${Math.round(r.est_time_s / 60 * 10) / 10} min · max ${r.max_alt} m</small>
+      ${r.problems.length ? `<small class="warn">${esc(r.problems.join("; "))}</small>` : ""}</span>
+      <button class="mini ${r.approved ? "go" : ""}" data-approve="${esc(r.from)}|${esc(r.to)}|${r.approved ? 0 : 1}">${r.approved ? "Approved" : "Approve"}</button></div>`).join("")
+    || `<div class="route"><small>No routes yet. Record one: fly it by hand from pad to pad.</small></div>`;
+  padLayer.clearLayers(); routeLayer.clearLayers();
+  for (const [id, p] of Object.entries(a.pads)) {
+    L.circle([p.lat, p.lon], { radius: 3, color: "#5ad1ff", weight: 1.5, fillOpacity: 0.15, interactive: false }).addTo(padLayer);
+    L.marker([p.lat, p.lon], { interactive: false, icon: L.divIcon({ className: "", iconAnchor: [-6, 18], html: `<span class="pad-lbl">${esc(p.name)}</span>` }) }).addTo(padLayer);
+  }
+  for (const r of a.routes) {
+    const pts = r.path.filter(q => q[0] != null);
+    L.polyline(pts, { color: r.approved ? "#4fd68a" : "#ffb020", weight: 2, opacity: 0.85, dashArray: r.approved ? null : "6 6", interactive: false }).addTo(routeLayer);
+  }
+}
+$("trips").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b || b.disabled) return;
+  if (b.dataset.pad) {
+    if (confirm(`Fly the drone to pad ${b.dataset.pad.toUpperCase()} on the approved route?`)) send({ type: "trip", action: "goto", pad: b.dataset.pad });
+  } else if (b.dataset.approve) {
+    const [f, t, ok] = b.dataset.approve.split("|");
+    if (ok === "1" && !confirm(`Approve route ${f} → ${t}? Check it on the map first. The backend can then fly it.`)) return;
+    send({ type: "approve", from: f, to: t, ok: ok === "1" });
+  } else if (b.id === "t-hold") send({ type: "trip", action: "hold" });
+  else if (b.id === "t-resume") send({ type: "trip", action: "resume" });
+  else if (b.id === "t-return") { if (confirm("Stop the trip and return to the start pad (RTL)?")) send({ type: "trip", action: "return" }); }
+  else if (b.id === "b-rec") {
+    if (state.auto && state.auto.recording) send({ type: "rec_cancel" });
+    else send({ type: "rec_start", from: $("rec-from").value.trim().toLowerCase(), to: $("rec-to").value.trim().toLowerCase() });
+  }
+});
+
+/* ---------- hold to hop (no GPS): release = motors off ---------- */
+let hopCm = 2, hopSec = 30;          // test run: height above where it sat (cm), time held there (s)
+function hopSetH(v) { hopCm = Math.max(1, Math.min(38, Math.round(v))); $("hop-h").textContent = hopCm + " cm"; }
+function hopSetT(v) { hopSec = Math.max(5, Math.min(120, Math.round(v / 5) * 5)); $("hop-t").textContent = hopSec + " s"; }
+$("hop-up").onclick = () => hopSetH(hopCm + 1);
+$("hop-dn").onclick = () => hopSetH(hopCm - 1);
+$("hop-tup").onclick = () => hopSetT(hopSec + 5);
+$("hop-tdn").onclick = () => hopSetT(hopSec - 5);
+$("hop-ok").onchange = () => { $("b-hop").disabled = !$("hop-ok").checked; };
+$("b-hop").onclick = () => {
+  if ($("b-hop").disabled) return;
+  send({ type: "hop_test", height: hopCm / 100, duration: hopSec });
+  $("hop-ok").checked = false; $("b-hop").disabled = true;   // unlock again for the next run
+};
+$("b-hop-stop").onclick = () => send({ type: "hop_stop" });
+function renderHop(h) {
+  if (!h) return;
+  const b = $("hop-badge");
+  b.textContent = (h.state || "idle").toUpperCase();
+  b.className = "badge" + (h.active ? " on" : "");
+  if (h.state === "refused" || h.state === "killed" || h.state === "done")
+    $("hop-state").textContent = `${h.state.toUpperCase()}: ${h.reason || ""}`;
+  else if (h.active)
+    $("hop-state").textContent = `${h.state === "landing" ? "Landing" : "Holding"} ${Math.round((h.height || 0) * 100)} cm · tag height now ${h.height_now != null ? (h.height_now * 100).toFixed(1) : "?"} cm`
+      + (h.drift_m != null ? ` · off the start ${(h.drift_m * 100).toFixed(1)} cm` : "")
+      + (h.test_left != null && h.state !== "landing" ? ` · lands in ${h.test_left.toFixed(0)} s` : "")
+      + (h.pose ? ` (${h.pose.toUpperCase()})` : "") + " · SD or Stop = motors off";
+}
+
+/* ---------- fly to a point ---------- */
+let ftAlt = 5, ftLand = true, ftPick = false;
+const ftTarget = L.marker([0, 0], { interactive: false, zIndexOffset: 900,
+  icon: L.divIcon({ className: "", iconSize: [20, 20], html: '<div class="ft-ico">✕</div>' }) });
+const ftLine = L.polyline([], { color: "#c58bff", weight: 2, dashArray: "4 6", interactive: false });
+function ftDist(a, b) {   // m, flat earth (fine for a few km)
+  const n = (b[0] - a[0]) * 111320, e = (b[1] - a[1]) * 111320 * Math.cos(a[0] * Math.PI / 180);
+  return Math.hypot(n, e);
+}
+function ftPoint() {
+  const lat = parseFloat($("ft-lat").value), lon = parseFloat($("ft-lon").value);
+  return Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? [lat, lon] : null;
+}
+function ftShow() {
+  const f = state.flyto, active = f && ["starting", "taking_off", "enroute", "landing"].includes(f.state);
+  const p = active && f.target ? [f.target.lat, f.target.lon] : ftPoint();
+  if (!p) { [ftTarget, ftLine].forEach(l => map.hasLayer(l) && map.removeLayer(l)); return; }
+  if (!map.hasLayer(ftTarget)) ftTarget.addTo(map);
+  ftTarget.setLatLng(p);
+  if (state.lat != null) { if (!map.hasLayer(ftLine)) ftLine.addTo(map); ftLine.setLatLngs([[state.lat, state.lon], p]); }
+}
+function ftSetAlt(v) { ftAlt = Math.max(2, Math.min(60, Math.round(v))); $("ft-alt").textContent = ftAlt + " m"; }
+$("ft-alt-up").onclick = () => ftSetAlt(ftAlt + 1);
+$("ft-alt-dn").onclick = () => ftSetAlt(ftAlt - 1);
+$("ft-land").onclick = () => { ftLand = !ftLand; $("ft-land").classList.toggle("on", ftLand); $("ft-land").textContent = ftLand ? "Land" : "Hover"; };
+function ftSetPick(on) {
+  ftPick = on; $("ft-pick").classList.toggle("on", on);
+  if (on && airProbe) $("air-probe").click();     // one map-click tool at a time
+  map.getContainer().style.cursor = on ? "crosshair" : "";
+}
+$("ft-pick").onclick = () => ftSetPick(!ftPick);
+["ft-lat", "ft-lon"].forEach(id => $(id).addEventListener("input", ftShow));
+map.on("click", e => {
+  if (!ftPick) return;
+  $("ft-lat").value = e.latlng.lat.toFixed(7); $("ft-lon").value = e.latlng.lng.toFixed(7);
+  ftSetPick(false); ftShow();
+});
+$("ft-go").onclick = () => {
+  const p = ftPoint();
+  if (!p) { alert("Set the point first: Pick on the map, or type lat and lon."); return; }
+  const sp = +$("sp-h").value;
+  const far = state.lat != null ? `, ${Math.round(ftDist([state.lat, state.lon], p))} m away` : "";
+  const how = state.armed ? "It flies from where it is (GUIDED)." : "It arms and takes off first.";
+  if (confirm(`Fly to ${p[0].toFixed(6)}, ${p[1].toFixed(6)} at ${ftAlt} m, ${sp.toFixed(1)} m/s${far}, then ${ftLand ? "land" : "hover"}?\n\n${how}\nProps on, area clear, Boxer in hand. Any key, Hold, Land or Return home stops it.`))
+    send({ type: "flyto", lat: p[0], lon: p[1], alt: ftAlt, land: ftLand, speed: sp });
+};
+$("ft-cancel").onclick = () => { clearKeys(); send({ type: "hold" }); };
+function renderFlyto(f) {
+  if (!f) return;
+  const active = ["starting", "taking_off", "enroute", "landing"].includes(f.state);
+  const b = $("ft-badge");
+  b.textContent = f.state.replace("_", " ").toUpperCase(); b.className = "badge" + (active ? " on" : "");
+  const where = f.target ? `${f.target.lat.toFixed(6)}, ${f.target.lon.toFixed(6)} at ${f.target.alt} m · ${f.land ? "land" : "hover"}` : "";
+  $("ft-state").innerHTML = f.state === "idle" ? `Pick a point on the map<small>or type lat, lon</small>`
+    : `${esc(f.state.replace("_", " ").toUpperCase())}${active && f.dist_m != null ? ` · ${f.dist_m} m · ${f.eta_s} s` : ""}<small>${esc(f.reason || where)}</small>`;
+  $("ft-go").disabled = active || !state.link;
+  $("ft-cancel").disabled = !active;
+  ftShow();
+}
+
+/* ---------- keys ---------- */
+function inputVector() {
+  const k = c => held.has(c) ? 1 : 0;
+  return { type: "input", n: k("w") - k("s"), e: k("d") - k("a"), u: k("z") - k("x"), yaw: k("e") - k("q") };
+}
+setInterval(() => send(inputVector()), 100);  // 10 Hz; silence counts as "no keys"
+
+function setKey(c, on) {
+  if (!KEYS.includes(c)) return;
+  on ? held.add(c) : held.delete(c);
+  document.querySelectorAll(`.k[data-k="${c}"]`).forEach(el => el.classList.toggle("on", on));
+  send(inputVector());
+}
+function clearKeys() { [...held].forEach(c => setKey(c, false)); }
+// A key in a text field is typing, not flying.
+const typing = e => { const t = e.target;
+  return !!t && (t.isContentEditable || t.tagName === "TEXTAREA" || t.tagName === "SELECT"
+    || (t.tagName === "INPUT" && !["range", "checkbox", "radio", "button"].includes(t.type))); };
+addEventListener("keydown", e => {
+  if (e.key === "Escape") { if (typing(e)) e.target.blur(); else closeAll(); return; }
+  if (typing(e) || e.metaKey || e.ctrlKey || e.altKey) return;
+  const c = e.key.toLowerCase();
+  if (c === " ") { e.preventDefault(); clearKeys(); if (state.armed) send({ type: "hold" }); return; }
+  if (KEYS.includes(c)) { e.preventDefault(); if (!e.repeat) setKey(c, true); }
+});
+addEventListener("keyup", e => setKey(e.key.toLowerCase(), false));
+addEventListener("blur", clearKeys);
+document.addEventListener("visibilitychange", clearKeys);
+document.querySelectorAll(".k").forEach(el => {
+  const c = el.dataset.k;
+  el.addEventListener("pointerdown", e => { el.setPointerCapture(e.pointerId); setKey(c, true); });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => el.addEventListener(t, () => setKey(c, false)));
+});
+
+document.addEventListener("click", e => { const b = e.target.closest("button"); if (b) b.blur(); });
+
+/* ---------- speeds + actions ---------- */
+function sendSpeeds() {
+  const h = +$("sp-h").value, v = +$("sp-v").value, y = +$("sp-y").value;
+  $("o-h").textContent = h.toFixed(1) + " m/s"; $("o-v").textContent = v.toFixed(1) + " m/s"; $("o-y").textContent = y + " °/s";
+  send({ type: "speeds", h, v, yaw: y });
+}
+["sp-h", "sp-v", "sp-y"].forEach(id => $(id).addEventListener("input", sendSpeeds));
+
+let takeoffAlt = 1.0;
+function setAlt(v) { takeoffAlt = Math.max(0.5, Math.min(10, Math.round(v * 2) / 2)); $("alt").textContent = takeoffAlt.toFixed(1) + " m"; }
+$("alt-up").onclick = () => setAlt(takeoffAlt + 0.5);
+$("alt-dn").onclick = () => setAlt(takeoffAlt - 0.5);
+$("b-takeoff").onclick = () => {
+  if (confirm(`Arm and take off to ${takeoffAlt.toFixed(1)} m in GUIDED?\n\nProps on, area clear, Boxer in hand.`)) send({ type: "takeoff", alt: takeoffAlt });
+};
+$("b-land").onclick = () => send({ type: "land" });
+$("b-rtl").onclick = () => send({ type: "rtl" });
+$("b-hold").onclick = () => { clearKeys(); send({ type: "hold" }); };
+
+let killTimer = null, killStart = 0;   // a 1 s press, so a stray click cannot drop the drone
+function killUp() { clearInterval(killTimer); killTimer = null; $("kill-fill").style.width = "0"; }
+$("b-kill").addEventListener("pointerdown", () => {
+  killStart = performance.now();
+  killTimer = setInterval(() => {
+    const f = Math.min(1, (performance.now() - killStart) / 1000);
+    $("kill-fill").style.width = f * 100 + "%";
+    if (f >= 1) { send({ type: "kill" }); killUp(); }
+  }, 30);
+});
+["pointerup", "pointerleave", "pointercancel"].forEach(t => $("b-kill").addEventListener(t, killUp));
+document.querySelectorAll("[data-lights]").forEach(b => b.onclick = () => send({ type: "lights", mode: b.dataset.lights }));
+$("b-show").onclick = () => send({ type: "light_show", on: !$("b-show").classList.contains("on") });
+
+/* ---------- render ---------- */
+function dot(id, cls) { $(id).className = "dot " + (cls || ""); }
+const fx = (v, d = 1) => v == null ? "—" : (Math.abs(v) < 0.5 * 10 ** -d ? 0 : v).toFixed(d);   // no "-0.0"
+function setNum(id, txt) { const el = $(id); el.firstChild.nodeValue = txt; }
+
+
+/* ---------- legal ceiling / airspace ---------- */
+const FT = 0.3048;
+map.createPane("air"); map.getPane("air").style.zIndex = 380;
+const airG = { ceil: null, cls: L.layerGroup(), laanc: L.layerGroup(), tfr: L.layerGroup(), stad: L.layerGroup(), auth: L.layerGroup(), zone: L.layerGroup() };
+const AIR_DEF = { ceil: true, cls: true, laanc: false, tfr: true, stad: true, auth: true, zone: true };
+let airOn = { ...AIR_DEF };
+try { airOn = { ...AIR_DEF, ...JSON.parse(localStorage.getItem("air-layers") || "{}") }; } catch (e) {}
+let airData = null, airBuiltAt = null, airProbe = false, airPopMode = null;
+const fmtFt = m => m == null ? "—" : `${Math.round(m / FT)} ft`;
+const fmtAge = s => s == null ? "—" : s < 120 ? `${s} s` : s < 7200 ? `${Math.round(s / 60)} min` : s < 172800 ? `${Math.round(s / 3600)} h` : `${Math.round(s / 86400)} d`;
+const esc2 = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const tStr = t => t == null ? "open" : new Date(t * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+function airApply() {
+  for (const k in airG) {
+    const lyr = airG[k]; if (!lyr) continue;
+    if (airOn[k] && !map.hasLayer(lyr)) lyr.addTo(map);
+    if (!airOn[k] && map.hasLayer(lyr)) map.removeLayer(lyr);
+  }
+  document.querySelectorAll("#air-pop input[data-l]").forEach(el => { el.checked = !!airOn[el.dataset.l]; });
+  try { localStorage.setItem("air-layers", JSON.stringify(airOn)); } catch (e) {}
+}
+document.querySelectorAll("#air-pop input[data-l]").forEach(el => el.onchange = () => { airOn[el.dataset.l] = el.checked; airApply(); });
+
+function floorTxt(p) {
+  const lo = p.LOWER_VAL ? `${p.LOWER_VAL} ${p.LOWER_CODE === "MSL" ? "MSL" : "AGL"}` : "SFC";
+  return `${lo} – ${p.UPPER_VAL ?? "?"} ${p.UPPER_CODE || ""}`;
+}
+function drawAir(d) {
+  airData = d;
+  const st = d.status || {};
+  if (d.bounds && st.built_age_s != null) {
+    const built = Date.now() / 1000 - st.built_age_s;
+    if (airBuiltAt == null || Math.abs(built - airBuiltAt) > 30) {
+      airBuiltAt = built;
+      const on = airG.ceil && map.hasLayer(airG.ceil);
+      if (airG.ceil) map.removeLayer(airG.ceil);
+      airG.ceil = L.imageOverlay(`/airspace/overlay.png?b=${Math.round(built)}`, d.bounds, { pane: "air", opacity: 0.8, interactive: false });
+      if (on || airOn.ceil) airG.ceil.addTo(map);
+    }
+  }
+  airG.cls.clearLayers();
+  for (const f of (d.classes?.features || [])) {
+    const p = f.properties, c = p.CLASS;
+    if (!["B", "C", "D"].includes(c) && !/E2|E3|E4/.test(p.LOCAL_TYPE || "")) continue;
+    const col = c === "B" ? "#4d8dff" : c === "D" ? "#4d8dff" : "#d65ad6";
+    L.geoJSON(f, { pane: "air", style: { color: col, weight: c === "B" ? 1.6 : 1.4, dashArray: c === "B" || c === "C" ? null : "7 5", fill: false } })
+      .bindTooltip(`<div class="air-tip"><b>${esc2(p.NAME)}</b><br>Class ${esc2(c)} · ${esc2(floorTxt(p))}</div>`, { sticky: true })
+      .addTo(airG.cls);
+  }
+  airG.laanc.clearLayers();
+  for (const f of (d.uasfm?.features || [])) {
+    const ft = f.properties.CEILING;
+    const col = ft === 0 ? "#c81e3a" : ft <= 100 ? "#ea5a2c" : ft <= 200 ? "#f39233" : ft <= 300 ? "#e9d04a" : "#4caf8f";
+    L.geoJSON(f, { pane: "air", style: { color: "#fff", weight: 0.3, opacity: 0.4, fillColor: col, fillOpacity: 0.28 } })
+      .bindTooltip(`<div class="air-tip">LAANC <b>${ft} ft</b> · ${esc2(f.properties.APT1_NAME)}</div>`, { sticky: true })
+      .addTo(airG.laanc);
+  }
+  airG.tfr.clearLayers();
+  for (const t of (d.tfrs || [])) {
+    const alt = `${Math.round(t.lower_m / FT)} ft ${t.lower_ref} – ${t.upper_m == null ? "?" : Math.round(t.upper_m / FT) + " ft " + t.upper_ref}`;
+    const when = (t.schedule || []).map(([a, b]) => `${tStr(a)} → ${tStr(b)}`).join("<br>");
+    L.polygon(t.ring, { pane: "air", color: t.active ? "#ff4d4d" : "#ffb020", weight: 1.6, dashArray: t.active ? null : "6 5",
+      fillColor: "#ff4d4d", fillOpacity: t.active ? 0.22 : 0.06 })
+      .bindTooltip(`<div class="air-tip"><b>TFR ${esc2(t.id)}</b> ${esc2(t.type || "")}${t.active ? " · ACTIVE" : ""}<br>${esc2(t.desc || t.name)}<br>${alt}<br>${when}</div>`, { sticky: true })
+      .addTo(airG.tfr);
+  }
+  airG.stad.clearLayers();
+  for (const sd of (d.stadiums || [])) {
+    const next = sd.events.map(e => `${tStr(e.start)} → ${tStr(e.end)}`).join("<br>") || "no events entered";
+    L.circle([sd.lat, sd.lon], { pane: "air", radius: 5556, color: sd.active ? "#ff4d4d" : "#ff9d4d", weight: sd.active ? 2 : 1.2,
+      dashArray: sd.active ? null : "4 6", opacity: sd.active ? 0.9 : 0.55, fillColor: "#ff4d4d", fillOpacity: sd.active ? 0.15 : 0 })
+      .bindTooltip(`<div class="air-tip"><b>${esc2(sd.name)}</b> · 3 NM stadium TFR${sd.active ? " · ACTIVE" : ""}<br>${next}</div>`, { sticky: true })
+      .addTo(airG.stad);
+  }
+  airG.auth.clearLayers();
+  for (const a of (d.auths || [])) {
+    L.circle([a.lat, a.lon], { pane: "air", radius: a.radius_m, color: "#4fd68a", weight: 1.5, fillOpacity: 0.12 })
+      .bindTooltip(`<div class="air-tip"><b>${esc2(a.name)}</b> · ${a.max_ft} ft AGL<br>${tStr(a.start)} → ${tStr(a.end)}</div>`, { sticky: true })
+      .addTo(airG.auth);
+  }
+  airG.zone.clearLayers();
+  for (const z of (d.zones || [])) {
+    L.circle([z.lat, z.lon], { pane: "air", radius: z.radius_m, color: "#ff4d4d", weight: 1.5, dashArray: "5 4", fillOpacity: 0.14 })
+      .bindTooltip(`<div class="air-tip"><b>${esc2(z.name)}</b> · keep-out zone · ${Math.round(z.radius_m)} m</div>`, { sticky: true })
+      .addTo(airG.zone);
+  }
+  $("zo-list").innerHTML = (d.zones || []).map((z, i) =>
+    `<div><span>${esc2(z.name)} · ${Math.round(z.radius_m)} m</span><button data-rm="zones" data-i="${i}">×</button></div>`).join("");
+  $("ev-list").innerHTML = (d.events || []).map((e, i) => {
+    const sd = (d.stadiums || []).find(x => x.key === e.stadium);
+    return `<div><span>${esc2(sd ? sd.name : e.stadium)} · ${tStr(e.start)}</span><button data-rm="events" data-i="${i}">×</button></div>`;
+  }).join("");
+  $("au-list").innerHTML = (d.auths || []).map((a, i) =>
+    `<div><span>${esc2(a.name)} · ${a.max_ft} ft · ${tStr(a.end)}</span><button data-rm="auths" data-i="${i}">×</button></div>`).join("");
+  document.querySelectorAll("#air-pop [data-rm]").forEach(b => b.onclick = () => airPost({ kind: "remove", list: b.dataset.rm, index: +b.dataset.i }));
+  airApply();
+}
+async function airLoad() {
+  try { const r = await fetch("/airspace/layers.json"); if (r.ok) drawAir(await r.json()); } catch (e) {}
+}
+async function airPost(body) {
+  $("air-err").textContent = "";
+  try {
+    const r = await fetch("/airspace/edit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!r.ok) { $("air-err").textContent = d.error || "not saved"; return; }
+    drawAir(d);
+  } catch (e) { $("air-err").textContent = "server not reachable"; }
+}
+const epoch = id => { const v = $(id).value; return v ? new Date(v).getTime() / 1000 : NaN; };
+$("ev-add").onclick = () => airPost({ kind: "event", stadium: $("ev-st").value, start: epoch("ev-start"), end: epoch("ev-end") });
+$("zo-add").onclick = () => {
+  const c = map.getCenter();
+  airPost({ kind: "zone", name: $("zo-name").value || "zone", lat: c.lat, lon: c.lng, radius_m: +$("zo-r").value });
+};
+$("au-add").onclick = () => {
+  const c = map.getCenter();
+  airPost({ kind: "auth", name: $("au-name").value || "LAANC", lat: c.lat, lon: c.lng, radius_m: +$("au-r").value,
+            max_ft: +$("au-ft").value, start: epoch("au-start"), end: epoch("au-end") });
+};
+$("air-pop").addEventListener("keydown", e => e.stopPropagation());   // typing here must not fly the drone
+$("air-pop").addEventListener("keyup", e => e.stopPropagation());
+function airPop(mode) {
+  airPopMode = airPopMode === mode ? null : mode;
+  $("air-pop").classList.toggle("open", !!airPopMode);
+  $("air-pop-layers").style.display = airPopMode === "layers" ? "" : "none";
+  $("air-pop-edit").style.display = airPopMode === "edit" ? "" : "none";
+  $("air-layers").classList.toggle("on", airPopMode === "layers");
+  $("air-edit").classList.toggle("on", airPopMode === "edit");
+}
+$("air-layers").onclick = () => airPop("layers");
+$("air-edit").onclick = () => airPop("edit");
+$("air-probe").onclick = () => { if (!airProbe && ftPick) ftSetPick(false); airProbe = !airProbe; $("air-probe").classList.toggle("on", airProbe); map.getContainer().style.cursor = airProbe ? "crosshair" : ""; };
+map.on("click", async e => {
+  if (!airProbe) return;
+  try {
+    const q = await (await fetch(`/airspace/query?lat=${e.latlng.lat}&lon=${e.latlng.lng}`)).json();
+    const body = !q.ok ? esc2(q.reason)
+      : `<b style="font:600 16px var(--mono);color:${q.nofly ? "var(--bad)" : "var(--text)"}">${q.nofly ? "NO-FLY" : fmtFt(q.ceiling_agl) + " AGL"}</b><br>`
+        + `${esc2(q.reason)}<br><span style="color:var(--muted)">ground ${q.ground_m} m · ceiling ${q.ceiling_amsl} m MSL</span>`
+        + (q.warnings?.length ? `<br><span style="color:var(--warn)">${q.warnings.map(esc2).join("<br>")}</span>` : "");
+    L.popup().setLatLng(e.latlng).setContent(body).openOn(map);
+  } catch (err) {}
+});
+airLoad();
+setInterval(airLoad, 60000);
+
+let nfPoly = null;
+function nfLine(pts) {          // thin line from the drone to the nearest NO-FLY edge
+  if (!pts) { if (nfPoly) { nfPoly.remove(); nfPoly = null; } return; }
+  if (!nfPoly) nfPoly = L.polyline(pts, { pane: "air", color: "#ff4d4d", weight: 1, dashArray: "2 4", interactive: false }).addTo(map);
+  else nfPoly.setLatLngs(pts);
+}
+function renderAir(c, down) {
+  const box = $("air"), badge = $("air-badge");
+  if (down || !c) { badge.textContent = "—"; badge.className = "badge"; dot("d-ceil", ""); $("t-ceil").textContent = "—"; return; }
+  const h = c.here || {}, fc = c.fc || {}, st = c.status || "";
+  const nofly = !!c.nofly, over = st.startsWith("ABOVE"), fb = fc.fresh && fc.state === 1;
+  box.classList.toggle("nofly", nofly); box.classList.toggle("over", over);
+  let b = "WAIT", cls = "warn";
+  if (nofly) { b = "NO-FLY"; cls = "bad"; }
+  else if (over) { b = "DESCEND"; cls = "bad"; }
+  else if (c.mode === "off") { b = "OFF"; cls = ""; }
+  else if (st === "active") { b = "ACTIVE"; cls = "on"; }
+  else if (fb || st.startsWith("no link")) { b = "FALLBACK"; cls = "warn"; }
+  badge.textContent = b; badge.className = "badge " + cls;
+  $("air-ft").textContent = nofly ? "NO-FLY" : h.ok ? `${Math.round(h.ceiling_agl / FT)}` : "—";
+  $("air-m").textContent = nofly ? "" : h.ok ? `ft AGL · ${Math.round(h.ceiling_agl)} m` : "";
+  $("air-reason").textContent = (nofly || over || !h.ok || st !== "active") && st ? st : (h.reason || st);
+  $("air-reason").title = [h.reason, st, ...(h.warnings || [])].filter(Boolean).join(" · ");
+  $("air-sent").textContent = c.target_m == null ? "—" : `${c.target_m.toFixed(0)} m`;
+  $("air-fc").textContent = fc.fresh && fc.fence != null ? `${fc.fence.toFixed(0)} m` : "no reply";
+  const e = c.edge;
+  $("air-nf").textContent = !e ? "none within 2 km" : e.inside ? "INSIDE" : `${Math.round(e.dist_m)} m`;
+  $("air-nf").title = e ? e.name : "";
+  $("air-nf").style.color = e && (e.inside || e.dist_m < 100) ? "var(--bad)" : e && e.dist_m < 300 ? "var(--warn)" : "";
+  nfLine(e && !e.inside && e.dist_m < 500 && state.lat ? [[state.lat, state.lon], [e.lat, e.lon]] : null);
+  dot("d-ceil", nofly || over ? "bad" : st === "active" ? "ok" : "warn");
+  $("t-ceil").textContent = nofly ? "NO-FLY" : h.ok ? `${Math.round(h.ceiling_agl / FT)} ft` : "—";
+  const m = c.map || {};
+  $("air-ages").innerHTML = `map <b>${esc2(m.state || "—")}</b>${m.error ? ` · <span style="color:var(--warn)">${esc2(m.error)}</span>` : ""}<br>`
+    + `TFR list <b>${fmtAge(m.tfr_age_s)}</b> old · ${m.tfr_count ?? 0} near here<br>`
+    + `FAA airspace <b>${fmtAge(m.class_age_s)}</b> · buildings <b>${fmtAge(m.bld_age_s)}</b> (${m.buildings ?? 0})<br>`
+    + `home ${c.home_amsl == null ? "—" : c.home_amsl + " m"} (${esc2(c.home_src || "—")}) · fallback ${c.fallback_m == null ? "—" : c.fallback_m + " m"}`;
+}
+function render(down) {
+  const s = state;
+  dot("d-link", down ? "bad" : s.link ? "ok" : "bad");
+  $("t-link").textContent = down ? "SERVER DOWN" : s.link ? "UP" : "LOST";
+  dot("d-rc", s.rc_ok ? (s.sd_stop ? "bad" : "ok") : "bad");
+  // RSSI 0..254; 0 and 255 mean "not measured" (the FC has no RSSI source set up)
+  const rssi = s.rssi > 0 && s.rssi < 255 ? `${Math.round(s.rssi * 100 / 254)}%` : "OK";
+  $("t-rc").textContent = s.rc_ok ? (s.sd_stop ? "SD STOP" : rssi) : "NONE";
+  const fix = ["none", "none", "2D", "3D", "DGPS", "RTK F", "RTK"][s.gps_fix] || "—";
+  dot("d-gps", s.gps_q === "good" ? "ok" : s.gps_q === "poor" ? "warn" : s.gps_q === "bad" ? "bad"
+    : s.gps_fix >= 3 && s.sats >= 8 ? "ok" : s.gps_fix >= 2 ? "warn" : "bad");
+  $("t-gps").textContent = s.sats != null ? `${fix} · ${s.sats}` + (s.gps_hacc != null ? ` · ±${Math.round(s.gps_hacc)} m` : "") : "—";
+  const cell = s.batt_v ? s.batt_v / 6 : null;
+  const pct = s.batt_pct;
+  const bcls = pct != null ? (pct <= 20 ? "bad" : pct <= 35 ? "warn" : "ok")
+                           : cell == null ? "" : cell < 3.6 ? "bad" : cell < 3.8 ? "warn" : "ok";
+  dot("d-batt", bcls);
+  $("t-batt").textContent = s.batt_v ? (pct != null ? `${pct}% · ` : "") + `${s.batt_v.toFixed(1)} V` : "—";
+  dot("d-fence", s.fence_on ? "ok" : "warn");
+  const ftype = s.ceil && s.ceil.fc ? s.ceil.fc.fence_type : null;
+  $("t-fence").textContent = s.fence_on == null ? "—" : !s.fence_on ? "OFF"
+    : ftype != null && !(ftype & 2) ? "ALT ONLY" : `${Math.round(s.fence_r)} m`;
+  dot("d-log", s.log_file ? "ok" : "");
+  $("t-log").textContent = s.log_file ? "TLOG" : "OFF";
+  dot("d-cloud", s.cloud === "ok" ? "ok" : s.cloud === "error" ? "bad" : "");
+  $("t-cloud").textContent = (s.cloud || "—").toUpperCase();
+
+  // Commands: on the ground LAND, RTL and BRAKE would block arming (ArduCopter
+  // allows_arming() is false in those modes), so they work only when armed.
+  const air = !down && !!s.armed;
+  document.querySelectorAll("#actions [data-air]").forEach(b => {
+    b.disabled = !air; b.title = air ? "" : "Works when armed. On the ground this mode would block arming.";
+  });
+  $("b-takeoff").disabled = down || !s.link || !!s.armed;
+  $("b-takeoff").title = down || !s.link ? "No link to the drone" : s.armed ? "Already armed" : "";
+  fitTop();
+  // lights: what the FC reads on CH6 (lua/lights.lua: 800..969 landing (laptop only), <1300 status, <1700 nav, else off)
+  const lr = s.lights_raw, lmode = !lr ? null : lr >= 800 && lr < 970 ? "landing" : lr < 1300 ? "status" : lr < 1700 ? "aviation" : "off";
+  document.querySelectorAll("[data-lights]").forEach(b => {
+    b.classList.toggle("on", b.dataset.lights === lmode); b.disabled = down || !s.link;
+  });
+  // delivery show (LIT_SHOW): plays while disarmed, the next arming ends it
+  const show = $("b-show"), noShow = s.lights_show == null;
+  show.classList.toggle("on", !!s.lights_show);
+  show.disabled = down || !s.link || noShow;
+  show.title = noShow ? "lights.lua not loaded on the FC (no LIT_SHOW parameter)"
+    : "Delivery show: rainbow spin, ripple and green pulses while disarmed. Arming (stick right) ends it. Tap again to stop.";
+  $("lights-note").textContent = s.lights_show ? (s.armed ? "Show on landing" : "Show playing") : s.rc_ok ? "Boxer SB overrides" : "";
+
+  $("mode").textContent = s.mode || "—";
+  // ArduCopter modes whose allows_arming() is false (mode.h, 4.7)
+  const NO_ARM = ["AUTOTUNE", "BRAKE", "CIRCLE", "FLIP", "LAND", "RTL", "SMART_RTL", "SYSTEMID", "AVOID_ADSB", "FOLLOW", "AUTOROTATE"];
+  const blocked = !down && s.link && !s.armed && NO_ARM.includes(s.mode);
+  $("mode-hint").classList.toggle("on", blocked);
+  if (blocked) $("mode-hint").textContent = `${s.mode} does not allow arming. Change the mode on the Boxer. Auto takeoff changes to GUIDED itself.`;
+  $("armed").textContent = s.armed ? "ARMED" : "SAFE";
+  $("armed").classList.toggle("on", !!s.armed);
+  setNum("v-alt", fx(s.alt));
+  setNum("v-vz", s.vz == null ? "—" : fx(-s.vz));
+  setNum("v-gs", fx(Math.hypot(s.vn || 0, s.ve || 0)));
+  setNum("v-hdg", s.hdg == null ? "—" : String(Math.round(s.hdg)).padStart(3, "0"));
+  setNum("v-home", s.home_lat != null && s.lat != null ? fx(distM(s.home_lat, s.home_lon, s.lat, s.lon)) : "—");
+  setNum("v-cell", fx(cell, 2));
+  setNum("v-amp", fx(s.batt_a));
+  setNum("v-sats", s.sats != null ? String(s.sats) : "—");
+  setNum("v-pct", pct != null ? String(pct) : "—");
+  setNum("v-tleft", s.batt_min != null ? (s.armed ? "" : "~") + s.batt_min.toFixed(1) : "—");
+  $("b-fill").style.width = `${pct != null ? Math.max(0, Math.min(100, pct)) : 0}%`;
+  $("b-fill").className = "fill " + (bcls === "ok" ? "" : bcls);
+  $("b-used").textContent = s.batt_mah != null ? `${Math.round(s.batt_mah)} mAh used` + (s.batt_cap ? ` of ${Math.round(s.batt_cap)}` : "") : "— mAh used";
+  $("b-basis").textContent = s.batt_min_basis ? `to 20% · ${s.batt_min_basis}` : "to 20% reserve";
+  $("pos").textContent = s.lat != null ? `${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}` : "NO POSITION";
+  window.attitudeUpdate && window.attitudeUpdate(s);
+  window.radioLid = s.lid;
+  window.radioPiUrl = s.pi_url;
+  window.radioSnap = s.radio_snap;
+  renderTrips(s.auto);
+  renderFlyto(s.flyto);
+  renderHop(s.hop);
+  renderAir(s.ceil, down);
+
+  const big = $("keys-big"), p = $("keys-p");
+  if (down || !s.link) { big.textContent = "NO LINK"; big.className = "big"; p.textContent = "Waiting for the drone."; }
+  else if (s.taking_off) { big.textContent = "TAKEOFF"; big.className = "big"; p.textContent = "Keys start at the takeoff height."; }
+  else if (s.armed && s.mode === "GUIDED") { big.textContent = "KEYS LIVE"; big.className = "big live"; p.textContent = "Release all keys to hover. SC takes over."; }
+  else { big.textContent = "STANDBY"; big.className = "big"; p.textContent = "Keys work when armed in GUIDED."; }
+
+  $("log").innerHTML = (s.messages || []).slice().reverse().map(m =>
+    `<div class="s${m.sev}"><b>${new Date(m.t * 1000).toLocaleTimeString([], { hour12: false })}</b>${m.text.replace(/</g, "&lt;")}</div>`).join("");
+  updateMap(s);
+}
+
+// Panel heights for the CSS layout (command panel above the ceiling panel, camera above the keys).
+// Set on each update and resize (ResizeObserver does not run in a background tab).
+const rootStyle = document.documentElement.style, layoutPx = {};
+function setVar(name, px) { if (layoutPx[name] !== px) { layoutPx[name] = px; rootStyle.setProperty(name, px + "px"); } }
+// Top bar: hide the optional cells (Fence, Rec, Cloud) when the bar does not fit.
+function fitTop() {
+  setVar("--air-h", $("air").offsetHeight);
+  setVar("--fly-h", $("fly").offsetHeight);
+  const r = document.querySelector(".stat-row"), top = $("top");
+  r.classList.remove("tight"); top.classList.remove("tight");
+  if (r.scrollWidth > r.clientWidth + 1) r.classList.add("tight");
+  if (r.scrollWidth > r.clientWidth + 1) top.classList.add("tight");
+}
+addEventListener("resize", fitTop);
+fitTop();
+// Esc: close popups, expanded views and Probe.
+function closeAll() {
+  if (airPopMode) airPop(airPopMode);
+  if (airProbe) $("air-probe").click();
+  if (ftPick) ftSetPick(false);
+  if ($("cam").classList.contains("big")) $("cam-big").click();
+  if ($("att3d").classList.contains("big")) $("att-big").click();
+  map.closePopup();
+}
+
+setInterval(() => { $("clock").textContent = new Date().toISOString().slice(11, 19) + " UTC"; }, 1000);
+connect();
+</script>
+<script>
+/* ---------- box camera: frames and lid pose from the Pi (companion/cam_stream.py) ----------
+   Positions are in the lid frame: origin at the sticker centre, x along the long side,
+   y along the short side, z up out of the lid. "Drone" is the drone centre
+   (bottom-plate underside); the Pi converts from the camera with its mount offset. */
+(() => {
+  const $ = id => document.getElementById(id);
+  const LID_W = 0.3076, LID_H = 0.2112;            // BX-006 lid top face, m
+  const STK_W = 0.300, STK_H = 0.200;              // sticker
+  const url = $("cam-url"), vid = $("cam-vid"), ov = $("cam-ov"), top = $("cam-top");
+  // Empty = auto: the address the Pi sends over the radio (the name packet-cv.local
+  // does not resolve across subnets, and the DHCP address changes).
+  let saved = null; try { saved = localStorage.getItem("piUrl"); } catch {}
+  if (saved === "http://packet-cv.local:8080") saved = null;     // old default: use auto
+  url.value = new URLSearchParams(location.search).get("pi") || saved || "";
+  url.placeholder = "auto (address from the radio)";
+  url.onchange = () => { try { const v = url.value.trim(); v ? localStorage.setItem("piUrl", v) : localStorage.removeItem("piUrl"); } catch {} };
+  url.onkeydown = e => e.stopPropagation();       // typing here must not fly the drone
+  const base = () => (url.value.trim() || window.radioPiUrl || "").replace(/\/+$/, "");
+
+  let frames = 0, fpsT = performance.now(), lid = null, lidAge = Infinity, ok = false;
+  // Video: hardware H.264 from the Pi (/h264, companion/h264.py), decoded here with
+  // WebCodecs. Record: 4 B length, 1 B flags (1 = keyframe), 8 B capture time ms, Annex B data.
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  function avcCodec(d) {          // "avc1.PPCCLL" from the SPS in a keyframe
+    for (let i = 0; i + 7 < d.length; i++)
+      if (d[i] === 0 && d[i + 1] === 0 && d[i + 2] === 1 && (d[i + 3] & 0x1f) === 7)
+        return "avc1." + [d[i + 4], d[i + 5], d[i + 6]].map(v => v.toString(16).padStart(2, "0")).join("");
+    return null;
+  }
+  async function play() {
+    const g = vid.getContext("2d");
+    for (;;) {
+      url.placeholder = window.radioPiUrl ? `auto: ${window.radioPiUrl}` : "auto (address from the radio)";
+      if (!base() || typeof VideoDecoder === "undefined") { await sleep(1000); continue; }
+      const ctl = new AbortController();
+      let dec = null, needKey = true, last = performance.now();
+      const dog = setInterval(() => { if (performance.now() - last > 3000) ctl.abort(); }, 1000);
+      try {
+        const r = await fetch(`${base()}/h264`, { cache: "no-store", signal: ctl.signal });
+        const rd = r.body.getReader();
+        let buf = new Uint8Array(0);
+        for (;;) {
+          const { value, done } = await rd.read();
+          if (done) break;
+          const nb = new Uint8Array(buf.length + value.length); nb.set(buf); nb.set(value, buf.length); buf = nb;
+          let o = 0;
+          while (buf.length - o >= 13) {
+            const dv = new DataView(buf.buffer, buf.byteOffset + o, 13);
+            const len = dv.getUint32(0), key = (dv.getUint8(4) & 1) === 1, t = dv.getFloat64(5);
+            if (buf.length - o < 13 + len) break;
+            const data = buf.slice(o + 13, o + 13 + len); o += 13 + len;
+            if (!dec && key) {
+              const codec = avcCodec(data);
+              if (!codec) continue;
+              dec = new VideoDecoder({
+                output: f => {
+                  if (vid.width !== f.displayWidth) { vid.width = f.displayWidth; vid.height = f.displayHeight; }
+                  g.drawImage(f, 0, 0); f.close();
+                  ok = true; frames++; last = performance.now();
+                },
+                error: () => ctl.abort(),
+              });
+              dec.configure({ codec, optimizeForLatency: true });   // no description: Annex B
+            }
+            if (!dec) continue;
+            if (dec.decodeQueueSize > 4) needKey = true;           // decoder behind: drop to the next keyframe
+            if (needKey && !key) continue;
+            needKey = false;
+            dec.decode(new EncodedVideoChunk({ type: key ? "key" : "delta", timestamp: Math.round(t * 1000), data }));
+          }
+          buf = buf.subarray(o);
+        }
+      } catch {}
+      clearInterval(dog); ctl.abort();
+      if (dec && dec.state !== "closed") dec.close();
+      ok = false;
+      await sleep(1000);
+    }
+  }
+  play();
+
+  async function poll() {
+    try {
+      if (!base()) throw new Error("no Pi address yet");
+      const r = await fetch(`${base()}/lid.json`, { cache: "no-store", signal: AbortSignal.timeout(800) });
+      lid = await r.json(); lidAge = lid.now - lid.t;
+    } catch { lid = null; }
+    setTimeout(poll, lid ? 200 : 1000);
+  }
+  poll();
+  setInterval(render, 200);         // also runs when the Pi is not reachable over Wi-Fi
+
+  const f2 = v => v == null ? "—" : (v >= 0 ? "+" : "") + v.toFixed(2);
+  function setV(id, v) { const el = $(id); el.firstChild.nodeValue = v; }
+
+  // Pose source: Wi-Fi (/lid.json, full detail) when fresh, else the radio
+  // (server.py "lid": DEBUG_VECT from the Pi through the FC, about 2 Hz).
+  function pose() {
+    if (lid && lidAge < 1.5) {
+      const b = lid.boxes && lid.boxes.length ? lid.boxes[0] : null;
+      return { src: "WI-FI", b, tags: b ? `${b.tags.join(" ")} · ${b.px_per_cell} px/cell` : "no tags in view" };
+    }
+    const r = window.radioLid;
+    if (r && r.age < 2.5) {
+      const b = r.box == null ? null : { box: r.box, drone_m: r.drone_m, yaw_deg: r.yaw_deg, tilt_deg: r.tilt_deg,
+                                          camera_m: [null, null, r.camera_z], rvec: r.rvec, tvec: r.tvec };
+      return { src: "RADIO", b, tags: b ? `${r.ntags} tags · ${r.px_per_cell.toFixed(1)} px/cell` : "no tags in view" };
+    }
+    return { src: null, b: null, tags: lid ? "pose stale" : "no pose (Wi-Fi or radio)" };
+  }
+
+  function render() {
+    const dt = (performance.now() - fpsT) / 1000;
+    const p = pose(), b = p.b;
+    if (dt > 1) {
+      const parts = [];
+      if (ok) parts.push(`${(frames / dt).toFixed(0)} FPS`);
+      if (p.src === "WI-FI") parts.push(`${lid.hz} HZ POSE`);
+      if (p.src) parts.unshift(p.src);
+      $("cam-rate").textContent = parts.length ? parts.join(" · ") : "—";
+      frames = 0; fpsT = performance.now();
+    }
+    if (!ok) $("cam-none").textContent = typeof VideoDecoder === "undefined" ? "NO VIDEO · THIS BROWSER HAS NO WEBCODECS"
+      : p.src === "RADIO" ? "NO VIDEO · POSE OVER RADIO" : "NO CAMERA";
+    // snapshot over the radio when there is no Wi-Fi video (ground_control/radio_snap.py)
+    const rs = window.radioSnap, snap = $("cam-snap"), tag = $("cam-snap-tag");
+    const showSnap = !ok && rs && rs.frame != null && rs.age_s < 30;
+    if (showSnap && snap.dataset.frame !== String(rs.frame)) { snap.src = `/radio_snap.jpg?f=${rs.frame}`; snap.dataset.frame = String(rs.frame); }
+    snap.style.display = showSnap ? "block" : "none";
+    vid.style.visibility = ok ? "visible" : "hidden";
+    $("cam-none").style.display = ok || showSnap ? "none" : "flex";
+    tag.style.display = !ok && rs && rs.state ? "block" : "none";
+    if (!ok && rs) tag.textContent = rs.state === "telemetry first" ? "RADIO SNAPSHOT · PAUSED: TELEMETRY FIRST"
+      : showSnap ? `RADIO SNAPSHOT · ${rs.age_s.toFixed(0)} S OLD · ${(rs.bytes / 1024).toFixed(1)} KB` + (rs.period_s ? ` · EVERY ${rs.period_s.toFixed(1)} S` : "") + (rs.receiving ? ` · NEXT ${rs.receiving}` : "")
+      : `RADIO SNAPSHOT · WAITING${rs.receiving ? " " + rs.receiving : ""}`;
+    $("cam-id").textContent = b ? String(b.box) : "—";
+    $("cam-tags").textContent = p.tags;
+    setV("cam-x", b ? f2(b.drone_m[0]) : "—");
+    setV("cam-y", b ? f2(b.drone_m[1]) : "—");
+    setV("cam-z", b ? b.drone_m[2].toFixed(2) : "—");
+    setV("cam-yaw", b ? (b.yaw_deg >= 0 ? "+" : "") + b.yaw_deg.toFixed(0) : "—");
+    setV("cam-ch", b ? b.camera_m[2].toFixed(3) : "—");
+    setV("cam-tilt", b ? b.tilt_deg.toFixed(1) : "—");
+    if (lid && lid.hfov_deg) camInfo = { hfov: lid.hfov_deg };
+    if (b && p.src === "RADIO" && showSnap) drawRadioBox(b);
+    else drawOverlay(b && p.src === "WI-FI" ? lid.boxes : [], lid);
+    drawTop(b);
+  }
+
+  function drawOverlay(boxes, l) {
+    const w = ov.clientWidth, h = ov.clientHeight, dpr = devicePixelRatio || 1;
+    if (ov.width !== w * dpr) { ov.width = w * dpr; ov.height = h * dpr; }
+    const g = ov.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    if (!l || !l.w) return;
+    const s = Math.min(w / l.w, h / l.h), ox = (w - l.w * s) / 2, oy = (h - l.h * s) / 2;   // object-fit: contain
+    g.lineWidth = 2; g.font = "600 11px ui-monospace, Menlo, monospace";
+    for (const b of boxes) for (const o of b.outlines) {
+      g.strokeStyle = o.tag[0] === "A" ? "#5ad1ff" : "#4fd68a";
+      g.beginPath(); o.px.forEach(([x, y], i) => g[i ? "lineTo" : "moveTo"](ox + x * s, oy + y * s)); g.closePath(); g.stroke();
+      const [x0, y0] = o.px[0]; g.fillStyle = g.strokeStyle; g.fillText(o.tag, ox + x0 * s + 3, oy + y0 * s - 4);
+    }
+  }
+
+  // Radio: no tag outlines come over the radio. Make them from the live radio pose
+  // (LIDRV/LIDTV: the full camera pose, the detector's own projection) and draw them
+  // with drawOverlay, as for the Wi-Fi video. Only tags fully in the picture are drawn.
+  let camInfo = { hfov: 48.8 };                    // C270 (cam_stream.py default)
+  const TAG_TL = [[-0.14, 0.09], [0.10, 0.09], [0.10, -0.05], [-0.14, -0.05]];   // 40 mm AprilTags, ids 4*box .. 4*box+3
+  const ARUCO = [[-0.084, 0.084], [0.084, 0.084], [0.084, -0.084], [-0.084, -0.084]];  // 168 mm ArUco, id = box
+  function rodrigues([a, b, c]) {     // rotation vector -> 3x3 matrix, row-major
+    const th = Math.hypot(a, b, c);
+    if (th < 1e-9) return [1, 0, 0, 0, 1, 0, 0, 0, 1];
+    const x = a / th, y = b / th, z = c / th, co = Math.cos(th), si = Math.sin(th), C = 1 - co;
+    return [co + x * x * C, x * y * C - z * si, x * z * C + y * si,
+            y * x * C + z * si, co + y * y * C, y * z * C - x * si,
+            z * x * C - y * si, z * y * C + x * si, co + z * z * C];
+  }
+  function drawRadioBox(b) {
+    const snap = $("cam-snap"), IW = snap.naturalWidth || 320, IH = snap.naturalHeight || 180;
+    if (!b.rvec || !b.tvec) { drawOverlay([], null); return; }      // an older Pi: no camera rotation, draw nothing
+    const R = rodrigues(b.rvec), t = b.tvec, f = IW / 2 / Math.tan(camInfo.hfov * Math.PI / 360);
+    const P = ([x, y]) => {
+      const X = R[0] * x + R[1] * y + t[0], Y = R[3] * x + R[4] * y + t[1], Z = R[6] * x + R[7] * y + t[2];
+      return Z > 0.01 ? [IW / 2 + f * X / Z, IH / 2 + f * Y / Z] : null;
+    };
+    const quads = [{ tag: `A${b.box}`, m: ARUCO },
+                   ...TAG_TL.map(([x, y], i) => ({ tag: `T${4 * b.box + i}`, m: [[x, y], [x + 0.04, y], [x + 0.04, y - 0.04], [x, y - 0.04]] }))];
+    const outlines = [];
+    for (const q of quads) {
+      const px = q.m.map(P);
+      if (px.every(p => p && p[0] >= 0 && p[0] <= IW && p[1] >= 0 && p[1] <= IH)) outlines.push({ tag: q.tag, px });
+    }
+    drawOverlay([{ outlines }], { w: IW, h: IH });
+  }
+
+  function drawTop(b) {
+    const g = top.getContext("2d"), W = top.width, H = top.height;
+    g.clearRect(0, 0, W, H);
+    const sc = (W - 24) / 0.62, cx = W / 2, cy = H / 2;           // 0.62 m wide view, lid frame +y up
+    const P = (x, y) => [cx + x * sc, cy - y * sc];
+    g.fillStyle = "rgba(255,255,255,.06)"; g.strokeStyle = "rgba(255,255,255,.35)"; g.lineWidth = 1;
+    let [x, y] = P(-LID_W / 2, LID_H / 2); g.fillRect(x, y, LID_W * sc, LID_H * sc); g.strokeRect(x, y, LID_W * sc, LID_H * sc);
+    g.strokeStyle = "rgba(255,255,255,.15)"; [x, y] = P(-STK_W / 2, STK_H / 2); g.strokeRect(x, y, STK_W * sc, STK_H * sc);
+    g.strokeStyle = "rgba(255,255,255,.12)"; g.beginPath(); g.moveTo(cx, 8); g.lineTo(cx, H - 8); g.moveTo(8, cy); g.lineTo(W - 8, cy); g.stroke();
+    if (!b) return;
+    const [dx, dy] = P(b.drone_m[0], b.drone_m[1]);
+    const cam = b.camera_m[0] != null, [kx, ky] = cam ? P(b.camera_m[0], b.camera_m[1]) : [dx, dy];
+    const a = b.yaw_deg * Math.PI / 180, L = 22;
+    g.strokeStyle = "rgba(90,209,255,.5)"; g.beginPath(); g.moveTo(dx, dy); g.lineTo(kx, ky); g.stroke();
+    g.fillStyle = "#5ad1ff"; g.beginPath(); g.arc(dx, dy, 5, 0, 2 * Math.PI); g.fill();
+    g.strokeStyle = "#5ad1ff"; g.lineWidth = 2; g.beginPath(); g.moveTo(dx, dy); g.lineTo(dx + L * Math.cos(a), dy - L * Math.sin(a)); g.stroke();
+    if (cam) { g.fillStyle = "#fff"; g.beginPath(); g.arc(kx, ky, 3, 0, 2 * Math.PI); g.fill(); }
+  }
+
+  $("cam-big").onclick = () => {
+    const on = $("cam").classList.toggle("big"); $("cam-big").textContent = on ? "CLOSE" : "EXPAND";
+    if (on) setMin(false);
+  };
+  function setMin(on) {
+    $("cam").classList.toggle("min", on); $("cam-min").textContent = on ? "SHOW" : "HIDE";
+    try { localStorage.setItem("camMin", on ? "1" : ""); } catch {}
+  }
+  let camMin = false; try { camMin = localStorage.getItem("camMin") === "1"; } catch {}
+  setMin(camMin);
+  $("cam-min").onclick = () => { if ($("cam").classList.contains("big")) $("cam-big").click(); setMin(!$("cam").classList.contains("min")); };
+  addEventListener("resize", () => render());
+})();
+</script>
+<script type="module">
+import { AttitudeView, ringGauge } from "/static/attitude.js";
+const view = new AttitudeView(document.getElementById("att-canvas"));
+const spd = ringGauge(document.getElementById("g-spd"), { label: "SPEED", unit: "m/s", max: 10 });
+const alt = ringGauge(document.getElementById("g-alt"), { label: "HEIGHT", unit: "m", max: 120 });
+const deg = v => v == null ? "—" : (v > 0 ? "+" : "") + v.toFixed(1) + "°";
+window.attitudeUpdate = s => {
+  view.update(s);
+  spd(s.vn == null ? null : Math.hypot(s.vn, s.ve));
+  alt(s.alt == null ? null : Math.max(0, s.alt));
+  document.getElementById("a-roll").textContent = deg(s.roll);
+  document.getElementById("a-pitch").textContent = deg(s.pitch);
+  const y = s.yaw ?? s.hdg;
+  document.getElementById("a-yaw").textContent = y == null ? "—" : String(Math.round(y)).padStart(3, "0") + "°";
+};
+const cam = document.getElementById("att-cam"), big = document.getElementById("att-big");
+cam.onclick = () => { view.chase = !view.chase; cam.textContent = view.chase ? "CHASE" : "NORTH UP"; };
+big.onclick = () => { const on = document.getElementById("att3d").classList.toggle("big"); big.textContent = on ? "CLOSE" : "EXPAND"; };
+</script>
+</body>
+</html>

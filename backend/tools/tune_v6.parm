@@ -1,0 +1,52 @@
+# tune_v6: the full box-camera hover tune, loaded in ONE step on top of tune_v5 (2026-11-03).
+# Hover simulator (tools/sim/hover): ArduCopter 4.7.2 SITL with the flown parameters and Lua scripts,
+# physics identified from logs 18-45 (IDENT.md), calibrated to logs 43/45. Results: RESULTS.md.
+#
+# LOAD ORDER (each step needed):
+#   1. Copy the new lua/hop_takeoff.lua to APM/scripts and REBOOT the FC (the HTO_ table grows 9 -> 11;
+#      a scripting restart alone stops the script). Check that HTO_TRIM_P and HTO_TRIM_R exist.
+#   2. Load this file. PSC_NE_VEL_D 0 is first on purpose: INS_POS with VEL_D 1.0 tipped the sim over.
+#   3. REBOOT the FC again: EKF3 sizes its buffer from VISO_DELAY_MS at boot only.
+#   4. Read back every value below.
+#   5. Deploy companion/systemd/packet-cam.service (new --imu-lag/--mount args) and restart packet-cam.
+#
+# - INS_POS: the IMU is 5.8 cm above the CG. With INS_POS 0 the tilt motion looks like acceleration and
+#   the velocity D term drives the 4.4 Hz ring of log 45.
+# - VISO_DELAY_MS 60 -> 110: exposure -> FC arrival is about 117 ms; the FC dated fixes 45 ms late.
+# - HTO_TRIM_P 0.85: the drone needs 0.85 deg nose-up to hover; without it the liftoff slides 2-3 cm.
+#   HTO_TRIM_R 0: the logged hover roll is 0.0-0.1 deg.
+# - Attitude: rate P 0.22, D 0.006 (lead), target filter 20 Hz: angle-loop resonance +4.2 dB -> +0.1 dB.
+#   Rate I 0.15 -> 0.3 holds the slow disturbance torque.
+# - Position: POS_P 2.5, VEL_P 4, VEL_I 4; velocity error filter 5 -> 10 Hz and ATC_INPUT_TC 0.05 -> 0.02
+#   take out about 40 ms of lag. VEL_P 4, not 5: VEL_P 5 tipped the sim over when two plant errors
+#   combine (authority -10..-20 % with slower motors or 90 ms camera latency); VEL_P 4 held all of them.
+# - EKF: EK3_ACC_P_NSE 0.35 -> 0.15 and EK3_TAU_OUTPUT 25 -> 40: less camera noise into the controller.
+# Watch on the first flight: a fast buzz (rate D is 3x tune_v5) and a 1-3 Hz roll/pitch rocking.
+# Before: PSC_NE_VEL_D 1.0, INS_POS 0, VISO_DELAY_MS 60, ATC_RAT_RLL/PIT_P 0.18 _I 0.15 _D 0.002 _FLTT 10,
+#         ATC_INPUT_TC 0.05, PSC_NE_POS_P 1.0, PSC_NE_VEL_P 3.5, PSC_NE_VEL_I 0.5, PSC_NE_VEL_FLTE 5,
+#         EK3_ACC_P_NSE 0.35, EK3_TAU_OUTPUT 25
+PSC_NE_VEL_D,0
+INS_POS1_X,-0.007
+INS_POS1_Y,-0.001
+INS_POS1_Z,-0.058
+INS_POS2_X,-0.007
+INS_POS2_Y,-0.001
+INS_POS2_Z,-0.058
+VISO_DELAY_MS,110
+HTO_TRIM_P,0.85
+HTO_TRIM_R,0
+ATC_RAT_RLL_P,0.22
+ATC_RAT_PIT_P,0.22
+ATC_RAT_RLL_I,0.3
+ATC_RAT_PIT_I,0.3
+ATC_RAT_RLL_D,0.006
+ATC_RAT_PIT_D,0.006
+ATC_RAT_RLL_FLTT,20
+ATC_RAT_PIT_FLTT,20
+ATC_INPUT_TC,0.02
+PSC_NE_POS_P,2.5
+PSC_NE_VEL_P,4
+PSC_NE_VEL_I,4
+PSC_NE_VEL_FLTE,10
+EK3_ACC_P_NSE,0.15
+EK3_TAU_OUTPUT,40

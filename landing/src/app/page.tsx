@@ -1,19 +1,25 @@
-import { ClosingCta } from "@/components/home/ClosingCta";
+import { ClosingPiece } from "@/components/home/ClosingPiece";
+import { Delivery } from "@/components/home/Delivery";
+import { FirstArea } from "@/components/home/FirstArea";
+import { FirstProduct } from "@/components/home/FirstProduct";
 import { Hero } from "@/components/home/Hero";
 import { HowItWorks } from "@/components/home/HowItWorks";
-import { Mission } from "@/components/home/Mission";
-import { Showcase } from "@/components/home/Showcase";
-import { WhatSection } from "@/components/home/WhatSection";
+import { Questions } from "@/components/home/Questions";
+import { WhatsNext } from "@/components/home/WhatsNext";
+import { WhatYouCanGet } from "@/components/home/WhatYouCanGet";
 
 export default function Home() {
 	return (
 		<main>
 			<Hero />
-			<WhatSection />
+			<WhatYouCanGet />
+			<FirstArea />
 			<HowItWorks />
-			<Mission />
-			<Showcase />
-			<ClosingCta />
+			<Delivery />
+			<FirstProduct />
+			<WhatsNext />
+			<Questions />
+			<ClosingPiece />
 		</main>
 	);
 }

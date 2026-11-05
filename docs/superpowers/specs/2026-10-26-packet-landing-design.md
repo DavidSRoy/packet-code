@@ -54,7 +54,7 @@ Anti-goals (would make the build a failure even if it works)
 
 All from the Figma rules sheet. The mockup is the reference for every value below.
 
-Inks (exactly four, as CSS tokens): Packet Red `#B4432F`, Black `#111111`, Mustard `#D3A13F`, White `#FFFFFF`. One extra neutral, `#d9d9d9`, is used only for the showcase progress track.
+Inks (exactly four, as CSS tokens): Packet Red `#B4432F`, Black `#111111`, Mustard `#D3A13F`, White `#FFFFFF`. No other neutral is used; the showcase progress track that needed one is gone (§6.11).
 
 Type
 - Libre Franklin 600: wordmark, headings, nav links, footer links.
@@ -113,82 +113,94 @@ See `home-1440.png` and `home-390-sheet.png`.
 - Right (beside the copy, bleeding off the right edge): a canvas **halftone globe**. The street grid around U Village is drawn as dots on a sphere, tilted (`roll -0.5`), small enough that the rim shows, over a faint latitude and longitude grid so the sphere reads where there are no streets. The art fades out before the copy column instead of ending on a straight cut. It drifts slowly.
   - On a check, the globe turns so the found point lands on the globe's front face, and four corner marks close in on it. The service-area boundary is drawn on the globe as a dotted outline, so inside and outside are visible.
   - The anchor-solving approach is in the mockup's `aim()` function.
-  - Use real U Village streets (§6.9).
+  - Use real U Village streets (§6.12).
 - Under 900px the globe sits above the copy, centred: 220px tall on phones and up to 320px on tablets (`clamp(220px, 42vw, 320px)`).
 - The hero is `min-height: clamp(520px, 72vh, 760px)`, so the next heading rises into the first screen on desktop.
 - The question and result lines are 24px Atkinson bold. Errors are set in Packet Red and the invalid field's underline turns red; hints stay black. Focus thickens a field's underline to 3px instead of drawing a box around it.
-- The button sits on the field's bottom edge. On phones each form row stacks: the field full width, the button under it. The same holds for the closing form (§6.6).
-- *Revised 2026-11-04 (hero pass; copy signed off by Tanner).*
+- The button sits on the field's bottom edge. On phones each form row stacks: the field full width, the button under it. The same holds for the closing form (§6.9).
+- On load, the globe fades in (1.4s); then the wordmark, the premise and the form rise in turn (at 0.8s, 1.25s and 1.6s). Under reduced motion everything is shown at once.
+- *Revised 2026-11-04 (hero pass; copy signed off by Tanner). Revised 2026-11-05: the intro sequence.*
 
-### 6.2 What
-- h2 "From nearby shops to your front door." (*was "Delivery from U Village shops to homes nearby."; revised 2026-11-04: the first area is stated once, in the body copy, as where Packet starts*)
-- The leading lines.
-- Body copy: "Order in the Packet app, follow it as it comes, and find it at your front door. Packet starts in University Village and the streets around it, including the U District and Bryant." This replaces the mockup's "[RADIUS]".
+### 6.2 What you can get
+- h2 "Lunch, coffee, and anything in-between."
+- The leading lines (this page's one use of them).
+- Lead, 20px: "Whatever a shop near you sells, Packet can bring it to you wherever you are."
+- Four item cards (two columns on phones), each a sketched drawing, the name and its kind: U Village Bowl / Lunch, Drumstick Wrap / Lunch, Cold Brew / Coffee, Anything that fits / In-between. The data lives in one typed array (`landing-items.ts`). Shops and prices stay on Products until they are real.
+- A smaller line, 14px, under the cards: "Packet starts in University Village and the streets around it, including the U District and Bryant." The first area is named once on the page before the map.
 
-### 6.3 How it works
-- h2 "Three steps, all in the app."
-- A scroll-driven canvas: the red block inside its corner marks travels a dotted route, leaving a mustard trail. The three numbered bullets fill as it passes each step.
-- Steps: Order ("Pick from [VENDOR]'s menu and pay in the app."), Follow it, At your door.
+### 6.3 Where Packet flies first (scroll-locked)
+- Left: the **plan of the first area**, a flat projection of the baked streets (§6.12) in a 640 by 460 sheet: dotted streets (main darker than minor), the service-area boundary, the red block inside its corner marks at the U Village hub, a north arrow, and the places named in Barlow caps on white: University Village, U District, UW north campus, Bryant, Mercer Court inside the area; Ravenna and Laurelhurst outside it, fainter. Caption: "First area" and "Sheet 1". No pen filter on the plan, so it repaints cheaply while pinned.
+- Right: h2 "Where Packet flies first." Then: "Packet is running in the university area first. The first flights cover University Village, the U District, Bryant, Mercer Court and the north campus." Then: "The streets around them come next, and the map grows as each one is added." Then the text link "Check your street" with an up arrow, to `#updates` (it sends the reader back to the hero form).
+- The lock, 2.4 screens: the boundary draws itself (0.04 to 0.42); the hub's block fades in and its corner marks close in from three times their size (0.3 to 0.58); the five first-area places name themselves in that order (0.5 to 0.8); the second paragraph and the link rise last (0.84 to 0.93).
+- Under 900px the plan sits above the copy. On phones the labels shrink to 11px and the two places outside the area are hidden.
 
-### 6.4 Mission
-- The section is about the delivery, not the vehicle. The aircraft is the first product and belongs to the showcase (§6.5) and Products (§7). *Revised 2026-11-04, Tanner's call.*
-- Left: h2 "Autonomous delivery, built around the way you live." Lead line: "From point A to point B faster than the road allows, and lighter on the streets you share." Then: "Vehicle 01 is the first step: a four-rotor aircraft that flies an order from the shop to your door."
+### 6.4 How it works
+- h2 "Four steps, all in the app."
+- A scroll-driven canvas: the red block inside its corner marks travels a dotted route past the steps, climbing a little at each stop and leaving a mustard trail. The numbered bullets fill as it passes each one. The route takes its stops from the bullets' positions; when they stack (two columns under 760px, one under 480px) it spaces them evenly instead.
+- Steps, each a 22px title and one line:
+  1. Order: "Pick from a nearby shop's menu and pay in the app."
+  2. Pick your spot: "A front step, a yard or a balcony with open sky above it. Packet remembers it."
+  3. Follow it: "See each step as it happens, with the time it will arrive."
+  4. At your door: "It's set down at your spot. Bring it in when you're ready."
+
+### 6.5 Delivery (scroll-locked)
+- The section is about the delivery, not the vehicle. The aircraft is the first product and gets its own section after this one (§6.6) and Products (§7). *Tanner's call, 2026-11-04.*
+- Left: h2 "Autonomous delivery, built around the way you live." Three benefits, each a 22px title and one line:
+  1. "Minutes, not an hour." "From the shop to your door, straight over the street."
+  2. "Nothing on your street." "No car, no bike, no double-parking. One aircraft above it."
+  3. "Set down, not handed off." "Left at your spot. Bring it in when you're ready."
+  Then: "Vehicle 01 is the first step: a four-rotor aircraft that flies an order from the shop to your door."
 - Right: the sketched **delivery drawing**, a side elevation from A to B:
   - the shop at A (awning, sign band, door, window) and a house at B (gable, door, window) on one ground line;
   - the route, mustard dots, rising from the shop's roof, running level above the street and setting down at the doorstep;
-  - the package in transit on the route, the red block inside four corner marks, as on the route in How it works;
-  - the drop-off drawn as a dashed outline of the package at the doorstep;
+  - the package in transit, the red block inside four corner marks, as on the route in How it works;
+  - a mustard landing pad at the doorstep;
   - an altitude dimension line and an A-to-B dimension line, labelled "Altitude" and "A to B" with no values (the drawing is a demonstration, not to scale; *Tanner, 2026-11-04*);
-  - callouts 1 to 4 (pickup at the shop; the route, above the street; drop-off at your door; the street below, unchanged);
-  - labels "A · Shop" and "B · Your door" under the ground line.
-- A legend sits under the drawing, then "Not to scale."
-- The lines draw in once (stroke-dashoffset), when the figure's top passes 75% of the viewport height. The route, the package and the annotations fade in after the lines.
-- No aircraft appears in this drawing. Keep it data-driven so the altitude and distance can be filled in later.
-- Under 760px the drawing's labels and callouts scale up (CSS on `.drawing text` and `.callout`), so they stay legible at phone width.
-- The Vehicle 01 plan-and-side drawing from the first build (`VehiclePlanSide`) is kept for Products.
+  - labels "A · Shop" and "B · Your door" under the ground line; "Not to scale." under the drawing. No callouts and no legend: the benefits beside it do that work.
+- The lines draw in once (stroke-dashoffset) when the figure enters; the route and the package fade in after them.
+- The lock, 3 screens: the package rests at the shop, lifts off and crosses above the street (0.06 to 0.86 of the lock, along the route itself), and sets down on the pad. Benefit 1 arrives as it lifts off (0.12), 2 as it crosses the street (0.38), 3 and the pad as it comes down (0.64), and the Vehicle 01 line once it has landed (0.86).
+- No aircraft appears in this drawing. Under 900px the drawing sits above the copy. The Vehicle 01 plan-and-side drawing from the first build (`VehiclePlanSide`) is kept for Products.
 
-### 6.5 Product showcase
-- h2 "One system, from the shop to your door."
-- One product at a time, set like a hero:
-  - copy on the left: number, a large name `clamp(40px, 5vw, 72px)`, one line, an "About …" link to `/products#…`;
-  - that product's sketched drawing on the right.
-- Products:
-  - 01 Vehicle 01: "The four-rotor aircraft that carries each order. Up to 15 lb, 45 minutes in the air."
-  - 02 Packet for iPhone: "Order from nearby shops and follow each step to your door."
-  - 03 Dispatch: "Plans each flight and follows it from pickup to drop-off."
-- Bottom right: a round 56px arrow button, labeled "Next" over the next product's name (only the arrow shows on phones).
-- Past it, a faded (50%), mostly off-screen slice of the next product's drawing peeks from the corner.
-- Transition:
-  - the current copy fades out;
-  - the incoming drawing grows from the bottom-right corner (from `translate(14%,10%) scale(.7)` to rest);
-  - the copy fades in after 150ms.
-- Auto-advance: after 7s with no interaction, it moves to the next product and wraps from 03 back to 01.
-  - A pointer-down, key press or focus inside the section restarts the 7s.
-  - A horizontal swipe of more than 48px changes the product.
-- Controls under the stage:
-  - three 44px progress tabs that fill over 7s and jump to a product when tapped;
-  - a pause/play button (required for auto-moving content).
-- Reduced motion: no auto-advance, no transitions.
-- Inactive products are `inert`.
-- There is no marquee band and no visible carousel track. Both were tried and rejected.
+### 6.6 The first product
+- A 1.5px rule above. Left: the label "01", h2 "The first product: Vehicle 01.", the product's description from Products, then a three-row spec table (Barlow keys, hairline rows) with the facts the team has given: Capacity "Up to 15 lb", Flight time "45 minutes", Built for "City and local deliveries". Rows still marked to follow stay on Products only.
+- Two text links: "About Vehicle 01" to `/products#vehicle-01` and "See the app and Dispatch" to `/products`.
+- Right: the aircraft's side drawing (`VehicleSide`). Under 760px it sits below the copy.
+- The product showcase from the first build (one product at a time, auto-advance, tabs, pause) is removed. The app and Dispatch are reached through the link.
 
-### 6.6 Closing call to action
-- Left: h2 "Hear when Packet reaches your street." An email field and "Get updates" (this screen's one station-sign button). The App Store line repeats.
+### 6.7 What's next
+- h2 "What's next."
+- Four stops on a dotted mustard route that runs off the right edge: the red block inside its corner marks at the first, numbered circles at the rest. Each has a Barlow label and a 20px line: Now "Sign-ups open"; Next "First test flights"; Then "First deliveries in the university area"; After "More of Seattle".
+- Under 760px the route turns vertical and the stops stack beside it.
+
+### 6.8 Questions
+- h2 "Questions a neighbor would ask." Lead, 20px: "Packet flies over streets people live on. These are the questions we would ask, and the answers as they stand."
+- Seven collapsible rows (`<details>`), numbered 1.0 to 7.0 like the Press manual, 1.5px rules between them, a plus at the right that becomes a minus. The first row starts open. Where the browser supports it the answer's height animates; elsewhere it opens at once.
+  1. "Is it safe?" "Vehicle 01 flies under the FAA's rules for small unmanned aircraft, on routes Dispatch plans in advance and follows from pickup to drop-off."
+  2. "How loud is it?" "It is overhead for seconds, not minutes. We will publish noise measurements before the first flight."
+  3. "Where does it land?" "At the spot you chose in the app, with open sky above it. It sets the order down and leaves."
+  4. "What if I'm not home?" "It is left at your spot, like a package. The app shows you when it arrived."
+  5. "What about rain and wind?" "Flights pause in heavy rain and high wind. The app says so before you order."
+  6. "Does it record my street?" "The aircraft uses its sensors to fly and to land at your spot. Packet does not sell data, and the privacy page says what is kept."
+  7. "Who is flying it?" "Packet's own team in Seattle, with Dispatch watching every flight."
+- The data lives in one typed array (`questions.ts`). **Tanner to confirm** each answer before the site is promoted.
+
+### 6.9 Closing piece: the call to action and the footer in one frame (scroll-locked)
+- One full-screen stage with four crop-mark corners, like the emblem's, at its corners. Behind it the **crop-mark tunnel**, a canvas of dotted corner marks rushing toward a vanishing point (rings at `D0·q^(i+f)`, a slight twist per ring, fading near the center), masked so it is faint under the copy and full on the right. **No square or icon at the center.**
+- Left, centred: h2 "Hear when Packet reaches your street." An email field and "Get updates" (this screen's one station-sign button). Then: "Sign up now and you will be first in line when Packet reaches your street." Then: "Know a neighbor who would want this? Send them the link." Then, 14px: "Packet for iPhone is coming to the App Store."
 - This form has no address step. It posts with only the email, so `in_area` is null.
-- Right: the **crop-mark tunnel**, a canvas of dotted corner marks rushing toward a vanishing point:
-  - rings at `D0·q^(i+f)`;
-  - a slight twist per ring;
-  - fading near the center.
-- **No square or icon at the center.** Several were tried and rejected.
+- The footer sits inside the same frame, at the bottom: the emblem, "© [YEAR] Packet. Seattle, Washington.", the line "For shops  Run a shop near U Village? Get in touch." (linking to the Press contact section), and the links Products, Press, Privacy at the right. The other pages render the footer on its own, as before.
+- The lock, 1.8 screens: the tunnel grows toward the reader (scale 0.55 to 1) and the copy rises (0.15 to 0.5), then the footer (0.45 to 0.75).
 
-### 6.7 Footer
-- The emblem, then "© [YEAR] Packet. Seattle, Washington."
-- Links, right-aligned: Products, Press, Privacy.
+### 6.10 Scroll-locked sections: how they work
+- A locked section is `--screens` viewports tall; its stage sticks to the top (`position: sticky`, `100svh`) while the reader scrolls through, and the section's `--p` custom property runs 0 to 1 over that distance (`useLockProgress`, one scroll listener per section, `requestAnimationFrame`). Everything that moves is CSS from `--p`: a ramp `--t` runs 0 to 1 while `--p` crosses `[--a, --b]`, and `.rise` elements fade and lift with it. The one thing CSS cannot do, moving the package along the route, uses `getPointAtLength` from the same value.
+- The CSS default is `--p: 1`, the end state, so the page is complete before JavaScript runs and without it.
+- Under reduced motion nothing pins and `--p` stays at 1. When the stage's content would not fit the viewport (small phones with large text), nothing pins either; `--p` then runs 0 to 1 as the section scrolls into view, so the same motion plays, unpinned.
 
-### 6.8 Removed from the mockup for the build
+### 6.11 Removed from the mockup for the build
 - The "Working notes" disclosure.
+- The product showcase (§6.6) and the first build's "What" and "Mission" sections, replaced by §6.2, §6.5 and §6.6.
 
-### 6.9 Real streets in the globe
+### 6.12 Real streets in the globe
 Replace the stylized grid with U Village area streets, a simplified set of main and minor streets, from OpenStreetMap data.
 - Bake it into a small static JSON at build time or by a one-off script committed with its output.
 - Keep ODbL attribution in the footer or on `/privacy`.
@@ -199,7 +211,7 @@ Replace the stylized grid with U Village area streets, a simplified set of main 
 See `products-1440.png`.
 
 - Intro: h1 "Products". Lead: "Three parts that take an order from a U Village shop to your door."
-- Three product sections, in showcase order, alternating copy and drawing sides. Each has the number, h2 name, two sentences and a spec table (Barlow keys, hairline rows).
+- Three product sections, in the order 01 to 03, alternating copy and drawing sides. Each has the number, h2 name, two sentences and a spec table (Barlow keys, hairline rows).
   - **Vehicle 01**: Capacity "Up to 15 lb"; Flight time "45 minutes"; Built for "City and local deliveries" (*from Tanner, 2026-11-05; the Rotors row was dropped the same day*); Cruise speed, Flight altitude and Weather limits `[TBD]`.
   - **Packet for iPhone**: Platform iPhone; Availability "App Store, [LAUNCH DATE]"; Order from U Village shops; Delivery area "University Village and the streets around it"; Payment [TBD].
   - **Dispatch**: Assigns "One aircraft per order"; Plans "Route and altitude for each flight"; Follows "Each flight from pickup to drop-off"; Hours [TBD]. **Tanner to confirm** this wording is accurate and fine to publish.
@@ -221,7 +233,8 @@ See `press-1440.png`. Laid out like a corporate manual: numbered sections (1.0 t
 
 ## 9. Rule changes to write back into Figma
 
-- 0.2 "Never show the drone" becomes: the aircraft appears only as a technical drawing (Products, Press and the landing page's product showcase). The landing page's mission section shows the delivery, not the aircraft.
+- 0.2 "Never show the drone" becomes: the aircraft appears only as a technical drawing (Products, Press and the landing page's first-product section). The landing page's delivery section shows the delivery, not the aircraft.
+- Scroll-locked sections (§6.10): three on the landing page, each with a reduced-motion path and a no-JavaScript end state.
 - Sketched-line technique for drawings (the two-pass pen filter).
 
 ## 10. Sign-ups: Worker and D1
@@ -340,13 +353,13 @@ The build ships with these as visible `[BRACKETS]`. All must be replaced before 
   - **Repeat sign-up**: the same email upserts and doesn't duplicate. It fills only fields that are still empty and keeps the values already stored.
   - **Closing form**: stores a row with null `in_area`.
   - **Bad input**: posting it directly to the API returns 400.
-  - **Showcase**: advances after 7s; the arrow, the tabs, swiping and pause work; the About links land on the right product on `/products`.
-  - **Mission drawing**: draws in on scroll.
-  - **Reduced motion**: nothing moves on its own.
+  - **Scroll-locked sections**: the plan draws and names its places, the package travels the route and lands, the closing frame arrives; each unpins at its end. The About and "See the app and Dispatch" links land on the right places on `/products`.
+  - **Questions**: rows open and close with the pointer and the keyboard.
+  - **Reduced motion**: nothing moves on its own and nothing pins; every section shows its end state.
 - Screenshots at 375, 430, 768, 1280, 1440 and 1920 for `/`, `/products` and `/press`:
   - no horizontal scroll, nothing clipped;
   - compared against the reference images in this folder.
-- Keyboard: every control is reachable with visible focus, and the showcase controls have labels.
+- Keyboard: every control is reachable with visible focus, the question rows included.
 
 ## 16. Left to the builder
 

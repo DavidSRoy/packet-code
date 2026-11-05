@@ -2,30 +2,14 @@
 
 import { useRef, type ReactNode } from "react";
 import { useDrawIn } from "@/components/home/useDrawIn";
+import { marksPath } from "@/lib/canvas/marks";
 
-/** Dimension labels only. The drawing is a demonstration, not to scale, so the lines carry no values. */
-const SPECS = {
-	altitude: "Altitude",
-	distance: "A to B",
-} as const;
+/** The route from the shop's roof, up and over the street, down to the doorstep. Shared with the lock that moves the package along it. */
+export const ROUTE_PATH = "M120 140C120 96 150 70 200 70H420C470 70 563 110 563 226";
 
-const LEGEND = [
-	"Pickup at the shop",
-	"The route, above the street",
-	"Drop-off at your door",
-	"The street below, unchanged",
-] as const;
-
-/** Leader line, then the circle's centre. */
-const CALLOUTS = [
-	{ n: 1, line: "M112 136L84 108", x: 74, y: 98 },
-	{ n: 2, line: "M250 62V44", x: 250, y: 34 },
-	{ n: 3, line: "M560 212H622", x: 634, y: 212 },
-	{ n: 4, line: "M330 238V222", x: 330, y: 210 },
-] as const;
-
-/** The package in transit, drawn as on the route in How it works: the red block inside four corner marks. */
-const PACKAGE = { x: 330, y: 70, s: 7 } as const;
+/** Where the package rests before any scroll has moved it: at the doorstep, the end of the route. */
+const PACKAGE_END = "translate(563 226)";
+const PACKAGE_HALF = 7;
 
 /** Renders a stroke element twice: the pen pass, then a fainter second pass wobbled differently. */
 function twice(render: (extra: string) => ReactNode): ReactNode {
@@ -37,21 +21,12 @@ function twice(render: (extra: string) => ReactNode): ReactNode {
 	);
 }
 
-/** Corner marks around (x, y), the same proportions as the canvas marks and the emblem. */
-function marksPath(x: number, y: number, s: number): string {
-	const B = s * 1.9;
-	const off = s * 0.4;
-	const len = s * 0.9;
-	const parts: string[] = [];
-	for (const sx of [-1, 1]) {
-		for (const sy of [-1, 1]) {
-			parts.push(`M${x + sx * (B + off)} ${y + sy * B}H${x + sx * (B + off + len)}`);
-			parts.push(`M${x + sx * B} ${y + sy * (B + off)}V${y + sy * (B + off + len)}`);
-		}
-	}
-	return parts.join("");
-}
-
+/**
+ * A delivery in side view, as a sketched technical drawing: the shop at A, the house at B, the route
+ * above the street, the package in transit and the landing pad at the doorstep. The lines draw in
+ * once; inside the Delivery section the package (`.pkg`) travels the route (`.route`) as the reader
+ * scrolls.
+ */
 export function DeliveryRoute() {
 	const figureRef = useRef<HTMLElement>(null);
 	const isIn = useDrawIn(figureRef);
@@ -96,70 +71,45 @@ export function DeliveryRoute() {
 				{twice((c) => (
 					<rect className={`thin${c}`} x="572" y="184" width="22" height="20" pathLength="1" />
 				))}
-				{/* the delivery: route, package in transit, drop-off; shows once the buildings have drawn */}
+				{/* the delivery: route and annotations fade in once the buildings have drawn */}
 				<g className="late">
-					<path className="route" d="M120 140C120 96 150 70 200 70H420C470 70 563 110 563 226" />
-					<path className="thin" d={marksPath(PACKAGE.x, PACKAGE.y, PACKAGE.s)} />
-					<rect
-						x={PACKAGE.x - PACKAGE.s}
-						y={PACKAGE.y - PACKAGE.s}
-						width={PACKAGE.s * 2}
-						height={PACKAGE.s * 2}
-						fill="var(--color-red)"
-					/>
-					{twice((c) => (
-						<rect className={`hid${c}`} x="556" y="226" width="14" height="14" />
-					))}
+					<path className="route" d={ROUTE_PATH} />
+					<rect className="dropoff rise" data-benefit="3" x="547" y="236" width="32" height="4" />
 					{/* altitude dimension, x 430 */}
 					{twice((c) => (
 						<path className={`thin${c}`} d="M422 70H438M422 240H438M430 70V240" />
 					))}
 					<path d="M430 70l-3 8h6zM430 240l-3-8h6z" fill="var(--color-ink)" />
 					<text className="dim" transform="translate(448 155) rotate(90)" textAnchor="middle">
-						{SPECS.altitude}
+						Altitude
 					</text>
-					{/* labels under the ground */}
 					<text className="dim" x="120" y="266" textAnchor="middle">
 						A · Shop
 					</text>
 					<text className="dim" x="540" y="266" textAnchor="middle">
 						B · Your door
 					</text>
-					{/* A to B dimension, y 294, with a gap for the label */}
 					{twice((c) => (
 						<path className={`thin${c}`} d="M120 278V302M563 278V302M120 294H262M398 294H563" />
 					))}
 					<path d="M120 294l8-3v6zM563 294l-8-3v6z" fill="var(--color-ink)" />
 					<text className="dim" x="330" y="298" textAnchor="middle">
-						{SPECS.distance}
+						A to B
 					</text>
-					{/* callouts: 1 pickup, 2 route, 3 drop-off, 4 street */}
-					{CALLOUTS.map((k) => (
-						<g key={k.n}>
-							{twice((c) => (
-								<path className={`thin${c}`} d={k.line} />
-							))}
-							<g transform={`translate(${k.x} ${k.y})`}>
-								<g className="callout">
-									<circle cx="0" cy="0" r="10" fill="var(--color-white)" stroke="var(--color-ink)" />
-									<text className="num" x="0" y="0">
-										{k.n}
-									</text>
-								</g>
-							</g>
-						</g>
-					))}
+				</g>
+				{/* the package in transit: the red block inside corner marks, as on the route in How it works */}
+				<g className="pkg late" transform={PACKAGE_END}>
+					<path className="thin" d={marksPath(0, 0, PACKAGE_HALF)} />
+					<rect
+						x={-PACKAGE_HALF}
+						y={-PACKAGE_HALF}
+						width={PACKAGE_HALF * 2}
+						height={PACKAGE_HALF * 2}
+						fill="var(--color-red)"
+					/>
 				</g>
 			</svg>
 			<figcaption>
-				<ol className="m-0 mt-6 grid list-none grid-cols-2 gap-x-8 gap-y-2 p-0 text-[15px] max-[760px]:grid-cols-[minmax(0,1fr)]">
-					{LEGEND.map((text, i) => (
-						<li key={text} className="flex items-baseline gap-3">
-							<b className="tabular-nums">{i + 1}</b>
-							<span>{text}</span>
-						</li>
-					))}
-				</ol>
 				<p className="m-0 mt-4 text-[14px] leading-5">Not to scale.</p>
 			</figcaption>
 		</figure>

@@ -4,6 +4,7 @@ Date: 2026-11-04
 Revised: 2026-11-04 (b). Tanner's correction to the framing: Packet's premise is autonomous delivery. Vehicle 01 is the first product, not the subject. University Village is the first area, not the premise. §2.3, §3.0, H-01, W-01 and P-02 are rewritten to match; X-01 to X-03 are new.
 Revised: 2026-11-04 (c). X-03 decided (option B) and built: the Mission section now shows a delivery drawing (`DeliveryRoute.tsx`) and the aircraft stays in the showcase. M-02 and P-02 are closed on `/` by the same change. Spec §6.4 and §9 updated.
 Revised: 2026-11-04 (d). Hero pass built with the copy signed off by Tanner: X-01, X-02, H-01 to H-08, C-01 and C-04 are done. Spec §6.1 to §6.3 and §6.5 updated. Captures: `built-fold-*.png`, `built-hero-*.png`, `built-cta-*.png`, `built-what-1440x900.png`.
+Revised: 2026-11-05 (e). The page was rebuilt around the section proposal (`2026-11-04-landing-sections-proposal.md`): new sections, three scroll-locked, the showcase removed. The remaining open items here that concerned the removed sections are closed by that rebuild; spec §6 describes the page as built.
 Reviewed: `feat/landing-site` at `02d06ba`, built with `npm run build` and served with `next start`, screenshotted with Playwright (Chromium) at 390×844, 768×1024, 1280×720, 1440×900 and 1920×1080.
 Screenshots: `2026-11-04-landing-design-review/*.png`
 Spec: `../specs/2026-10-26-packet-landing-design.md`

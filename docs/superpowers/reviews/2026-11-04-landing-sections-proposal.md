@@ -2,7 +2,7 @@
 
 Date: 2026-11-04
 Builds on: `2026-11-04-landing-design-review.md` (alignment, hierarchy, placement). This document is about content: what the page says and shows, section by section.
-Status: proposal. Nothing here is built. The copy drafts use `[BRACKETS]` only where a fact cannot be worded generically yet, per spec §14.
+Status: built on 2026-11-05 on `tannerpham/sweet-bardeen-6yrl5s` (PR #12). Spec §6 is now the record of what shipped; this document keeps the reasoning. The copy drafts use `[BRACKETS]` only where a fact cannot be worded generically yet, per spec §14.
 Revised 2026-11-04 after Tanner's review of the mockup (the Packet Landing Mockup canvas): no proof strip in the hero; an intro sequence; the items copy, with the first-area line as a smaller disclaimer; the map section as plain text about the university area; an up arrow on "Check your street"; the route given headroom so the package is not clipped; generic wording in place of placeholders wherever generic wording still works.
 Page with the current-state gallery: Packet Landing Sections artifact (private; shared from its page).
 

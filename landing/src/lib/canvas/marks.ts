@@ -1,5 +1,20 @@
 import { INK } from "./sphere";
 
+/** The same corner marks as SVG path data, around (x, y) with the block's half-size s. */
+export function marksPath(x: number, y: number, s: number): string {
+	const B = s * 1.9;
+	const off = s * 0.4;
+	const len = s * 0.9;
+	const parts: string[] = [];
+	for (const sx of [-1, 1]) {
+		for (const sy of [-1, 1]) {
+			parts.push(`M${x + sx * (B + off)} ${y + sy * B}H${x + sx * (B + off + len)}`);
+			parts.push(`M${x + sx * B} ${y + sy * (B + off)}V${y + sy * (B + off + len)}`);
+		}
+	}
+	return parts.join("");
+}
+
 /**
  * Corner marks around a point, as in the emblem. k spreads them (1 is as
  * drawn). hasBlock adds the red block, the app icon.

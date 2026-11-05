@@ -121,7 +121,7 @@ export function HeroGlobe(props: Props) {
 			ref={canvasRef}
 			role="img"
 			aria-label="Dotted street grid around University Village on a slowly turning globe"
-			className="absolute inset-0 block h-full w-full max-[900px]:relative max-[900px]:inset-auto max-[900px]:order-first max-[900px]:h-[clamp(220px,42vw,320px)]"
+			className="hero-globe absolute inset-0 block h-full w-full max-[900px]:relative max-[900px]:inset-auto max-[900px]:order-first max-[900px]:h-[clamp(220px,42vw,320px)]"
 		/>
 	);
 }

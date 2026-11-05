@@ -1,0 +1,930 @@
+{
+ "source": "logs/bin/2026-10-29..2026-11-03 (00000018-00000045) and logs/rec/2026110*/cv.jsonl; scripts in scratchpad/sim/",
+ "vehicle": {
+  "mass_kg": 2.92,
+  "mass_source": "tools/sim/x650.json (not re-identified)",
+  "frame": "Holybro X650, quad X, 15 in props, 6S",
+  "hover_throttle_oge": 0.2769,
+  "MOT_THST_HOVER_log45": 0.27043959498405457,
+  "MOT_THST_EXPO": 0.6499999761581421,
+  "battery_V_range_in_hovers": [
+   21.64,
+   22.88
+  ]
+ },
+ "rotation": {
+  "model": "omega_dot = K * u(t - d) [+ first-order lag tau] + bias + disturbance; u = RATE.ROut/POut/YOut; omega from RATE.R/P/Y (after the gyro filter)",
+  "roll": {
+   "pure_delay_fit": {
+    "K": 77,
+    "delay_s": 0.052,
+    "K_range": [
+     70,
+     83
+    ],
+    "delay_range_s": [
+     0.045,
+     0.055
+    ]
+   },
+   "lag_delay_fit_log45": {
+    "K": 83,
+    "tau_s": 0.01,
+    "delay_s": 0.035
+   },
+   "confidence": "high (K, total delay); medium (lag vs delay split)"
+  },
+  "pitch": {
+   "pure_delay_fit": {
+    "K": 73,
+    "delay_s": 0.052,
+    "K_range": [
+     68,
+     80
+    ],
+    "delay_range_s": [
+     0.048,
+     0.057
+    ]
+   },
+   "lag_delay_fit_log45": {
+    "K": 100,
+    "tau_s": 0.03,
+    "delay_s": 0.023,
+    "R2": 0.98
+   },
+   "confidence": "high (K, total delay); medium (split)"
+  },
+  "yaw": {
+   "K_range": [
+    4,
+    14
+   ],
+   "suggested": {
+    "K": 8,
+    "delay_s": 0.03
+   },
+   "confidence": "low (R2 <= 0.16 in every log)"
+  },
+  "notes": "Delay includes motor/ESC/prop response, the 40 Hz gyro LPF + notch (~5-6 ms) and loop/log timing. Direct frequency-domain fits are biased by feedback (gave K 146-188, d 16-26 ms) and are NOT used. Per-log fits in rot_id.json; plot ident_plots/rot_freq_response*.png is the biased fit, for reference only.",
+  "per_log": {
+   "19": {
+    "windows": [
+     [
+      36.3,
+      39.3
+     ],
+     [
+      41.9,
+      46.4
+     ],
+     [
+      50.1,
+      52.7
+     ],
+     [
+      723.3,
+      853.5
+     ],
+     [
+      879.2,
+      902.1
+     ],
+     [
+      957.4,
+      1003.4
+     ],
+     [
+      1104.3,
+      1215.1
+     ]
+    ],
+    "air_s": 320.0,
+    "roll": {
+     "r2": 0.014124554527618738,
+     "K": 1.261536009185224,
+     "tau_s": 0.0,
+     "delay_s": 0.0,
+     "bias": 0.009533336711671109,
+     "n": 3199
+    },
+    "pitch": {
+     "r2": 0.01669266110094314,
+     "K": 1.4234824470155212,
+     "tau_s": 0.0,
+     "delay_s": 0.0,
+     "bias": 0.08275132641046157,
+     "n": 3199
+    },
+    "yaw": {
+     "r2": 0.2436048834392498,
+     "K": 3.8597806436027633,
+     "tau_s": 0.0,
+     "delay_s": 0.0,
+     "bias": 0.5886946735930516,
+     "n": 3199
+    }
+   },
+   "31": {
+    "windows": [
+     [
+      137.8,
+      150.6
+     ],
+     [
+      169.8,
+      225.5
+     ]
+    ],
+    "air_s": 68.6,
+    "roll": {
+     "r2": 0.520337663955203,
+     "K": 69.8598812124665,
+     "tau_s": 0.0,
+     "delay_s": 0.05249999999995225,
+     "bias": 0.6467131826899808,
+     "n": 27446
+    },
+    "pitch": {
+     "r2": 0.6807091814928969,
+     "K": 69.0302334568071,
+     "tau_s": 0.0,
+     "delay_s": 0.057499999999947704,
+     "bias": -0.959080130259173,
+     "n": 27446
+    },
+    "yaw": {
+     "r2": 0.005858074875101926,
+     "K": 3.676939519836057,
+     "tau_s": 0.0,
+     "delay_s": 0.03999999999996362,
+     "bias": -0.09383287160038697,
+     "n": 27446
+    }
+   },
+   "33": {
+    "windows": [
+     [
+      177.1,
+      188.0
+     ]
+    ],
+    "air_s": 10.9,
+    "roll": {
+     "r2": 0.7534045808205159,
+     "K": 91.12737012985362,
+     "tau_s": 0.0,
+     "delay_s": 0.057499999999947704,
+     "bias": 1.5217935656759491,
+     "n": 4356
+    },
+    "pitch": {
+     "r2": 0.7496594082696479,
+     "K": 79.54763164983117,
+     "tau_s": 0.0,
+     "delay_s": 0.057499999999947704,
+     "bias": -0.8954664486559059,
+     "n": 4356
+    },
+    "yaw": {
+     "r2": 0.0035614093524353185,
+     "K": 6.542353990556931,
+     "tau_s": 0.0,
+     "delay_s": 0.03499999999996817,
+     "bias": -0.16573190889981496,
+     "n": 4356
+    }
+   },
+   "35": {
+    "windows": [
+     [
+      629.8,
+      690.8
+     ]
+    ],
+    "air_s": 61.0,
+    "roll": {
+     "r2": 0.7820381093110456,
+     "K": 80.17672657496784,
+     "tau_s": 0.0,
+     "delay_s": 0.05250000000114596,
+     "bias": 1.040460555825958,
+     "n": 24405
+    },
+    "pitch": {
+     "r2": 0.7627886360792707,
+     "K": 73.96903382523428,
+     "tau_s": 0.0,
+     "delay_s": 0.05500000000120053,
+     "bias": -0.876287264639962,
+     "n": 24405
+    },
+    "yaw": {
+     "r2": 0.1476919146429967,
+     "K": 7.991563590703608,
+     "tau_s": 0.0,
+     "delay_s": 0.0,
+     "bias": -0.24670732494024272,
+     "n": 24405
+    }
+   },
+   "36": {
+    "windows": [
+     [
+      1730.5,
+      1766.5
+     ]
+    ],
+    "air_s": 36.0,
+    "roll": {
+     "r2": 0.671523154556898,
+     "K": 72.88411133200579,
+     "tau_s": 0.0,
+     "delay_s": 0.050000000001091394,
+     "bias": 1.4165419967505868,
+     "n": 14400
+    },
+    "pitch": {
+     "r2": 0.7850586998840521,
+     "K": 68.27510038015271,
+     "tau_s": 0.0,
+     "delay_s": 0.05250000000114596,
+     "bias": -1.0023063629133044,
+     "n": 14400
+    },
+    "yaw": {
+     "r2": 0.010788358938012332,
+     "K": 6.376095901736369,
+     "tau_s": 0.0,
+     "delay_s": 0.0025000000000545697,
+     "bias": -0.2563870317901719,
+     "n": 14400
+    }
+   },
+   "38": {
+    "windows": [
+     [
+      1815.4,
+      1843.1
+     ]
+    ],
+    "air_s": 27.7,
+    "roll": {
+     "r2": 0.703009414009391,
+     "K": 73.76419733183384,
+     "tau_s": 0.0,
+     "delay_s": 0.05250000000114596,
+     "bias": 1.2535899816600362,
+     "n": 11078
+    },
+    "pitch": {
+     "r2": 0.7621208441323611,
+     "K": 68.53437945263501,
+     "tau_s": 0.0,
+     "delay_s": 0.050000000001091394,
+     "bias": -0.9405238906641069,
+     "n": 11078
+    },
+    "yaw": {
+     "r2": 0.014415472569255905,
+     "K": 5.20171600396754,
+     "tau_s": 0.0,
+     "delay_s": 0.0025000000000545697,
+     "bias": -0.20026224417096472,
+     "n": 11078
+    }
+   },
+   "39": {
+    "windows": [
+     [
+      1862.5,
+      1885.6
+     ]
+    ],
+    "air_s": 23.1,
+    "roll": {
+     "r2": 0.5851679863295058,
+     "K": 70.31056180231114,
+     "tau_s": 0.0,
+     "delay_s": 0.050000000001091394,
+     "bias": 0.9354144224351876,
+     "n": 9260
+    },
+    "pitch": {
+     "r2": 0.7852018944604455,
+     "K": 73.01338466024036,
+     "tau_s": 0.0,
+     "delay_s": 0.050000000001091394,
+     "bias": -0.9332976071430379,
+     "n": 9260
+    },
+    "yaw": {
+     "r2": 0.01310852765642434,
+     "K": 5.755350607555711,
+     "tau_s": 0.0,
+     "delay_s": 0.0025000000000545697,
+     "bias": -0.16558842429580461,
+     "n": 9260
+    }
+   },
+   "43": {
+    "windows": [
+     [
+      1953.2,
+      1976.4
+     ]
+    ],
+    "air_s": 23.2,
+    "roll": {
+     "r2": 0.5869177899783526,
+     "K": 70.35524526607614,
+     "tau_s": 0.0,
+     "delay_s": 0.05250000000114596,
+     "bias": 0.7154280336547928,
+     "n": 9264
+    },
+    "pitch": {
+     "r2": 0.747231985077568,
+     "K": 70.04055800163603,
+     "tau_s": 0.0,
+     "delay_s": 0.047500000001036824,
+     "bias": -0.9386155725621567,
+     "n": 9264
+    },
+    "yaw": {
+     "r2": 0.01589778672620701,
+     "K": 6.146606607051047,
+     "tau_s": 0.0,
+     "delay_s": 0.0025000000000545697,
+     "bias": -0.14769820407294887,
+     "n": 9264
+    }
+   },
+   "44": {
+    "windows": [
+     [
+      2776.9,
+      2783.5
+     ]
+    ],
+    "air_s": 6.7,
+    "roll": {
+     "r2": 0.5785567423513965,
+     "K": 85.16411613764966,
+     "tau_s": 0.005,
+     "delay_s": 0.030000000000654836,
+     "bias": 0.6513003236044633,
+     "n": 2672
+    },
+    "pitch": {
+     "r2": 0.6361334630193383,
+     "K": 72.1677778401401,
+     "tau_s": 0.0,
+     "delay_s": 0.035000000000763976,
+     "bias": -0.7973165276082191,
+     "n": 2672
+    },
+    "yaw": {
+     "r2": 0.055558781558289305,
+     "K": 13.185356758147714,
+     "tau_s": 0.0,
+     "delay_s": 0.005000000000109139,
+     "bias": -0.3807915807862148,
+     "n": 2672
+    }
+   },
+   "45": {
+    "windows": [
+     [
+      2828.2,
+      2842.4
+     ]
+    ],
+    "air_s": 14.1,
+    "roll": {
+     "r2": 0.832945625752598,
+     "K": 86.88608755527028,
+     "tau_s": 0.015,
+     "delay_s": 0.032500000000709406,
+     "bias": 1.1128978040275972,
+     "n": 5659
+    },
+    "pitch": {
+     "r2": 0.983694632525957,
+     "K": 99.81195048561112,
+     "tau_s": 0.03,
+     "delay_s": 0.022500000000491127,
+     "bias": -1.2453229067623395,
+     "n": 5659
+    },
+    "yaw": {
+     "r2": 0.15647368233908832,
+     "K": 14.064667007381042,
+     "tau_s": 0.0,
+     "delay_s": 0.025000000000545697,
+     "bias": -0.9238723614671134,
+     "n": 5659
+    }
+   }
+  }
+ },
+ "ground_effect": {
+  "model": "thrust multiplier k(h) = 1 + a*exp(-h/b), h = skid height above the start point (m)",
+  "a": 0.038,
+  "a_sd": 0.004,
+  "b_m": 0.0275,
+  "b_sd_m": 0.0061,
+  "n_chunks": 277,
+  "h_range_m": [
+   -0.03254999220371246,
+   0.1419999897480011
+  ],
+  "confidence": "medium-low: ~3 % at 0-2 cm, gone by ~5 cm; bins are noisy (2-4 cm bin shows none); battery voltage drifts with the same logs (not separable)",
+  "plot": "ident_plots/ground_effect.png"
+ },
+ "disturbances": {
+  "angular_rad_s2_rms_by_band": {
+   "near_ground": {
+    "roll": {
+     "0.05-0.3Hz": NaN,
+     "0.3-1.0Hz": 0.231,
+     "1.0-3.0Hz": 0.245,
+     "3.0-6.0Hz": 0.403,
+     "6.0-12.0Hz": 0.488,
+     "12.0-25.0Hz": 0.47
+    },
+    "pitch": {
+     "0.05-0.3Hz": NaN,
+     "0.3-1.0Hz": 0.188,
+     "1.0-3.0Hz": 0.264,
+     "3.0-6.0Hz": 0.354,
+     "6.0-12.0Hz": 0.345,
+     "12.0-25.0Hz": 0.227
+    },
+    "yaw": {
+     "0.05-0.3Hz": NaN,
+     "0.3-1.0Hz": 0.025,
+     "1.0-3.0Hz": 0.031,
+     "3.0-6.0Hz": 0.074,
+     "6.0-12.0Hz": 0.114,
+     "12.0-25.0Hz": 0.219
+    }
+   },
+   "higher": {
+    "roll": {
+     "0.05-0.3Hz": 0.217,
+     "0.3-1.0Hz": 0.234,
+     "1.0-3.0Hz": 0.231,
+     "3.0-6.0Hz": 0.31,
+     "6.0-12.0Hz": 0.267,
+     "12.0-25.0Hz": 0.396
+    },
+    "pitch": {
+     "0.05-0.3Hz": 0.158,
+     "0.3-1.0Hz": 0.242,
+     "1.0-3.0Hz": 0.295,
+     "3.0-6.0Hz": 0.298,
+     "6.0-12.0Hz": 0.205,
+     "12.0-25.0Hz": 0.161
+    },
+    "yaw": {
+     "0.05-0.3Hz": 0.037,
+     "0.3-1.0Hz": 0.029,
+     "1.0-3.0Hz": 0.051,
+     "3.0-6.0Hz": 0.046,
+     "6.0-12.0Hz": 0.051,
+     "12.0-25.0Hz": 0.202
+    }
+   }
+  },
+  "horizontal_m_s2_rms_by_band": {
+   "near_ground": {
+    "north": {
+     "0.05-0.3Hz": 0.0064,
+     "0.3-1.0Hz": 0.012,
+     "1.0-3.0Hz": 0.0314,
+     "3.0-6.0Hz": 0.0765,
+     "6.0-12.0Hz": 0.0425
+    },
+    "east": {
+     "0.05-0.3Hz": 0.0092,
+     "0.3-1.0Hz": 0.0131,
+     "1.0-3.0Hz": 0.0266,
+     "3.0-6.0Hz": 0.0866,
+     "6.0-12.0Hz": 0.0728
+    }
+   },
+   "higher": {
+    "north": {
+     "0.05-0.3Hz": 0.0063,
+     "0.3-1.0Hz": 0.0142,
+     "1.0-3.0Hz": 0.0501,
+     "3.0-6.0Hz": 0.0531,
+     "6.0-12.0Hz": 0.0361
+    },
+    "east": {
+     "0.05-0.3Hz": 0.0123,
+     "0.3-1.0Hz": 0.0095,
+     "1.0-3.0Hz": 0.045,
+     "3.0-6.0Hz": 0.0472,
+     "6.0-12.0Hz": 0.059
+    }
+   }
+  },
+  "groups": "near_ground = window median height < 5 cm (logs 35,39,41-45); higher = 6-13 cm (logs 31,33,36,38)",
+  "notes": "angular = omega_dot - K u(t-0.052) (20 ms differences; bands above ~6 Hz include gyro/vibration noise); horizontal = d(EKF vel)/dt - tilt-implied accel (25 Hz XKF1; above ~2 Hz includes EKF/lever-arm content). Log 45 inflated by its 4.4 Hz oscillation. Per-window values in disturb.json.",
+  "plot": "ident_plots/disturbance_roll_asd.png",
+  "confidence": "medium"
+ },
+ "imu": {
+  "batch_rate_hz": 3208,
+  "imu_log_rate_hz": 25,
+  "gyro_hover_asd_1_20Hz_rad_s_rtHz": {
+   "roll_pitch": [
+    0.004,
+    0.006
+   ],
+   "yaw": [
+    0.0006,
+    0.0012
+   ],
+   "note": "includes real motion"
+  },
+  "gyro_rest_asd_1_20Hz_rad_s_rtHz": [
+   0.0002,
+   0.0027
+  ],
+  "accel_hover_asd_1_20Hz_m_s2_rtHz": [
+   0.01,
+   0.034
+  ],
+  "accel_rest_asd_1_20Hz_m_s2_rtHz": [
+   0.0013,
+   0.0055
+  ],
+  "raw_accel_rms_hover_m_s2": [
+   2.0,
+   4.1
+  ],
+  "motor_harmonics_hz": [
+   56,
+   62,
+   119,
+   175,
+   238
+  ],
+  "vibe_m_s2_median": {
+   "35": [
+    2.879870653152466,
+    1.9239075183868408,
+    2.5530569553375244
+   ],
+   "43": [
+    2.607146739959717,
+    1.8680799007415771,
+    2.3039958477020264
+   ],
+   "45": [
+    2.8251636028289795,
+    2.2501277923583984,
+    2.5775020122528076
+   ]
+  },
+  "lever_arm_imu_to_cg_m_FRD": {
+   "z": -0.058,
+   "z_range": [
+    -0.063,
+    -0.049
+   ],
+   "x": "not identifiable (+-10 cm)",
+   "y": "not identifiable (+-10 cm)",
+   "method": "body accel X/Y (25 Hz, non-thrust specific force) regressed on angular accel x r, 0.5 Hz high-pass, logs 35/43/44/45, both IMUs",
+   "INS_POS1/2_*_in_logs": 0.0,
+   "confidence": "high for z (IMU ~6 cm above CG)",
+   "per_log": {
+    "45": {
+     "0": {
+      "r_m": [
+       -0.0062,
+       0.0283,
+       -0.0631
+      ],
+      "sd_m": [
+       0.0652,
+       0.0752,
+       0.0015
+      ],
+      "r2": 0.493,
+      "n": 353,
+      "wdot_rms": [
+       4.15,
+       5.97,
+       0.47
+      ]
+     },
+     "1": {
+      "r_m": [
+       0.0042,
+       0.0293,
+       -0.063
+      ],
+      "sd_m": [
+       0.0571,
+       0.0777,
+       0.0014
+      ],
+      "r2": 0.492,
+      "n": 353,
+      "wdot_rms": [
+       4.15,
+       5.97,
+       0.47
+      ]
+     }
+    },
+    "44": {
+     "0": {
+      "r_m": [
+       -0.099,
+       0.0494,
+       -0.0489
+      ],
+      "sd_m": [
+       0.0795,
+       0.0343,
+       0.0064
+      ],
+      "r2": 0.243,
+      "n": 167,
+      "wdot_rms": [
+       2.39,
+       1.24,
+       0.37
+      ]
+     },
+     "1": {
+      "r_m": [
+       -0.1007,
+       0.0404,
+       -0.0489
+      ],
+      "sd_m": [
+       0.079,
+       0.0382,
+       0.0064
+      ],
+      "r2": 0.239,
+      "n": 167,
+      "wdot_rms": [
+       2.39,
+       1.24,
+       0.37
+      ]
+     }
+    },
+    "43": {
+     "0": {
+      "r_m": [
+       -0.0717,
+       0.116,
+       -0.0537
+      ],
+      "sd_m": [
+       0.0308,
+       0.016,
+       0.0031
+      ],
+      "r2": 0.278,
+      "n": 579,
+      "wdot_rms": [
+       1.9,
+       1.46,
+       0.25
+      ]
+     },
+     "1": {
+      "r_m": [
+       -0.0641,
+       0.1136,
+       -0.0534
+      ],
+      "sd_m": [
+       0.0307,
+       0.0167,
+       0.0031
+      ],
+      "r2": 0.271,
+      "n": 579,
+      "wdot_rms": [
+       1.9,
+       1.46,
+       0.25
+      ]
+     }
+    },
+    "35": {
+     "0": {
+      "r_m": [
+       0.0137,
+       -0.1078,
+       -0.0616
+      ],
+      "sd_m": [
+       0.0174,
+       0.0448,
+       0.0011
+      ],
+      "r2": 0.476,
+      "n": 1525,
+      "wdot_rms": [
+       2.04,
+       1.77,
+       0.43
+      ]
+     },
+     "1": {
+      "r_m": [
+       0.0152,
+       -0.1119,
+       -0.0616
+      ],
+      "sd_m": [
+       0.0181,
+       0.0446,
+       0.0011
+      ],
+      "r2": 0.471,
+      "n": 1525,
+      "wdot_rms": [
+       2.04,
+       1.77,
+       0.43
+      ]
+     }
+    }
+   }
+  },
+  "confidence": "medium"
+ },
+ "camera": {
+  "resolution": [
+   512,
+   288
+  ],
+  "rate_hz": 10.0,
+  "frame_dt_ms_p99": [
+   104,
+   136
+  ],
+  "range_m_typical": 0.23,
+  "px_per_cell_typical": 9.0,
+  "noise_static_mm_clean_sets": {
+   "median_xyz": [
+    0.43,
+    0.2,
+    0.28
+   ],
+   "n_sets": 4
+  },
+  "noise_hover_frame_jitter_mm": {
+   "median_xyz": [
+    1.33,
+    1.36,
+    1.27
+   ],
+   "p90_xyz": [
+    4.93,
+    3.55,
+    5.1
+   ],
+   "n_sets": 34
+  },
+  "confidence": "medium (static sets with drone handling excluded; hover jitter after a 0.5 s moving-average detrend includes some real motion)"
+ },
+ "timing": {
+  "t_cap_to_detection_done_ms": {
+   "2026-11-03": {
+    "median": 52,
+    "p10_p90": [
+     49,
+     56
+    ]
+   },
+   "2026-11-02": {
+    "median": [
+     60,
+     76
+    ]
+   }
+  },
+  "t_cap_to_FC_arrival_ms": {
+   "median": 57,
+   "range": [
+    55,
+    66
+   ],
+   "p10_p90_spread": 11,
+   "how": "detection 52 ms + Pi->FC link (UDP to mav_tunnel, 2 Mbaud serial) a few ms; consistent with the IMU-attitude clock sync (55-66 ms)"
+  },
+  "FC_arrival_jitter_std_ms": [
+   3.9,
+   5.4
+  ],
+  "FC_arrival_dt_ms": {
+   "median": 100,
+   "p99": [
+    114,
+    234
+   ],
+   "max_in_hover": [
+    302,
+    398
+   ]
+  },
+  "FC_dating": {
+   "arrival_minus_corrected_ms_median": 11.5,
+   "VISO_DELAY_MS": 60,
+   "assumed_capture_before_arrival_ms": 71.5
+  },
+  "exposure_to_t_cap_ms": {
+   "value": null,
+   "status": "not identifiable from logs (rvec in cv.jsonl is IMU-fused; tags-only tilt too noisy, R2 0.04-0.39)"
+  },
+  "per_log": {
+   "35": {
+    "arrival_dt_median_ms": 100.04200000001583,
+    "arrival_dt_p99_ms": 115.11037999994588,
+    "arrival_dt_max_ms": 8439.55700000003,
+    "transport_jitter_std_ms": 4.112632995204491,
+    "transport_jitter_p10_p90_ms": [
+     -4.6513671875,
+     5.491943359375
+    ],
+    "arrival_minus_corrected_ms_median": 10.672999999951571,
+    "arrival_minus_corrected_p90": 16.0964999999851,
+    "VISO_DELAY_MS": 60.0
+   },
+   "39": {
+    "arrival_dt_median_ms": 100.00849999999627,
+    "arrival_dt_p99_ms": 115.27549999987241,
+    "arrival_dt_max_ms": 302.0200000000186,
+    "transport_jitter_std_ms": 4.101639749424336,
+    "transport_jitter_p10_p90_ms": [
+     -5.685107421875,
+     5.230273437500008
+    ],
+    "arrival_minus_corrected_ms_median": 11.64199999999255,
+    "arrival_minus_corrected_p90": 16.736200000019743,
+    "VISO_DELAY_MS": 60.0
+   },
+   "43": {
+    "arrival_dt_median_ms": 100.05999999982305,
+    "arrival_dt_p99_ms": 114.00271999999411,
+    "arrival_dt_max_ms": 397.7129999999888,
+    "transport_jitter_std_ms": 3.906255690069941,
+    "transport_jitter_p10_p90_ms": [
+     -4.8899902343749995,
+     4.7855224609375
+    ],
+    "arrival_minus_corrected_ms_median": 11.398999999975786,
+    "arrival_minus_corrected_p90": 16.127199999941514,
+    "VISO_DELAY_MS": 60.0
+   },
+   "44": {
+    "arrival_dt_median_ms": 100.00700000021607,
+    "arrival_dt_p99_ms": 134.6538799997985,
+    "arrival_dt_max_ms": 304.9220000002533,
+    "transport_jitter_std_ms": 4.408194854354032,
+    "transport_jitter_p10_p90_ms": [
+     -5.1458496093749995,
+     5.7556640625000055
+    ],
+    "arrival_minus_corrected_ms_median": 12.071999999927357,
+    "arrival_minus_corrected_p90": 18.377800000086427,
+    "VISO_DELAY_MS": 60.0
+   },
+   "45": {
+    "arrival_dt_median_ms": 100.08849999983795,
+    "arrival_dt_p99_ms": 233.6025799998577,
+    "arrival_dt_max_ms": 5822.481000000145,
+    "transport_jitter_std_ms": 5.35781745010439,
+    "transport_jitter_p10_p90_ms": [
+     -6.3045410156249995,
+     5.9605468749999995
+    ],
+    "arrival_minus_corrected_ms_median": 11.544000000227243,
+    "arrival_minus_corrected_p90": 17.292400000151247,
+    "VISO_DELAY_MS": 60.0
+   }
+  }
+ },
+ "param_sets_by_log": {
+  "18-29": "defaults (rate_i / rate_i_default; 25-29 indoor camera, front_camera/motor_start from 27)",
+  "30-31": "tune_v1 (+tune_logging)",
+  "32-33": "tune_v2 (+log_rotate)",
+  "34-35": "tune_v3",
+  "36-43": "tune_v3 + tune_v4",
+  "44-45": "tune_v4 + tune_v5"
+ },
+ "params_file": "params_log45.parm"
+}

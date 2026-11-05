@@ -1,0 +1,101 @@
+[
+ {
+  "name": "fin2_nom1",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "parm": [
+   "tools/tune_v6.parm"
+  ],
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "fin2_nom2",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "parm": [
+   "tools/tune_v6.parm"
+  ],
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 2
+ },
+ {
+  "name": "fin2_nom3",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "parm": [
+   "tools/tune_v6.parm"
+  ],
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 3
+ },
+ {
+  "name": "fin2_nom4",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "parm": [
+   "tools/tune_v6.parm"
+  ],
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 4
+ },
+ {
+  "name": "fin2_abK20",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "parm": [
+   "tools/tune_v6.parm"
+  ],
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]",
+   "inertia=[0.193, 0.2035, 0.1288]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 1
+ },
+ {
+  "name": "fin2_abSlow",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "parm": [
+   "tools/tune_v6.parm"
+  ],
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]",
+   "motor_delay=0.040",
+   "motor_tau=0.025"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 1
+ }
+]

@@ -1,0 +1,138 @@
+[
+ {
+  "name": "c4_L30_43",
+  "flown": "tools/sim/hover/flown_log43.parm",
+  "set": [
+   "camera.exposure_to_readout_s=0.03"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ]
+ },
+ {
+  "name": "c4_L50_43",
+  "flown": "tools/sim/hover/flown_log43.parm",
+  "set": [
+   "camera.exposure_to_readout_s=0.05"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ]
+ },
+ {
+  "name": "c4_L70_43",
+  "flown": "tools/sim/hover/flown_log43.parm",
+  "set": [
+   "camera.exposure_to_readout_s=0.07"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ]
+ },
+ {
+  "name": "c4_L90_43",
+  "flown": "tools/sim/hover/flown_log43.parm",
+  "set": [
+   "camera.exposure_to_readout_s=0.09"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ]
+ },
+ {
+  "name": "c4_L50s2_43",
+  "flown": "tools/sim/hover/flown_log43.parm",
+  "set": [
+   "camera.exposure_to_readout_s=0.05"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 2
+ },
+ {
+  "name": "c4_L70s2_43",
+  "flown": "tools/sim/hover/flown_log43.parm",
+  "set": [
+   "camera.exposure_to_readout_s=0.07"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 2
+ },
+ {
+  "name": "c4_L30_45",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.exposure_to_readout_s=0.03"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ]
+ },
+ {
+  "name": "c4_L50_45",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.exposure_to_readout_s=0.05"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ]
+ },
+ {
+  "name": "c4_L70_45",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.exposure_to_readout_s=0.07"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ]
+ },
+ {
+  "name": "c4_L90_45",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.exposure_to_readout_s=0.09"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ]
+ },
+ {
+  "name": "c4_L50s2_45",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.exposure_to_readout_s=0.05"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 2
+ },
+ {
+  "name": "c4_L70s2_45",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.exposure_to_readout_s=0.07"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8"
+  ],
+  "seed": 2
+ }
+]

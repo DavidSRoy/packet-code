@@ -1,0 +1,9 @@
+# High-rate logging for tuning the rate loop from data (2026-11-03). Before: LOG_BITMASK 180222
+# (attitude/PID at about 10 Hz), INS_LOG_BAT_MASK 0. ATTITUDE_FAST (bit 0) logs RATE and
+# PIDR/PIDP/PIDY at the 400 Hz loop rate; the batch sampler logs raw gyro, before and after
+# the filters (INS_LOG_BAT_OPT 4), for the motor-noise spectrum and the harmonic notch.
+# The batch sampler starts after an FC reboot.
+LOG_BITMASK,180223
+INS_LOG_BAT_MASK,1
+INS_LOG_BAT_OPT,4
+INS_LOG_BAT_CNT,1024

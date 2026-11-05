@@ -1,0 +1,14 @@
+[Unit]
+Description=Packet: SSH over the telemetry radio (MAVLink TUNNEL on /dev/serial0)
+After=network.target ssh.service
+
+[Service]
+User=packet
+WorkingDirectory=/home/packet/companion
+# 2 Mbaud to the FC (SERIAL5_BAUD 2000): /dev/serial0 is the PL011 UART (dtoverlay=disable-bt)
+ExecStart=/home/packet/companion/.venv/bin/python -u mav_tunnel.py --baud 2000000
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

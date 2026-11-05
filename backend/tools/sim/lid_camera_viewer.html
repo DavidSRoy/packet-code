@@ -1,0 +1,367 @@
+<meta charset="utf-8">
+<title>Packet Lid Camera</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: instrument panel. Controls column on the left, the two views (drone over box, camera image) stacked on the right. */
+:root {
+  --bg: #eef1f3; --panel: #ffffff; --line: #d3d9de; --fg: #18232c; --muted: #5b6873;
+  --accent: #0b7a8f; --ok: #1e8a4c; --bad: #c2412d; --warn: #b7791f; --scene: #dfe5e9;
+  --display: "Barlow", "Helvetica Neue", Arial, sans-serif; --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11171c; --panel: #182128; --line: #2a353e; --fg: #e3e9ed; --muted: #92a0ab;
+  --accent: #39b6cc; --ok: #4cc47e; --bad: #ef6a52; --warn: #e2a748; --scene: #1d272f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11171c; --panel: #182128; --line: #2a353e; --fg: #e3e9ed; --muted: #92a0ab;
+  --accent: #39b6cc; --ok: #4cc47e; --bad: #ef6a52; --warn: #e2a748; --scene: #1d272f; color-scheme: dark }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--display); font-size: 15px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px; box-sizing: border-box; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-bottom: 12px; }
+h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: .01em; }
+header p { margin: 0; color: var(--muted); font-size: 14px; max-width: 70ch; }
+.app { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 860px) { .app { grid-template-columns: minmax(0, 1fr); } }
+.controls { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 14px; }
+fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
+legend { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin-bottom: 4px; }
+.row { display: grid; grid-template-columns: 74px minmax(0, 1fr) 64px; align-items: center; gap: 8px; font-size: 13px; }
+.row output { font-family: var(--mono); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.seg { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { flex: 1; border: 0; background: transparent; color: var(--fg); padding: 6px 4px; font: 600 13px var(--display); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--panel); }
+.btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.btn { border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 6px; padding: 6px 10px; font: 600 13px var(--display); cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.views { display: grid; gap: 14px; min-width: 0; }
+.view { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; min-width: 0; }
+.view h2 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); padding: 8px 12px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.stage { position: relative; width: 100%; }
+#scene3d { aspect-ratio: 16 / 8; }
+#camwrap { aspect-ratio: 16 / 9; background: #5f5f5f; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.status { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 10px 12px; border-top: 1px solid var(--line); font-size: 13px; align-items: center; }
+.pill { font: 600 12px var(--mono); padding: 3px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.pill.ok { color: var(--ok); } .pill.bad { color: var(--bad); } .pill.warn { color: var(--warn); }
+.mono { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+#strip { height: 34px; display: block; width: 100%; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.note { font-size: 12px; color: var(--muted); line-height: 1.45; margin: 0; }
+</style>
+
+<header>
+  <h1>Packet lid camera</h1>
+  <p>Fly the drone down onto box 1 and see what the lid camera sees. Drag the 3D view to turn it. Tags in green are readable, red are blocked by the gripper or legs, orange are too small or blurred.</p>
+</header>
+
+<div class="app">
+  <div class="controls">
+    <fieldset>
+      <legend>Camera</legend>
+      <div class="seg" role="group" aria-label="Camera model">
+        <button id="camC920" aria-pressed="true">C920 · 70.4°</button>
+        <button id="camC270" aria-pressed="false">C270 · 48.8°</button>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Camera mount (mm from frame centre, tilt in toward the box)</legend>
+      <div class="row"><label for="mx">forward</label><input id="mx" type="range" min="-180" max="180" step="5" value="40"><output id="mxo"></output></div>
+      <div class="row"><label for="my">to left</label><input id="my" type="range" min="-240" max="240" step="5" value="120"><output id="myo"></output></div>
+      <div class="row"><label for="mz">down</label><input id="mz" type="range" min="20" max="140" step="1" value="40"><output id="mzo"></output></div>
+      <div class="row"><label for="mt">tilt in</label><input id="mt" type="range" min="0" max="45" step="1" value="0"><output id="mto"></output></div>
+      <div class="btns" id="presets"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Drone over the box</legend>
+      <div class="row"><label for="hh">height</label><input id="hh" type="range" min="0" max="1000" step="1" value="600"><output id="hho"></output></div>
+      <div class="row"><label for="ox">off fwd</label><input id="ox" type="range" min="-400" max="400" step="5" value="40"><output id="oxo"></output></div>
+      <div class="row"><label for="oy">off left</label><input id="oy" type="range" min="-400" max="400" step="5" value="-30"><output id="oyo"></output></div>
+      <div class="row"><label for="yw">yaw</label><input id="yw" type="range" min="-30" max="30" step="1" value="8"><output id="ywo"></output></div>
+      <div class="row"><label for="rl">roll</label><input id="rl" type="range" min="-8" max="8" step="0.5" value="2"><output id="rlo"></output></div>
+      <div class="row"><label for="pt">pitch</label><input id="pt" type="range" min="-8" max="8" step="0.5" value="-2"><output id="pto"></output></div>
+    </fieldset>
+    <fieldset>
+      <legend>Descent</legend>
+      <div class="btns">
+        <button class="btn primary" id="play">Play descent</button>
+        <button class="btn" id="reset">Reset</button>
+      </div>
+      <p class="note">Starts 3 m up, off to the side and turned, with some wobble, and closes in on the way down, like the misaligned descents in the Python sim.</p>
+    </fieldset>
+    <p class="note">Geometry: Master Assembly v60 (gripper jaws RP-019 v16 as boxes, drive housing, battery plate, landing legs), box BX-005 v12 and lid BX-006 v7 with the 218 × 200 mm sticker. The camera can sit anywhere you like here; check that a real bracket can hold it there. Readability here is a quick estimate (whole tag in view, not blocked, at least 2.7 px per cell, blur). <span class="mono">tools/sim/lid_camera_sim.py</span> runs the real detector and gives the scored numbers.</p>
+  </div>
+
+  <div class="views">
+    <section class="view">
+      <h2><span>Drone over the box</span><span class="legend"><span><i style="background:var(--accent)"></i>camera view</span><span><i style="background:#c08a4e"></i>gripper</span></span></h2>
+      <div class="stage" id="scene3d"><canvas id="c3d"></canvas></div>
+    </section>
+    <section class="view">
+      <h2><span>Camera image (1280 × 720)</span><span class="mono" id="camlabel"></span></h2>
+      <div class="stage" id="camwrap"><canvas id="ccam"></canvas><canvas id="cover"></canvas></div>
+      <div class="status">
+        <span class="pill" id="found">–</span>
+        <span id="counts" class="mono"></span>
+        <span id="dist" class="mono"></span>
+      </div>
+      <div class="status" style="flex-direction:column;align-items:stretch;gap:4px">
+        <span class="note">Last descent: box found at each height (green) or not (red), 3 m on the left to the grab on the right</span>
+        <canvas id="strip" width="800" height="34"></canvas>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const STICKER_PNG='data:image/png;base64,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';
+const TAGS=[{"n": "A1", "cells": 6, "c": [[-0.054, 0.054, 0.0], [0.054, 0.054, 0.0], [0.054, -0.054, 0.0], [-0.054, -0.054, 0.0]]}, {"n": "T4", "cells": 8, "c": [[-0.104, 0.095, 0.0], [-0.074, 0.095, 0.0], [-0.074, 0.065, 0.0], [-0.104, 0.065, 0.0]]}, {"n": "T5", "cells": 8, "c": [[0.074, 0.095, 0.0], [0.104, 0.095, 0.0], [0.104, 0.065, 0.0], [0.074, 0.065, 0.0]]}, {"n": "T6", "cells": 8, "c": [[0.074, -0.065, 0.0], [0.104, -0.065, 0.0], [0.104, -0.095, 0.0], [0.074, -0.095, 0.0]]}, {"n": "T7", "cells": 8, "c": [[-0.104, -0.065, 0.0], [-0.074, -0.065, 0.0], [-0.074, -0.095, 0.0], [-0.104, -0.095, 0.0]]}, {"n": "T210", "cells": 8, "c": [[-0.0595, 0.095, 0.0], [-0.0295, 0.095, 0.0], [-0.0295, 0.065, 0.0], [-0.0595, 0.065, 0.0]]}, {"n": "T211", "cells": 8, "c": [[-0.015, 0.095, 0.0], [0.015, 0.095, 0.0], [0.015, 0.065, 0.0], [-0.015, 0.065, 0.0]]}, {"n": "T212", "cells": 8, "c": [[0.0295, 0.095, 0.0], [0.0595, 0.095, 0.0], [0.0595, 0.065, 0.0], [0.0295, 0.065, 0.0]]}, {"n": "T213", "cells": 8, "c": [[-0.0595, -0.065, 0.0], [-0.0295, -0.065, 0.0], [-0.0295, -0.095, 0.0], [-0.0595, -0.095, 0.0]]}, {"n": "T214", "cells": 8, "c": [[-0.015, -0.065, 0.0], [0.015, -0.065, 0.0], [0.015, -0.095, 0.0], [-0.015, -0.095, 0.0]]}, {"n": "T215", "cells": 8, "c": [[0.0295, -0.065, 0.0], [0.0595, -0.065, 0.0], [0.0595, -0.095, 0.0], [0.0295, -0.095, 0.0]]}, {"n": "T216", "cells": 8, "c": [[-0.104, 0.051, 0.0], [-0.074, 0.051, 0.0], [-0.074, 0.021, 0.0], [-0.104, 0.021, 0.0]]}, {"n": "T217", "cells": 8, "c": [[-0.104, -0.021, 0.0], [-0.074, -0.021, 0.0], [-0.074, -0.051, 0.0], [-0.104, -0.051, 0.0]]}, {"n": "T218", "cells": 8, "c": [[0.074, 0.051, 0.0], [0.104, 0.051, 0.0], [0.104, 0.021, 0.0], [0.074, 0.021, 0.0]]}, {"n": "T219", "cells": 8, "c": [[0.074, -0.021, 0.0], [0.104, -0.021, 0.0], [0.104, -0.051, 0.0], [0.074, -0.051, 0.0]]}];
+
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  THREE.Object3D.DefaultUp.set(0, 0, 1);
+
+  // ---- geometry (mm). Drone frame: +x nose, +y left, +z up. Lid frame: origin sticker centre, lid top z = 0.
+  const LID_W = 225.6, LID_H = 206.4, BOX_L = 254.4, BOX_W = 206.4, BOX_H = 155.2, LID_TOP_DRONE = -158.1;
+  const BOXES = {
+    housing: [-100, 100, -47, 47, -147.3, -92.0],
+    jaw1: [-126.8, 65.0, -60.0, 34.9, -170.9, -131.9],
+    jaw2: [-65.0, 126.8, -34.9, 60.0, -170.9, -131.9],
+    plate: [-64, 64, -60, 60, -92, -90],
+  };
+  const CAMS = { C920: { hfov: 70.4, af: true, body: [94, 43, 30] }, C270: { hfov: 48.8, af: false, body: [73, 32, 30] } };
+  const legY = z => 64.1 + 0.317 * (-4.1 - z);
+
+  let camName = "C920";
+
+  // ---- scene
+  const scene = new THREE.Scene();
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x667788, 0.9); scene.add(hemi);
+  const sun = new THREE.DirectionalLight(0xffffff, 0.55); sun.position.set(400, -300, 900); scene.add(sun);
+
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(12000, 12000), new THREE.MeshLambertMaterial({ color: 0x5f5f5f }));
+  ground.position.z = -BOX_H; scene.add(ground);
+  const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(BOX_L, BOX_W, BOX_H - 3), new THREE.MeshLambertMaterial({ color: 0x8f969c }));
+  boxMesh.position.z = -BOX_H / 2 - 1.5; scene.add(boxMesh);
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(LID_W, LID_H, 2), new THREE.MeshLambertMaterial({ color: 0x969696 }));
+  lid.position.z = -1; scene.add(lid);
+  const tex = new THREE.TextureLoader().load(STICKER_PNG);
+  tex.anisotropy = 8;
+  const sticker = new THREE.Mesh(new THREE.PlaneGeometry(218, 200), new THREE.MeshBasicMaterial({ map: tex }));
+  sticker.position.z = 0.2; scene.add(sticker);
+
+  const drone = new THREE.Group(); drone.rotation.order = "ZXY"; scene.add(drone);
+  const occluders = [];
+  const brass = new THREE.MeshLambertMaterial({ color: 0xc08a4e });
+  const dark = new THREE.MeshLambertMaterial({ color: 0x3a4148 });
+  function addBox([x0, x1, y0, y1, z0, z1], mat, occ) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), mat);
+    m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); drone.add(m); if (occ) occluders.push(m); return m;
+  }
+  addBox(BOXES.housing, dark, true); addBox(BOXES.jaw1, brass, true); addBox(BOXES.jaw2, brass, true); addBox(BOXES.plate, dark, true);
+  function tube(a, b, r, mat, occ) {
+    const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = B.clone().sub(A);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d.length(), 16), mat);
+    m.position.copy(A).add(B).multiplyScalar(0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+    drone.add(m); if (occ) occluders.push(m);
+  }
+  for (const s of [1, -1]) {
+    tube([0, s * legY(-4.1), -4.1], [0, s * legY(-295), -295], 8, dark, true);
+    tube([-163, s * legY(-295), -304], [163, s * legY(-295), -304], 8, dark, false);
+  }
+  for (const [sx, sy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const e = [sx * 230, sy * 230, -3];
+    tube([0, 0, -3], e, 9, dark, false);
+    const prop = new THREE.Mesh(new THREE.CylinderGeometry(150, 150, 2, 40), new THREE.MeshLambertMaterial({ color: 0x9aa4ab, transparent: true, opacity: 0.25 }));
+    prop.rotation.x = Math.PI / 2; prop.position.set(e[0], e[1], 30); drone.add(prop);
+  }
+  const canopy = new THREE.Mesh(new THREE.SphereGeometry(82, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xe6e9ec }));
+  canopy.rotation.x = Math.PI / 2; drone.add(canopy);
+
+  // camera rig
+  const rig = new THREE.Group(); drone.add(rig);
+  const lensCam = new THREE.PerspectiveCamera(40, 16 / 9, 5, 20000); rig.add(lensCam);
+  const camBody = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x15191c })); rig.add(camBody);
+  const frustum = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x0b7a8f }));
+  scene.add(frustum);
+  const footprint = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: 0x0b7a8f, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false }));
+  scene.add(footprint);
+
+  // ---- renderers
+  const r3d = new THREE.WebGLRenderer({ canvas: $("c3d"), antialias: true });
+  const rcam = new THREE.WebGLRenderer({ canvas: $("ccam"), antialias: true });
+  r3d.setPixelRatio(Math.min(2, window.devicePixelRatio));
+  rcam.setPixelRatio(1);
+  const view = new THREE.PerspectiveCamera(40, 2, 5, 50000);
+  view.position.set(900, -1300, 900);
+  const orbit = new THREE.OrbitControls(view, $("c3d"));
+  orbit.target.set(0, 0, 200); orbit.update();
+
+  // ---- state
+  const v = id => parseFloat($(id).value);
+  const heightMM = () => Math.exp(Math.log(165) + (Math.log(3000) - Math.log(165)) * v("hh") / 1000);
+  function mountPose() {
+    const x = v("mx"), y = v("my"), z = -v("mz"), tilt = v("mt") * Math.PI / 180;
+    let dir = new THREE.Vector3(0, 0, -1);
+    if (tilt > 0) {
+      const r = Math.hypot(x, y), ux = r > 1 ? -x / r : -1, uy = r > 1 ? -y / r : 0;
+      dir = new THREE.Vector3(Math.sin(tilt) * ux, Math.sin(tilt) * uy, -Math.cos(tilt)).normalize();
+    }
+    return { pos: new THREE.Vector3(x, y, z), dir };
+  }
+  function place() {
+    const h = heightMM();
+    drone.position.set(v("ox"), v("oy"), h);
+    drone.rotation.set(v("rl") * Math.PI / 180, v("pt") * Math.PI / 180, v("yw") * Math.PI / 180);
+    const { pos, dir } = mountPose();
+    rig.position.copy(pos);
+    // image top = nose: camera +Y points to drone +x (projected), looks along dir
+    const zc = dir.clone();
+    let y = new THREE.Vector3(-1, 0, 0).sub(zc.clone().multiplyScalar(-zc.x)).normalize();   // image down -> tail
+    const x = new THREE.Vector3().crossVectors(y, zc);
+    const m = new THREE.Matrix4().makeBasis(x, y.clone().negate(), zc.clone().negate());
+    rig.quaternion.setFromRotationMatrix(m);
+    const c = CAMS[camName];
+    lensCam.fov = 2 * Math.atan(Math.tan(c.hfov * Math.PI / 360) * 9 / 16) * 180 / Math.PI;
+    lensCam.updateProjectionMatrix();
+    camBody.scale.set(c.body[1], c.body[0], c.body[2]);      // long side along the drone x (rig y = nose)
+    camBody.position.set(0, 0, c.body[2] / 2 + 2);
+    camBody.visible = true;
+    scene.updateMatrixWorld(true);
+  }
+
+  // ---- footprint and frustum on the lid plane / ground
+  function updateFrustum() {
+    const o = new THREE.Vector3().setFromMatrixPosition(lensCam.matrixWorld);
+    const pts = [], seg = [];
+    for (const [nx, ny] of [[-1, 1], [1, 1], [1, -1], [-1, -1]]) {
+      const p = new THREE.Vector3(nx, ny, 0.5).unproject(lensCam).sub(o).normalize();
+      const t = p.z < -1e-4 ? (0 - o.z) / p.z : 4000;
+      const q = o.clone().add(p.multiplyScalar(Math.min(t, 8000)));
+      pts.push(q); seg.push(o.x, o.y, o.z, q.x, q.y, q.z);
+    }
+    for (let i = 0; i < 4; i++) { const a = pts[i], b = pts[(i + 1) % 4]; seg.push(a.x, a.y, a.z, b.x, b.y, b.z); }
+    frustum.geometry.setAttribute("position", new THREE.Float32BufferAttribute(seg, 3));
+    const f = []; for (const i of [0, 1, 2, 0, 2, 3]) f.push(pts[i].x, pts[i].y, 0.6);
+    footprint.geometry.setAttribute("position", new THREE.Float32BufferAttribute(f, 3));
+    footprint.geometry.computeBoundingSphere(); frustum.geometry.computeBoundingSphere();
+  }
+
+  // ---- tag readability (estimate)
+  const ray = new THREE.Raycaster();
+  function assess() {
+    const c = CAMS[camName], W = 1280, H = 720;
+    const fx = (W / 2) / Math.tan(c.hfov * Math.PI / 360);
+    const o = new THREE.Vector3().setFromMatrixPosition(lensCam.matrixWorld);
+    const res = [];
+    for (const t of TAGS) {
+      const world = t.c.map(p => new THREE.Vector3(p[0] * 1000, p[1] * 1000, 0.3));
+      const ctr = world.reduce((a, b) => a.add(b), new THREE.Vector3()).multiplyScalar(0.25);
+      const px = world.map(p => { const q = p.clone().project(lensCam); return [(q.x + 1) / 2 * W, (1 - q.y) / 2 * H, q.z]; });
+      const inFront = world.every(p => p.clone().applyMatrix4(lensCam.matrixWorldInverse).z < 0);
+      const inFrame = inFront && px.every(([x, y]) => x > 3 && x < W - 3 && y > 3 && y < H - 3);
+      let side = 0; for (let i = 0; i < 4; i++) side += Math.hypot(px[i][0] - px[(i + 1) % 4][0], px[i][1] - px[(i + 1) % 4][1]);
+      const cell = side / 4 / t.cells;
+      let blocked = false;
+      if (inFrame) for (const p of [...world, ctr]) {
+        const d = p.clone().sub(o), L = d.length(); ray.set(o, d.normalize()); ray.far = L - 1;
+        if (ray.intersectObjects(occluders, false).length) { blocked = true; break; }
+      }
+      const dist = ctr.distanceTo(o);
+      let sigma = 0.7;
+      if (!c.af) { const coc = (3.7 / 2) * 3.7 * Math.abs(1 / Math.max(dist, 50) - 1 / 600) / (3.6 / 1280); sigma = Math.hypot(sigma, coc / 2.355); }
+      const sharp = cell >= 2.7 && sigma <= 0.3 * cell;
+      res.push({ t, px, inFrame, blocked, cell, sharp, ok: inFrame && !blocked && sharp });
+    }
+    return res;
+  }
+
+  function drawOverlay(res) {
+    const cv = $("cover"), ctx = cv.getContext("2d");
+    cv.width = cv.clientWidth * devicePixelRatio; cv.height = cv.clientHeight * devicePixelRatio;
+    const s = cv.width / 1280; ctx.clearRect(0, 0, cv.width, cv.height);
+    for (const r of res) {
+      if (!r.px.every(p => p[2] < 1)) continue;
+      ctx.beginPath(); r.px.forEach(([x, y], i) => i ? ctx.lineTo(x * s, y * s) : ctx.moveTo(x * s, y * s)); ctx.closePath();
+      ctx.lineWidth = Math.max(2, 3 * s);
+      ctx.strokeStyle = !r.inFrame ? "rgba(0,0,0,0)" : r.blocked ? "#ef6a52" : r.sharp ? "#4cc47e" : "#e2a748";
+      ctx.stroke();
+    }
+  }
+
+  // ---- render loop
+  function frame() {
+    place(); updateFrustum();
+    const w = $("scene3d").clientWidth, h = $("scene3d").clientHeight;
+    if (r3d.domElement.width !== Math.round(w * r3d.getPixelRatio())) { r3d.setSize(w, h, false); view.aspect = w / h; view.updateProjectionMatrix(); }
+    const cw = $("camwrap").clientWidth, ch = $("camwrap").clientHeight;
+    if (rcam.domElement.width !== Math.round(cw)) rcam.setSize(cw, ch, false);
+    scene.background = new THREE.Color(css("--scene"));
+    camBody.visible = true; frustum.visible = true; footprint.visible = true;
+    r3d.render(scene, view);
+    scene.background = new THREE.Color(0x5f5f5f);
+    camBody.visible = false; frustum.visible = false; footprint.visible = false;
+    rcam.render(scene, lensCam);
+    const res = assess(); drawOverlay(res);
+    const ok = res.filter(r => r.ok).length, seen = res.filter(r => r.inFrame).length, bl = res.filter(r => r.inFrame && r.blocked).length;
+    const f = $("found"); f.textContent = ok ? "BOX 1 FOUND" : "NO BOX"; f.className = "pill " + (ok ? "ok" : "bad");
+    $("counts").textContent = `${ok} of ${TAGS.length} tags readable · ${seen} in frame · ${bl} blocked`;
+    $("dist").textContent = `${(heightMM() / 1000).toFixed(2)} m above lid`;
+    $("camlabel").textContent = `${camName} · HFOV ${CAMS[camName].hfov}°`;
+    for (const id of ["mx", "my", "mz", "mt", "ox", "oy", "yw", "rl", "pt"]) $(id + "o").textContent = $(id).value + (["mt", "yw", "rl", "pt"].includes(id) ? "°" : " mm");
+    $("hho").textContent = (heightMM() / 1000).toFixed(2) + " m";
+    if (playing) stepPlay(ok > 0);
+    requestAnimationFrame(frame);
+  }
+
+  // ---- descent playback (same path as tools/sim/descent_video.py)
+  let playing = false, u = 0, hist = [];
+  function pathAt(u) {
+    const h = Math.exp(Math.log(3000) + (Math.log(165) - Math.log(3000)) * u);
+    const r = (30 + 0.15 * h) * (0.9 + 0.1 * Math.sin(7 * u)), a = (-35 + 90 * u) * Math.PI / 180;
+    return { h, dx: r * Math.cos(a), dy: r * Math.sin(a), yaw: 15 * Math.cos(3 * u) + 4 * Math.sin(11 * u), roll: 4 * Math.sin(9 * u), pitch: 3 * Math.sin(13 * u + 1) };
+  }
+  function setPose(p) {
+    $("hh").value = 1000 * (Math.log(p.h) - Math.log(165)) / (Math.log(3000) - Math.log(165));
+    $("ox").value = p.dx; $("oy").value = p.dy; $("yw").value = p.yaw; $("rl").value = p.roll; $("pt").value = p.pitch;
+  }
+  function stepPlay(found) {
+    hist.push(found); drawStrip();
+    u += 1 / 360;
+    if (u > 1) { playing = false; $("play").textContent = "Play descent"; return; }
+    setPose(pathAt(u));
+  }
+  function drawStrip() {
+    const cv = $("strip"), ctx = cv.getContext("2d"); ctx.clearRect(0, 0, cv.width, cv.height);
+    const n = 361, w = cv.width / n;
+    hist.forEach((f, i) => { ctx.fillStyle = f ? css("--ok") : css("--bad"); ctx.fillRect(i * w, 4, Math.ceil(w), 26); });
+  }
+  $("play").onclick = () => {
+    if (playing) { playing = false; $("play").textContent = "Play descent"; return; }
+    if (u >= 1 || u === 0) { u = 0; hist = []; }
+    setPose(pathAt(u)); playing = true; $("play").textContent = "Pause";
+  };
+  $("reset").onclick = () => { playing = false; u = 0; hist = []; drawStrip(); $("play").textContent = "Play descent"; setPose(pathAt(0)); };
+
+  // ---- camera buttons and presets
+  for (const n of ["C920", "C270"]) $("cam" + n).onclick = () => { camName = n; for (const m of ["C920", "C270"]) $("cam" + m).setAttribute("aria-pressed", m === n); };
+  const PRESETS = [{"name": "Body left side (best, off the props)", "x": 40, "y": 120, "z": -40, "tilt": 0}, {"name": "Under rear-left arm (under a prop)", "x": -140, "y": 140, "z": -40, "tilt": 25}, {"name": "Mount D (side, straight down)", "x": 70, "y": 95, "z": -100, "tilt": 0}, {"name": "Old mount (GPS mast)", "x": 134, "y": 0, "z": -112, "tilt": 0}];
+  for (const p of PRESETS) {
+    const b = document.createElement("button"); b.className = "btn"; b.textContent = p.name; b.title = p.note || "";
+    b.onclick = () => { $("mx").value = p.x; $("my").value = p.y; $("mz").value = -p.z; $("mt").value = p.tilt; };
+    $("presets").appendChild(b);
+  }
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) orbit.enableDamping = false;
+  requestAnimationFrame(frame);
+})();
+</script>

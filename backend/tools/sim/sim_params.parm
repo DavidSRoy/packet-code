@@ -1,0 +1,17 @@
+# Extra parameters for the trip test in ArduPilot SITL. They copy the real drone
+# where it matters, plus the changes the backend trips need.
+SCR_ENABLE 1
+FS_GCS_ENABLE 1
+FS_GCS_TIMEOUT 5
+FS_OPTIONS 18
+LAND_SPD_MS 0.5
+LAND_SPD_HIGH_MS 0.5
+BATT_CAPACITY 6500
+SIM_BATT_VOLTAGE 25.2
+FENCE_ENABLE 0
+RTL_ALT_M 15
+WP_RADIUS_M 2
+DISARM_DELAY 10
+SIM_GPS1_NUMSATS 20
+FLTMODE_CH 7
+RC7_OPTION 0

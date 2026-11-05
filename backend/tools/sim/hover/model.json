@@ -1,0 +1,160 @@
+{
+  "_doc": "Hover simulator model of the Packet V0 drone (X650, 6S). SI units, body FRD, world NED. Identified values: tools/sim/hover/IDENT.md (logs 18-45, Pi recordings 2026-11-02/03).",
+  "mass": 2.92,
+  "_inertia_doc": "set so that torque per unit ATC output (0.4596 * thrust_full = 11.89 N m) / I = identified K: roll 77, pitch 73, yaw ~8 rad/s^2",
+  "inertia": [
+    0.1544,
+    0.1628,
+    0.103
+  ],
+  "arm_len": 0.325,
+  "motor_z": -0.08,
+  "prop_radius": 0.1905,
+  "yaw_torque_per_thrust": 0.016,
+  "motor_angles_deg": [
+    45,
+    -135,
+    -45,
+    135
+  ],
+  "motor_yaw_dir": [
+    1,
+    1,
+    -1,
+    -1
+  ],
+  "_thrust_doc": "per-motor thrust at full actuator and full voltage: m g / 4 / MOT_THST_HOVER(out of ground effect, 0.2769). ArduPilot's voltage compensation cancels battery_v.",
+  "thrust_full": 25.86,
+  "thrust_expo": 0.65,
+  "spin_min": 0.16,
+  "spin_max": 0.95,
+  "pwm_min": 1000,
+  "pwm_max": 2000,
+  "battery_v": 23.0,
+  "battery_v_max": 25.2,
+  "_motor_doc": "identified 52 ms total; split (log 45 fit): lag 10-30 ms + pure delay 23-35 ms",
+  "motor_tau": 0.02,
+  "motor_delay": 0.03,
+  "drag_lin": [
+    0.3,
+    0.3,
+    0.5
+  ],
+  "rot_damp": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "_ge_doc": "fit: k(h) = 1 + a exp(-h/b), h = height above the resting height (logs: a 0.038 +-0.004, b 2.8 +-0.6 cm)",
+  "ground_effect": "fit",
+  "ge_a": 0.038,
+  "ge_b": 0.028,
+  "skid_points": [
+    [
+      0.163,
+      0.159,
+      0.3
+    ],
+    [
+      0.163,
+      -0.159,
+      0.3
+    ],
+    [
+      -0.163,
+      0.159,
+      0.3
+    ],
+    [
+      -0.163,
+      -0.159,
+      0.3
+    ]
+  ],
+  "contact_k": 20000.0,
+  "contact_c": 170.0,
+  "contact_mu": 0.5,
+  "contact_v_eps": 0.01,
+  "_imu_doc": "identified: IMU 4.9-6.3 cm above the CG (x, y not identifiable); INS_POS* = 0 on the drone",
+  "imu_pos": [
+    -0.007,
+    -0.001,
+    -0.058
+  ],
+  "_dist_doc": "angular (rad/s^2) and linear (m/s^2) disturbance as sums of OU processes. Angular: logged residual band RMS (roll 0.3-1 Hz 0.23, 1-3 Hz 0.24, 3-6 Hz 0.31-0.36 rad/s^2). Linear: raised from the residual (0.006-0.014) to 0.025 (xy) and 0.06 (z) at tau 1 s so that the hold position error matches log 43 (compare.py, hold window)",
+  "dist_alpha": [
+    {
+      "sigma": [
+        0.25,
+        0.25,
+        0.08
+      ],
+      "tau": 0.25
+    },
+    {
+      "sigma": [
+        0.4,
+        0.4,
+        0.1
+      ],
+      "tau": 0.025
+    }
+  ],
+  "dist_accel": [
+    {
+      "sigma": [
+        0.025,
+        0.025,
+        0.06
+      ],
+      "tau": 1.0
+    },
+    {
+      "sigma": [
+        0.012,
+        0.012,
+        0.02
+      ],
+      "tau": 0.15
+    }
+  ],
+  "dist_ground_gain": 0.15,
+  "dist_ground_h": 0.05,
+  "camera": {
+    "rate_hz": 10.0,
+    "rate_jitter_s": 0.002,
+    "drop_frac": 0.04,
+    "_lat_doc": "exposure->t_cap 60 ms (+-15): fitted from the 4 Hz attitude-match error in logs 41-45 (scratchpad latfit3.py; the method reads 10-20 ms low on sim logs with known L, corrected); t_cap->detection 52 ms (49-56); t_cap->FC 57 ms (55-66), jitter 4-5 ms. Total exposure->FC ~117 ms; the FC (VISO_DELAY_MS 60) assumes 71.5 ms",
+    "exposure_to_readout_s": 0.06,
+    "detect_s": 0.05,
+    "detect_jitter_s": 0.004,
+    "link_s": 0.005,
+    "_noise_doc": "static 0.2-0.4 mm; hover frame jitter median 1.3 mm, p90 3.5-5 mm (includes real motion). Sim 1.0 mm xy with 10 % of frames x4: the VISION_SPEED spread then matches log 43 (sim 19-20 mm/s, real 23-25)",
+    "noise_xy_m": 0.001,
+    "noise_z_m": 0.0006,
+    "noise_tail_frac": 0.1,
+    "noise_tail_mult": 4.0,
+    "noise_yaw_rad": 0.003,
+    "tilt_attitude_lag_s": 0.0,
+    "lid_height_above_ground": 0.0,
+    "send_speed": true,
+    "speed_max_gap_s": 0.25,
+    "cam_pos": [
+      0.127,
+      -0.001,
+      0.101
+    ],
+    "_cam_pos_doc": "lens relative to the CG (CAD mount A). The Pi assumes --mount-fwd 0.134 --mount-down 0.02: it reports a point 8.1 cm below the CG (pi_cam_pos_err = Pi lens offset - true lens offset)",
+    "pi_cam_pos_err": [
+      0.007,
+      0.001,
+      -0.081
+    ]
+  },
+  "_geom_doc": "CAD (Packet V0/05_viewer): motors (+-0.2299, +-0.2299), prop plane 8 cm above the CG, skids 0.30 m below the CG, track +-0.159, length +-0.163",
+  "_thrust_axis_doc": "thrust direction off the IMU -z axis as a fraction of thrust (body x, y). Logs 43/45: the drone holds +0.8-0.9 deg pitch, PSC I term -0.15 m/s^2 N and -0.04 m/s^2 E at yaw ~350 deg",
+  "thrust_axis_xy": [
+    0.0153,
+    0.004
+  ]
+}

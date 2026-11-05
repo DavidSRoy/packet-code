@@ -1,0 +1,312 @@
+[
+ {
+  "name": "b3_A0_v4",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "VISO_DELAY_MS=100",
+   "PSC_NE_VEL_D=0",
+   "PSC_NE_POS_P=2",
+   "PSC_NE_VEL_I=2",
+   "ATC_RAT_RLL_P=0.18",
+   "ATC_RAT_RLL_D=0.002",
+   "ATC_RAT_RLL_FLTT=10",
+   "ATC_RAT_PIT_P=0.18",
+   "ATC_RAT_PIT_D=0.002",
+   "ATC_RAT_PIT_FLTT=10",
+   "ATC_ANG_RLL_P=7.5",
+   "ATC_ANG_PIT_P=7.5",
+   "PSC_NE_VEL_P=4"
+  ]
+ },
+ {
+  "name": "b3_A0_v5",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "VISO_DELAY_MS=100",
+   "PSC_NE_VEL_D=0",
+   "PSC_NE_POS_P=2",
+   "PSC_NE_VEL_I=2",
+   "ATC_RAT_RLL_P=0.18",
+   "ATC_RAT_RLL_D=0.002",
+   "ATC_RAT_RLL_FLTT=10",
+   "ATC_RAT_PIT_P=0.18",
+   "ATC_RAT_PIT_D=0.002",
+   "ATC_RAT_PIT_FLTT=10",
+   "ATC_ANG_RLL_P=7.5",
+   "ATC_ANG_PIT_P=7.5",
+   "PSC_NE_VEL_P=5"
+  ]
+ },
+ {
+  "name": "b3_A1_v4",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "VISO_DELAY_MS=100",
+   "PSC_NE_VEL_D=0",
+   "PSC_NE_POS_P=2",
+   "PSC_NE_VEL_I=2",
+   "ATC_RAT_RLL_P=0.22",
+   "ATC_RAT_RLL_D=0.006",
+   "ATC_RAT_RLL_FLTT=20",
+   "ATC_RAT_PIT_P=0.22",
+   "ATC_RAT_PIT_D=0.006",
+   "ATC_RAT_PIT_FLTT=20",
+   "ATC_ANG_RLL_P=7.5",
+   "ATC_ANG_PIT_P=7.5",
+   "PSC_NE_VEL_P=4"
+  ]
+ },
+ {
+  "name": "b3_A1_v5",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "VISO_DELAY_MS=100",
+   "PSC_NE_VEL_D=0",
+   "PSC_NE_POS_P=2",
+   "PSC_NE_VEL_I=2",
+   "ATC_RAT_RLL_P=0.22",
+   "ATC_RAT_RLL_D=0.006",
+   "ATC_RAT_RLL_FLTT=20",
+   "ATC_RAT_PIT_P=0.22",
+   "ATC_RAT_PIT_D=0.006",
+   "ATC_RAT_PIT_FLTT=20",
+   "ATC_ANG_RLL_P=7.5",
+   "ATC_ANG_PIT_P=7.5",
+   "PSC_NE_VEL_P=5"
+  ]
+ },
+ {
+  "name": "b3_A1_v6",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "VISO_DELAY_MS=100",
+   "PSC_NE_VEL_D=0",
+   "PSC_NE_POS_P=2",
+   "PSC_NE_VEL_I=2",
+   "ATC_RAT_RLL_P=0.22",
+   "ATC_RAT_RLL_D=0.006",
+   "ATC_RAT_RLL_FLTT=20",
+   "ATC_RAT_PIT_P=0.22",
+   "ATC_RAT_PIT_D=0.006",
+   "ATC_RAT_PIT_FLTT=20",
+   "ATC_ANG_RLL_P=7.5",
+   "ATC_ANG_PIT_P=7.5",
+   "PSC_NE_VEL_P=6"
+  ]
+ },
+ {
+  "name": "b3_A4_v4",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "VISO_DELAY_MS=100",
+   "PSC_NE_VEL_D=0",
+   "PSC_NE_POS_P=2",
+   "PSC_NE_VEL_I=2",
+   "ATC_RAT_RLL_P=0.2",
+   "ATC_RAT_RLL_D=0.005",
+   "ATC_RAT_RLL_FLTT=20",
+   "ATC_RAT_PIT_P=0.2",
+   "ATC_RAT_PIT_D=0.005",
+   "ATC_RAT_PIT_FLTT=20",
+   "ATC_ANG_RLL_P=8.5",
+   "ATC_ANG_PIT_P=8.5",
+   "PSC_NE_VEL_P=4"
+  ]
+ },
+ {
+  "name": "b3_A4_v5",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "VISO_DELAY_MS=100",
+   "PSC_NE_VEL_D=0",
+   "PSC_NE_POS_P=2",
+   "PSC_NE_VEL_I=2",
+   "ATC_RAT_RLL_P=0.2",
+   "ATC_RAT_RLL_D=0.005",
+   "ATC_RAT_RLL_FLTT=20",
+   "ATC_RAT_PIT_P=0.2",
+   "ATC_RAT_PIT_D=0.005",
+   "ATC_RAT_PIT_FLTT=20",
+   "ATC_ANG_RLL_P=8.5",
+   "ATC_ANG_PIT_P=8.5",
+   "PSC_NE_VEL_P=5"
+  ]
+ },
+ {
+  "name": "b3_A4_v6",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "VISO_DELAY_MS=100",
+   "PSC_NE_VEL_D=0",
+   "PSC_NE_POS_P=2",
+   "PSC_NE_VEL_I=2",
+   "ATC_RAT_RLL_P=0.2",
+   "ATC_RAT_RLL_D=0.005",
+   "ATC_RAT_RLL_FLTT=20",
+   "ATC_RAT_PIT_P=0.2",
+   "ATC_RAT_PIT_D=0.005",
+   "ATC_RAT_PIT_FLTT=20",
+   "ATC_ANG_RLL_P=8.5",
+   "ATC_ANG_PIT_P=8.5",
+   "PSC_NE_VEL_P=6"
+  ]
+ },
+ {
+  "name": "b3_A5_v4",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "VISO_DELAY_MS=100",
+   "PSC_NE_VEL_D=0",
+   "PSC_NE_POS_P=2",
+   "PSC_NE_VEL_I=2",
+   "ATC_RAT_RLL_P=0.2",
+   "ATC_RAT_RLL_D=0.004",
+   "ATC_RAT_RLL_FLTT=20",
+   "ATC_RAT_PIT_P=0.2",
+   "ATC_RAT_PIT_D=0.004",
+   "ATC_RAT_PIT_FLTT=20",
+   "ATC_ANG_RLL_P=7.5",
+   "ATC_ANG_PIT_P=7.5",
+   "PSC_NE_VEL_P=4"
+  ]
+ },
+ {
+  "name": "b3_A5_v5",
+  "flown": "tools/sim/hover/flown_log45.parm",
+  "set": [
+   "camera.tilt_attitude_lag_s=0.06",
+   "camera.pi_cam_pos_err=[0,0,0]"
+  ],
+  "p": [
+   "SIM_ACC1_RND=0.8",
+   "SIM_ACC2_RND=0.8",
+   "INS_POS1_X=-0.007",
+   "INS_POS1_Y=-0.001",
+   "INS_POS1_Z=-0.058",
+   "INS_POS2_X=-0.007",
+   "INS_POS2_Y=-0.001",
+   "INS_POS2_Z=-0.058",
+   "VISO_DELAY_MS=100",
+   "PSC_NE_VEL_D=0",
+   "PSC_NE_POS_P=2",
+   "PSC_NE_VEL_I=2",
+   "ATC_RAT_RLL_P=0.2",
+   "ATC_RAT_RLL_D=0.004",
+   "ATC_RAT_RLL_FLTT=20",
+   "ATC_RAT_PIT_P=0.2",
+   "ATC_RAT_PIT_D=0.004",
+   "ATC_RAT_PIT_FLTT=20",
+   "ATC_ANG_RLL_P=7.5",
+   "ATC_ANG_PIT_P=7.5",
+   "PSC_NE_VEL_P=5"
+  ]
+ }
+]

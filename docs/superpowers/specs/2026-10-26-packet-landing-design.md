@@ -200,7 +200,7 @@ See `products-1440.png`.
 
 - Intro: h1 "Products". Lead: "Three parts that take an order from a U Village shop to your door."
 - Three product sections, in showcase order, alternating copy and drawing sides. Each has the number, h2 name, two sentences and a spec table (Barlow keys, hairline rows).
-  - **Vehicle 01**: Rotors 4; Capacity "Up to 15 lb"; Flight time "45 minutes"; Built for "City and local deliveries" (*the three from Tanner, 2026-11-05*); Cruise speed, Flight altitude and Weather limits `[TBD]`.
+  - **Vehicle 01**: Capacity "Up to 15 lb"; Flight time "45 minutes"; Built for "City and local deliveries" (*from Tanner, 2026-11-05; the Rotors row was dropped the same day*); Cruise speed, Flight altitude and Weather limits `[TBD]`.
   - **Packet for iPhone**: Platform iPhone; Availability "App Store, [LAUNCH DATE]"; Order from U Village shops; Delivery area "University Village and the streets around it"; Payment [TBD].
   - **Dispatch**: Assigns "One aircraft per order"; Plans "Route and altitude for each flight"; Follows "Each flight from pickup to drop-off"; Hours [TBD]. **Tanner to confirm** this wording is accurate and fine to publish.
 - **From U Village shops** (preview): an 8px black rule, the mustard "Preview" tag, h2, and "Some of what Packet will deliver at launch. Shops, items and prices to follow. Orders open in the app."

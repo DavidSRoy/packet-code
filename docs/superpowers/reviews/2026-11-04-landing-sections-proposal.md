@@ -37,7 +37,7 @@ Landing-page guidance converges on the same order: a specific, outcome-driven he
 
 ## 3. Proposed structure
 
-Eleven blocks instead of seven. Each adds one thing a visitor did not have. Order follows the visitor's questions: what is it, what do I get, is it for my street, how does it work, why is it better, what is the vehicle, who are you, when, is it safe, sign up. (*Revised 2026-11-05: the questions moved to the bottom, just before the closing, at Tanner's request.*)
+Eleven blocks instead of seven. Each adds one thing a visitor did not have. Order follows the visitor's questions: what is it, what do I get, is it for my street, how does it work, why is it better, what is the vehicle, when, is it safe, sign up. (*Revised 2026-11-05: the questions moved to the bottom, just before the closing, at Tanner's request.*)
 
 ### A. Hero (keep) plus an intro sequence
 The hero stays as built, with no proof strip (Tanner, 2026-11-04: those facts do not earn their place). Add an intro: the globe appears first, then the wordmark, then the premise line and the form, about two seconds in all. Under reduced motion everything shows at once.
@@ -66,7 +66,7 @@ Keep the h2 and the delivery drawing, and lock the section (§5): the package tr
 Then the line "Vehicle 01 is the first step: a four-rotor aircraft that flies an order from the shop to your door." Reference: Wing's Fast / Convenient / Eco friendly; Zipline's Fresher / Worry-free / Less waiting.
 
 ### F. The first product (replaces the showcase)
-One section, no carousel: h2 "The first product: Vehicle 01.", the side-view drawing, four spec rows (Rotors 4 · Capacity up to 15 lb · Flight time 45 minutes · Built for city and local deliveries; *facts from Tanner, 2026-11-05, also applied to Products*), "About Vehicle 01" to `/products#vehicle-01` and "See the app and Dispatch" to `/products`. The app and Dispatch keep their full sections on Products. This also retires S-01 to S-04 from the design review.
+One section, no carousel: h2 "The first product: Vehicle 01.", the side-view drawing, three spec rows (Capacity up to 15 lb · Flight time 45 minutes · Built for city and local deliveries; *facts from Tanner, 2026-11-05, also applied to Products; no Rotors row*), "About Vehicle 01" to `/products#vehicle-01` and "See the app and Dispatch" to `/products`. The app and Dispatch keep their full sections on Products. This also retires S-01 to S-04 from the design review.
 
 ### G. Questions a neighbour would ask (new), at the bottom, collapsible
 Sits last before the closing, so the doubts are answered right before the ask. Each question is a collapsible row (native `details`/`summary`, the first one open, a plus that turns to a minus), numbered like the Press manual.
@@ -82,8 +82,8 @@ Sits last before the closing, so the doubts are answered right before the ask. E
   7. **Who is flying it?** Packet's own team in Seattle, with Dispatch watching every flight.
 - Every bracket is a fact the team has to supply or decide. The section is worth building with the brackets showing: it tells a visitor the questions are taken seriously.
 
-### H. Who is building Packet (new)
-A founder's note of three or four sentences, signed [NAME], [TITLE], Seattle. Why this, why here, what the first year is for. No university, no class, no team name (spec anti-goals). The Press fact sheet already carries the leadership placeholders.
+### H. Who is building Packet (dropped)
+Removed 2026-11-05 at Tanner's request. The page carries no team note; leadership stays on the Press fact sheet.
 
 ### I. What's next (new)
 A timeline drawn as the dotted route motif with the red block at the current stop: **Sign-ups open** now · **First test flights** [DATE] · **First deliveries, with [SHOP]** [LAUNCH DATE] · **[NEIGHBOURHOOD]** [DATE]. Pre-launch pages that state a date convert better than ones that say "soon".
@@ -106,7 +106,7 @@ Add [EMAIL].
 | G. Questions a neighbour would ask | High: trust | Low: copy | Answers to 1, 2, 5, 6 |
 | E. Why, as benefits | Medium | Low | Delivery time |
 | I. What's next | Medium: a reason to sign up now | Low: one drawing | Dates, first shop |
-| H. Founder's note | Medium: people | Low | Names, titles, the note |
+| H. Founder's note | Dropped, 2026-11-05 | | |
 | F. Vehicle 01, single section | Medium: simpler, honest | Low | none |
 | A. Proof strip, J. offer and referral | Medium | Low | Launch date, the offer |
 | D. Fourth step | Low to medium | Low | Landing-spot rule |
@@ -124,7 +124,7 @@ Three blocks pin to the viewport while the visitor scrolls through them, and the
 | E. Why (the delivery) | The package lifts off at the shop, crosses above the street and sets down at the door, with each benefit arriving at its moment: "Minutes, not an hour" at lift-off, "Nothing on your street" over the street, "Set down, not handed off" at the door. | The scroll performs the delivery. Each benefit is tied to the instant that proves it. This is the premise, so it gets the longest lock. |
 | J. Closing | The crop-mark tunnel rushes toward the visitor as the form comes in. | Momentum into the one action, using the brand's own motion motif. |
 
-Not locked, on purpose: the hero (the address check has to be reachable at once; it keeps its load-time intro instead), How it works (the mechanics of the app, kept short and scannable; its route still draws in on scroll as built), the questions (read, not watched), the timeline and the team note.
+Not locked, on purpose: the hero (the address check has to be reachable at once; it keeps its load-time intro instead), How it works (the mechanics of the app, kept short and scannable; its route still draws in on scroll as built), the questions (read, not watched) and the timeline.
 
 Technique, in the mockup and for the build: a tall section (2 to 3 screens) with a `position: sticky` stage, and CSS scroll-driven animations (`view-timeline-name` on the section, `animation-timeline` and `animation-range: contain …` on the moving parts) so no JavaScript is needed. The package follows the route with `offset-path`. Browsers without scroll-driven animations get the section at its normal height showing the end state; reduced motion shows the end state too. The map's boundary and hub move out of the map image into an inline layer so they can draw.
 

@@ -23,7 +23,6 @@ export const PRODUCTS: readonly Product[] = [
 		description:
 			"The aircraft that carries each order. It lifts off at the shop, flies above the street grid along a planned route, and sets the order down at your door.",
 		specs: [
-			{ key: "Rotors", value: "4" },
 			{ key: "Capacity", value: "Up to 15 lb" },
 			{ key: "Flight time", value: "45 minutes" },
 			{ key: "Built for", value: "City and local deliveries" },

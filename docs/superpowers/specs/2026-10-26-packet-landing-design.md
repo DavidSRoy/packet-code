@@ -153,7 +153,7 @@ See `home-1440.png` and `home-390-sheet.png`.
   - copy on the left: number, a large name `clamp(40px, 5vw, 72px)`, one line, an "About …" link to `/products#…`;
   - that product's sketched drawing on the right.
 - Products:
-  - 01 Vehicle 01: "The four-rotor aircraft that carries each order. Payload [TBD]."
+  - 01 Vehicle 01: "The four-rotor aircraft that carries each order. Up to 15 lb, 45 minutes in the air."
   - 02 Packet for iPhone: "Order from nearby shops and follow each step to your door."
   - 03 Dispatch: "Plans each flight and follows it from pickup to drop-off."
 - Bottom right: a round 56px arrow button, labeled "Next" over the next product's name (only the arrow shows on phones).
@@ -200,7 +200,7 @@ See `products-1440.png`.
 
 - Intro: h1 "Products". Lead: "Three parts that take an order from a U Village shop to your door."
 - Three product sections, in showcase order, alternating copy and drawing sides. Each has the number, h2 name, two sentences and a spec table (Barlow keys, hairline rows).
-  - **Vehicle 01**: Rotors 4. Payload, Range, Cruise speed, Flight altitude and Weather limits all `[TBD]`.
+  - **Vehicle 01**: Rotors 4; Capacity "Up to 15 lb"; Flight time "45 minutes"; Built for "City and local deliveries" (*the three from Tanner, 2026-11-05*); Cruise speed, Flight altitude and Weather limits `[TBD]`.
   - **Packet for iPhone**: Platform iPhone; Availability "App Store, [LAUNCH DATE]"; Order from U Village shops; Delivery area "University Village and the streets around it"; Payment [TBD].
   - **Dispatch**: Assigns "One aircraft per order"; Plans "Route and altitude for each flight"; Follows "Each flight from pickup to drop-off"; Hours [TBD]. **Tanner to confirm** this wording is accurate and fine to publish.
 - **From U Village shops** (preview): an 8px black rule, the mustard "Preview" tag, h2, and "Some of what Packet will deliver at launch. Shops, items and prices to follow. Orders open in the app."
@@ -315,7 +315,7 @@ A short, plain notice, drafted by the builder and approved by Tanner before laun
 The build ships with these as visible `[BRACKETS]`. All must be replaced before the site is promoted:
 - launch date;
 - the first vendor and shop names;
-- the Vehicle 01 specs (payload, range, speed, altitude, weather, dimensions);
+- the remaining Vehicle 01 specs (speed, altitude, weather, dimensions);
 - payment methods;
 - dispatch hours;
 - founded year;

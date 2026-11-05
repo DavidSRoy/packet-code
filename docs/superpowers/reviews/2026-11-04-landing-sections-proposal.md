@@ -37,7 +37,7 @@ Landing-page guidance converges on the same order: a specific, outcome-driven he
 
 ## 3. Proposed structure
 
-Eleven blocks instead of seven. Each adds one thing a visitor did not have. Order follows the visitor's questions: what is it, what do I get, is it for my street, how does it work, why is it better, what is the vehicle, is it safe, who are you, when, sign up.
+Eleven blocks instead of seven. Each adds one thing a visitor did not have. Order follows the visitor's questions: what is it, what do I get, is it for my street, how does it work, why is it better, what is the vehicle, who are you, when, is it safe, sign up. (*Revised 2026-11-05: the questions moved to the bottom, just before the closing, at Tanner's request.*)
 
 ### A. Hero (keep) plus an intro sequence
 The hero stays as built, with no proof strip (Tanner, 2026-11-04: those facts do not earn their place). Add an intro: the globe appears first, then the wordmark, then the premise line and the form, about two seconds in all. Under reduced motion everything shows at once.
@@ -66,9 +66,10 @@ Keep the h2 and the delivery drawing, and lock the section (§5): the package tr
 Then the line "Vehicle 01 is the first step: a four-rotor aircraft that flies an order from the shop to your door." Reference: Wing's Fast / Convenient / Eco friendly; Zipline's Fresher / Worry-free / Less waiting.
 
 ### F. The first product (replaces the showcase)
-One section, no carousel: h2 "The first product: Vehicle 01.", the side-view drawing, three spec rows (Rotors 4 · Payload [TBD] · Range [TBD]), "About Vehicle 01" to `/products#vehicle-01` and "See the app and Dispatch" to `/products`. The app and Dispatch keep their full sections on Products. This also retires S-01 to S-04 from the design review.
+One section, no carousel: h2 "The first product: Vehicle 01.", the side-view drawing, four spec rows (Rotors 4 · Capacity up to 15 lb · Flight time 45 minutes · Built for city and local deliveries; *facts from Tanner, 2026-11-05, also applied to Products*), "About Vehicle 01" to `/products#vehicle-01` and "See the app and Dispatch" to `/products`. The app and Dispatch keep their full sections on Products. This also retires S-01 to S-04 from the design review.
 
-### G. Questions a neighbour would ask (new)
+### G. Questions a neighbour would ask (new), at the bottom, collapsible
+Sits last before the closing, so the doubts are answered right before the ask. Each question is a collapsible row (native `details`/`summary`, the first one open, a plus that turns to a minus), numbered like the Press manual.
 - h2 "Questions a neighbour would ask."
 - Intro: "Packet flies over streets people live on. These are the questions we would ask, and the answers as they stand."
 - Seven Q&As, numbered like the Press manual (1.0 to 7.0), as an accordion:
@@ -87,8 +88,8 @@ A founder's note of three or four sentences, signed [NAME], [TITLE], Seattle. Wh
 ### I. What's next (new)
 A timeline drawn as the dotted route motif with the red block at the current stop: **Sign-ups open** now · **First test flights** [DATE] · **First deliveries, with [SHOP]** [LAUNCH DATE] · **[NEIGHBOURHOOD]** [DATE]. Pre-launch pages that state a date convert better than ones that say "soon".
 
-### J. Closing call to action (keep, give a reason)
-Keep the heading and form. Add the offer and the referral:
+### J. Closing call to action and footer, one piece
+The closing form, the tunnel and the footer share one framed block (*Tanner, 2026-11-05*): four corner marks at the block's corners, echoing the emblem, the tunnel's rings rushing toward their vanishing point behind the form, and the footer row (emblem, copyright, the shops line, the links) inside the same frame at the bottom. Keep the heading and form. Add the offer and the referral:
 - "Sign up now and [OFFER: first delivery on us / founding-address status]."
 - "Know a neighbour who would want this? Send them the link." (a `?ref=` parameter can follow later; attribution capture already stores sources)
 - A slim strip above the footer for the other audience: "Run a shop near U Village? Write to [EMAIL]." (Manna's "Partner with Manna")

@@ -18,14 +18,15 @@ export const PRODUCTS: readonly Product[] = [
 		id: "vehicle-01",
 		no: "01",
 		name: "Vehicle 01",
-		line: "The four-rotor aircraft that carries each order. Payload [TBD].",
+		line: "The four-rotor aircraft that carries each order. Up to 15 lb, 45 minutes in the air.",
 		linkLabel: "About Vehicle 01",
 		description:
 			"The aircraft that carries each order. It lifts off at the shop, flies above the street grid along a planned route, and sets the order down at your door.",
 		specs: [
 			{ key: "Rotors", value: "4" },
-			{ key: "Payload", value: "[TBD]" },
-			{ key: "Range", value: "[TBD]" },
+			{ key: "Capacity", value: "Up to 15 lb" },
+			{ key: "Flight time", value: "45 minutes" },
+			{ key: "Built for", value: "City and local deliveries" },
 			{ key: "Cruise speed", value: "[TBD]" },
 			{ key: "Flight altitude", value: "[TBD]" },
 			{ key: "Weather limits", value: "[TBD]" },

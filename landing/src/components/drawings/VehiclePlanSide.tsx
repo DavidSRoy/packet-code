@@ -7,7 +7,7 @@ import { useDrawIn } from "@/components/home/useDrawIn";
 const SPECS = {
 	span: "Span [TBD]",
 	height: "Height [TBD]",
-	payloadLimit: "[TBD]",
+	payloadLimit: "15 lb",
 } as const;
 
 const LEGEND = [

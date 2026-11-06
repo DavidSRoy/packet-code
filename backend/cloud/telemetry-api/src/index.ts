@@ -30,7 +30,17 @@
  *                                   | {"action":"flyto","lat":..,"lon":..,"alt":..,"land":true,"speed":2}
  *   GET  /v1/drones/:id/commands    Bearer READ_TOKEN or COMMAND_TOKEN (last 20)
  *   GET  /v1/drones/:id/commands/:c Bearer READ_TOKEN or COMMAND_TOKEN
+ *   POST /v1/orders                 Bearer READ_TOKEN, JSON: items, pickup, dropoff (pads)
+ *   GET  /v1/orders                 Bearer READ_TOKEN   ?status=<state>&limit=<n>
+ *   GET  /v1/orders/:id             Bearer READ_TOKEN
+ *   PATCH /v1/orders/:id            Bearer READ_TOKEN, JSON: status and/or drone_id
+ *   DELETE /v1/orders/:id           Bearer READ_TOKEN (terminal orders only)
  *   GET  /v1/health                 no auth
+ *
+ * Orders are global (one Durable Object for all orders), not per-drone. Status:
+ * placed -> accepted -> picked_up -> loaded -> in_flight -> delivered, plus
+ * failed / cancelled. Dispatch (phase 2) files the flight plan and sends the
+ * command when an order is accepted.
  *
  * Commands reach the drone through the laptop: the reply to each telemetry
  * POST carries the next queued command. The laptop answers in a later POST
@@ -46,6 +56,7 @@ import { DurableObject } from "cloudflare:workers";
 
 export interface Env {
   DRONE: DurableObjectNamespace<DroneState>;
+  ORDERS: DurableObjectNamespace<Orders>;
   INGEST_TOKEN: string;
   READ_TOKEN: string;
   COMMAND_TOKEN: string;
@@ -671,11 +682,145 @@ export class DroneState extends DurableObject<Env> {
   }
 }
 
+/* ---------------- orders ---------------- */
+// Customer/ops orders. One global Durable Object (getByName("orders")), not
+// per-drone: orders outlive trips and dispatch assigns them across drones.
+// POC auth is READ_TOKEN on every order endpoint (guest checkout, CORS-open);
+// operator auth is a follow-up, not a blocker.
+
+const ORDER_STATUS = ["placed", "accepted", "picked_up", "loaded", "in_flight",
+  "delivered", "failed", "cancelled"] as const;
+type OrderStatus = typeof ORDER_STATUS[number];
+
+/** Legal status moves. Terminal states (delivered, failed, cancelled) have no exits. */
+const ORDER_NEXT: Record<OrderStatus, OrderStatus[]> = {
+  placed: ["accepted", "cancelled"],
+  accepted: ["picked_up", "failed", "cancelled"],
+  picked_up: ["loaded", "failed", "cancelled"],
+  loaded: ["in_flight", "failed", "cancelled"],
+  in_flight: ["delivered", "failed"],
+  delivered: [],
+  failed: [],
+  cancelled: [],
+};
+
+const ORDER_ID = /^[A-Za-z0-9_-]{1,64}$/;
+const ITEMS_MAX = 20;
+
+type OrderRow = {
+  id: string; status: string; items: string; pickup: string; dropoff: string;
+  drone_id: string | null; command_id: string | null; reason: string | null;
+  created_at: number; updated_at: number;
+};
+
+function orderOut(o: OrderRow) {
+  return { id: o.id, status: o.status, items: JSON.parse(o.items), pickup: o.pickup, dropoff: o.dropoff,
+           drone_id: o.drone_id, command_id: o.command_id, reason: o.reason,
+           created_at: new Date(o.created_at).toISOString(), updated_at: new Date(o.updated_at).toISOString() };
+}
+
+/** An order item: menu name and quantity. The menu itself lives in the customer app. */
+function cleanItems(v: unknown): { name: string; qty: number }[] | string {
+  if (!Array.isArray(v) || !v.length || v.length > ITEMS_MAX) return `items must be 1..${ITEMS_MAX} entries`;
+  const out: { name: string; qty: number }[] = [];
+  for (const it of v) {
+    const o = it as Record<string, unknown>;
+    const name = str(o?.name, 80);
+    const qty = num(o?.qty);
+    if (!name) return "each item needs a name (up to 80 chars)";
+    if (qty == null || !Number.isInteger(qty) || qty < 1 || qty > 99) return "each item needs qty, 1..99";
+    out.push({ name, qty });
+  }
+  return out;
+}
+
+export class Orders extends DurableObject<Env> {
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    ctx.blockConcurrencyWhile(async () => {
+      ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS orders (
+        id TEXT PRIMARY KEY, status TEXT NOT NULL, items TEXT NOT NULL,
+        pickup TEXT NOT NULL, dropoff TEXT NOT NULL, drone_id TEXT, command_id TEXT, reason TEXT,
+        created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`);
+      // Whole flight plans filed by dispatch (phase 2); keyed by order.
+      ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS flight_plans (
+        order_id TEXT PRIMARY KEY, plan TEXT NOT NULL,
+        created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`);
+    });
+  }
+
+  async create(items: { name: string; qty: number }[], pickup: string, dropoff: string) {
+    const now = Date.now();
+    const id = `ord_${now.toString(36)}${crypto.randomUUID().slice(0, 6)}`;
+    const sql = this.ctx.storage.sql;
+    sql.exec("INSERT INTO orders (id, status, items, pickup, dropoff, drone_id, command_id, reason, " +
+             "created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+      id, "placed", JSON.stringify(items), pickup, dropoff, null, null, null, now, now);
+    return orderOut(sql.exec<OrderRow>("SELECT * FROM orders WHERE id = ?", id).one());
+  }
+
+  async get(id: string) {
+    const row = this.ctx.storage.sql.exec<OrderRow>("SELECT * FROM orders WHERE id = ?", id).toArray()[0];
+    return row ? orderOut(row) : null;
+  }
+
+  async list(status: string | null, limit: number) {
+    const sql = this.ctx.storage.sql;
+    const rows = (status
+      ? sql.exec<OrderRow>("SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC LIMIT ?", status, limit)
+      : sql.exec<OrderRow>("SELECT * FROM orders ORDER BY created_at DESC LIMIT ?", limit)).toArray();
+    return rows.map(orderOut);
+  }
+
+  /** Advance status (validated against ORDER_NEXT) and/or assign a drone. command_id is dispatch-owned. */
+  async patch(id: string, b: { status?: unknown; drone_id?: unknown; reason?: unknown }) {
+    const sql = this.ctx.storage.sql;
+    const row = sql.exec<OrderRow>("SELECT * FROM orders WHERE id = ?", id).toArray()[0];
+    if (!row) return { error: "no such order", status: 404 };
+    const terminal = ORDER_NEXT[row.status as OrderStatus].length === 0;
+    let status = row.status, drone = row.drone_id, reason = row.reason;
+    if (b.status != null) {
+      if (typeof b.status !== "string" || !(ORDER_STATUS as readonly string[]).includes(b.status))
+        return { error: `status must be one of ${ORDER_STATUS.join(", ")}`, status: 400 };
+      if (!ORDER_NEXT[row.status as OrderStatus].includes(b.status as OrderStatus))
+        return { error: `cannot move from ${row.status} to ${b.status}`, status: 400 };
+      status = b.status;
+    }
+    if (b.drone_id !== undefined) {
+      if (b.drone_id !== null && (typeof b.drone_id !== "string" || !DRONE_ID.test(b.drone_id)))
+        return { error: "drone_id must be 1-32 chars of a-z, 0-9 or -", status: 400 };
+      drone = b.drone_id;
+    }
+    if (b.reason !== undefined) {
+      if (b.reason !== null && typeof b.reason !== "string") return { error: "reason must be a string", status: 400 };
+      reason = b.reason == null ? null : b.reason.slice(0, 200);
+    }
+    if (status === row.status && drone === row.drone_id && reason === row.reason)
+      return { order: orderOut(row) };                                    // no-op patch: return as-is
+    if (terminal) return { error: `order is ${row.status}`, status: 400 };
+    const now = Date.now();
+    sql.exec("UPDATE orders SET status = ?, drone_id = ?, reason = ?, updated_at = ? WHERE id = ?",
+      status, drone, reason, now, id);
+    return { order: orderOut(sql.exec<OrderRow>("SELECT * FROM orders WHERE id = ?", id).one()) };
+  }
+
+  /** Delete terminal orders only. Cancel live ones instead (the ops queue needs the trail). */
+  async remove(id: string) {
+    const sql = this.ctx.storage.sql;
+    const row = sql.exec<OrderRow>("SELECT * FROM orders WHERE id = ?", id).toArray()[0];
+    if (!row) return { error: "no such order", status: 404 };
+    if (ORDER_NEXT[row.status as OrderStatus].length !== 0)
+      return { error: `cannot delete a ${row.status} order (cancel it first)`, status: 400 };
+    sql.exec("DELETE FROM orders WHERE id = ?", id);
+    return { ok: true };
+  }
+}
+
 /* ---------------- router ---------------- */
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Authorization, Content-Type",
   "Access-Control-Expose-Headers": "X-Frame-Time, X-Frame, X-Frames, X-Bounds, X-Updated-At",
   "Access-Control-Max-Age": "86400",
@@ -722,6 +867,50 @@ export default {
     const parts = url.pathname.split("/").filter(Boolean);  // v1 drones :id :what [:cid]
 
     if (url.pathname === "/v1/health") return json({ ok: true, time: new Date().toISOString() });
+
+    // Orders: customer/ops CRUD (global, not per-drone). POC auth: READ_TOKEN.
+    if (parts[0] === "v1" && parts[1] === "orders") {
+      if (!(await safeEqual(bearer(request), env.READ_TOKEN))) return error(401, "bad read token");
+      const orders = env.ORDERS.getByName("orders");
+      if (parts.length === 2) {
+        if (request.method === "POST") {
+          let b: Record<string, unknown>;
+          try { b = (await request.json()) as Record<string, unknown>; } catch { return error(400, "invalid JSON"); }
+          const items = cleanItems(b.items);
+          if (typeof items === "string") return error(400, items);
+          const pickup = str(b.pickup, 32), dropoff = str(b.dropoff, 32);
+          if (!pickup || !PAD_ID.test(pickup)) return error(400, "pickup must be a pad id (a-z, 0-9, -, up to 32 chars)");
+          if (!dropoff || !PAD_ID.test(dropoff)) return error(400, "dropoff must be a pad id (a-z, 0-9, -, up to 32 chars)");
+          return json(await orders.create(items, pickup, dropoff), 201);
+        }
+        if (request.method !== "GET") return error(405, "use GET or POST");
+        const st = url.searchParams.get("status");
+        if (st != null && !(ORDER_STATUS as readonly string[]).includes(st))
+          return error(400, `status must be one of ${ORDER_STATUS.join(", ")}`);
+        const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 100) || 100, 1), 500);
+        return json({ orders: await orders.list(st, limit) });
+      }
+      if (parts.length === 3 && ORDER_ID.test(parts[2])) {
+        const oid = parts[2];
+        if (request.method === "GET") {
+          const o = await orders.get(oid);
+          return o ? json(o) : error(404, "no such order");
+        }
+        if (request.method === "PATCH") {
+          let b: Record<string, unknown>;
+          try { b = (await request.json()) as Record<string, unknown>; } catch { return error(400, "invalid JSON"); }
+          const r = await orders.patch(oid, b);
+          return "error" in r ? error(r.status as number, r.error as string) : json(r.order);
+        }
+        if (request.method === "DELETE") {
+          const r = await orders.remove(oid);
+          return "error" in r ? error(r.status as number, r.error as string) : json({ ok: true });
+        }
+        return error(405, "use GET, PATCH or DELETE");
+      }
+      return error(404, "not found");
+    }
+
     if (parts.length < 4 || parts.length > 5 || parts[0] !== "v1" || parts[1] !== "drones") return error(404, "not found");
     const [, , id, what] = parts;
     if (!DRONE_ID.test(id)) return error(400, "drone id must be 1-32 chars of a-z, 0-9 or -");

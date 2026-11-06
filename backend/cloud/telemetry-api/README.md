@@ -176,6 +176,24 @@ The last box camera picture that came over the telemetry radio (WebP, about 320�
 
 What the laptop has: `pads` (id, name, lat, lon), `routes` (each with `from`, `to`, `approved`, `problems`, `length_m`, `est_time_s`, `max_alt`, `takeoff_alt`, and `path` as `[lat, lon]` points), `recording` (a route recording in progress) and `sa_channel`. The laptop uploads it when it changes.
 
+### Orders: `POST /v1/orders`, `GET /v1/orders`, `GET /v1/orders/<id>`, `PATCH /v1/orders/<id>`, `DELETE /v1/orders/<id>`
+
+Customer/ops order CRUD. Auth: Bearer `READ_TOKEN` on every order endpoint (guest checkout; operator auth is a follow-up). CORS is open, so browser apps can call it directly. Orders are global, not per-drone: `pickup`/`dropoff` are pad ids (same ids as in `/routes`).
+
+```json
+{ "id": "ord_m...", "status": "placed",
+  "items": [{ "name": "Bowl", "qty": 2 }],
+  "pickup": "qfc", "dropoff": "uplace",
+  "drone_id": null, "command_id": null, "reason": null,
+  "created_at": "...", "updated_at": "..." }
+```
+
+- Create: `POST /v1/orders` with `items` (1–20 entries, each `name` up to 80 chars and `qty` 1–99), `pickup`, `dropoff`. Reply is `201`. `command_id` is dispatch-owned and never client-set.
+- List: `GET /v1/orders?status=placed&limit=100` — filter by state for the ops queue (`limit` 1–500, default 100). Newest first.
+- Advance: `PATCH /v1/orders/<id>` with `status` and/or `drone_id`. Legal moves: `placed → accepted | cancelled`, `accepted → picked_up | failed | cancelled`, `picked_up → loaded | failed | cancelled`, `loaded → in_flight | failed | cancelled`, `in_flight → delivered | failed`. Anything else is `400`. A no-op patch returns the order unchanged.
+- Delete: `DELETE /v1/orders/<id>` works on terminal orders (`delivered`, `failed`, `cancelled`) only. Cancel a live order instead — the ops queue needs the trail.
+- `404` for an unknown id. Dispatch (phase 2) files the flight plan and sends the command when an order is accepted, linking `command_id` back to the order.
+
 ### Airspace map
 
 - `GET /v1/drones/packet-v0/airspace/layers`: the airspace data the laptop's map shows, as JSON: `status` (data ages), `bounds`, `classes` and `uasfm` (airspace class and UAS facility map areas), `tfrs`, `stadiums`, `auths`, `events`, `zones`.

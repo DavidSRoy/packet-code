@@ -9,10 +9,11 @@
  *   Production branch: master
  *   Build command: npx opennextjs-cloudflare build
  *   Deploy command: npx opennextjs-cloudflare deploy
+ *   Preview command: npx wrangler preview (with Enable Preview Builds turned on)
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "landing",
+	"name": "packet-landing",
 	"main": ".open-next/worker.js",
 	"compatibility_date": "2026-10-19",
 	"compatibility_flags": [
@@ -32,7 +33,7 @@
 			// Self-reference service binding, the service name must match the worker name
 			// see https://opennext.js.org/cloudflare/caching
 			"binding": "WORKER_SELF_REFERENCE",
-			"service": "landing"
+			"service": "packet-landing"
 		}
 	],
 	"observability": {
@@ -43,11 +44,38 @@
 		{
 			"binding": "DB",
 			"database_name": "packet-landing",
-			// Placeholder for local use only. Replace with the id from `wrangler d1 create` before merge.
-			"database_id": "local-only-replace-before-merge",
+			"database_id": "fb7fbcd8-cbb4-4073-a770-7881de5ba572",
 			"migrations_dir": "migrations"
 		}
-	]
+	],
+	/**
+	 * Previews: every push to a branch other than master gets its own Preview URL
+	 * (Workers Builds runs the build command, then `npx wrangler preview`).
+	 * Previews do not inherit the settings above, so each binding is repeated here.
+	 * Previews write signups to packet-landing-preview, never to production.
+	 * Apply new migrations to it with:
+	 *   npx wrangler d1 migrations apply packet-landing-preview --remote --config wrangler.preview-migrations.jsonc
+	 */
+	"previews": {
+		"images": {
+			"binding": "IMAGES"
+		},
+		"services": [
+			{
+				// A Preview's service binding calls the production deployment of packet-landing.
+				"binding": "WORKER_SELF_REFERENCE",
+				"service": "packet-landing"
+			}
+		],
+		"d1_databases": [
+			{
+				"binding": "DB",
+				"database_name": "packet-landing-preview",
+				"database_id": "4b53c0ad-b148-45cb-81ce-732d5470fd4c",
+				"migrations_dir": "migrations"
+			}
+		]
+	}
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

@@ -1,0 +1,14 @@
+// Only used to apply D1 migrations to the Preview database.
+// Keep database_name and database_id in sync with previews.d1_databases in wrangler.jsonc.
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "packet-landing",
+	"d1_databases": [
+		{
+			"binding": "PREVIEW_DB",
+			"database_name": "packet-landing-preview",
+			"database_id": "4b53c0ad-b148-45cb-81ce-732d5470fd4c",
+			"migrations_dir": "migrations"
+		}
+	]
+}

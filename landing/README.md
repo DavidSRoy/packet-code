@@ -38,6 +38,22 @@ Production deploys run through Cloudflare Workers Builds, the GitHub integration
 | Root directory | `landing` |
 | Build command | `npx opennextjs-cloudflare build` |
 | Deploy command | `npx opennextjs-cloudflare deploy` |
+| Preview command | `npx wrangler preview` |
+
+The Worker is `packet-landing`. Production signups go to the `packet-landing` D1 database.
+
+### Previews (one URL per branch)
+
+With **Settings → Build → Branch control → Enable Preview Builds** turned on, every push to a branch other than `master` runs the build command, then `npx wrangler preview`. The branch gets a stable Preview URL that follows its latest push, and the pull request gets a comment with the link. Find all Previews in the Worker's **Previews** section.
+
+Previews use the `previews` block in `wrangler.jsonc`, not the production settings. Signups from a Preview go to the `packet-landing-preview` D1 database, never to production. When you add a migration, apply it to both databases:
+
+```bash
+npx wrangler d1 migrations apply packet-landing --remote
+npx wrangler d1 migrations apply packet-landing-preview --remote --config wrangler.preview-migrations.jsonc
+```
+
+Preview URLs are public. To require sign-in, put them behind Cloudflare Access.
 
 `npm run deploy` builds and deploys from a machine. That bypasses Workers Builds, so those runs do not show up in the Cloudflare build log.
 

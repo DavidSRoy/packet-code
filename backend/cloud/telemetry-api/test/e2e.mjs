@@ -133,5 +133,66 @@ const bad = new WebSocket(`${BASE.replace("http", "ws")}/v1/drones/${ID}/stream?
 const opened = await new Promise((res) => { bad.onopen = () => res(true); bad.onerror = () => res(false); });
 check("stream bad token is refused", opened === false);
 
+const patch = (p, body, h = RD) => fetch(BASE + p, { method: "PATCH", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+const del = (p, h = RD) => fetch(BASE + p, { method: "DELETE", headers: h });
+const item = { name: "Bowl", qty: 2 };
+
+r = await post(`/v1/orders`, { items: [item], pickup: "qfc", dropoff: "uplace" }, {});
+check("orders create without token -> 401", r.status === 401);
+r = await patch(`/v1/orders/ord_nope`, { status: "accepted" }, {});
+check("orders patch without token -> 401", r.status === 401);
+r = await post(`/v1/orders`, { items: [], pickup: "qfc", dropoff: "uplace" }, RD);
+check("orders create empty items -> 400", r.status === 400);
+r = await post(`/v1/orders`, { items: [item], pickup: "QFC!", dropoff: "uplace" }, RD);
+check("orders create bad pickup -> 400", r.status === 400);
+r = await post(`/v1/orders`, { items: [{ name: "Bowl", qty: 0 }], pickup: "qfc", dropoff: "uplace" }, RD);
+check("orders create bad qty -> 400", r.status === 400);
+
+r = await post(`/v1/orders`, { items: [item], pickup: "qfc", dropoff: "uplace" }, RD);
+j = await r.json();
+check("orders create -> 201 placed", r.status === 201 && j.status === "placed" && j.id.startsWith("ord_")
+  && j.drone_id === null && j.command_id === null, j.id);
+const OID = j.id;
+
+r = await get(`/v1/orders/${OID}`);
+j = await r.json();
+check("orders get one", r.ok && j.id === OID && j.items[0].qty === 2);
+r = await get(`/v1/orders/ord_nope`);
+check("orders get unknown -> 404", r.status === 404);
+
+r = await patch(`/v1/orders/${OID}`, { status: "delivered" });
+check("orders illegal jump placed -> delivered -> 400", r.status === 400);
+r = await patch(`/v1/orders/${OID}`, { status: "shipped" });
+check("orders bad status -> 400", r.status === 400);
+r = await patch(`/v1/orders/${OID}`, { status: "accepted", drone_id: "BAD_ID" });
+check("orders bad drone_id -> 400", r.status === 400);
+
+r = await patch(`/v1/orders/${OID}`, { status: "accepted", drone_id: "packet-v0" });
+j = await r.json();
+check("orders accept + assign", r.ok && j.status === "accepted" && j.drone_id === "packet-v0");
+for (const s of ["picked_up", "loaded", "in_flight", "delivered"]) {
+  r = await patch(`/v1/orders/${OID}`, { status: s });
+  check(`orders -> ${s}`, r.ok && (await r.json()).status === s);
+}
+r = await patch(`/v1/orders/${OID}`, { status: "cancelled" });
+check("orders terminal is immutable -> 400", r.status === 400);
+r = await del(`/v1/orders/${OID}`);
+check("orders delete terminal -> ok", r.ok);
+r = await get(`/v1/orders/${OID}`);
+check("orders get after delete -> 404", r.status === 404);
+
+r = await post(`/v1/orders`, { items: [item], pickup: "qfc", dropoff: "uplace" }, RD);
+const LIVE = (await r.json()).id;
+r = await del(`/v1/orders/${LIVE}`);
+check("orders delete live -> 400", r.status === 400);
+r = await patch(`/v1/orders/${LIVE}`, { status: "cancelled", reason: "customer changed mind" });
+j = await r.json();
+check("orders cancel with reason", r.ok && j.status === "cancelled" && j.reason === "customer changed mind");
+r = await get(`/v1/orders?status=placed`);
+j = await r.json();
+check("orders list filters by status", r.ok && Array.isArray(j.orders) && j.orders.every(o => o.status === "placed"));
+r = await del(`/v1/orders/${LIVE}`);
+check("orders delete cancelled -> ok", r.ok);
+
 console.log(fails ? `${fails} FAILED` : "ALL PASS");
 process.exit(fails ? 1 : 0);

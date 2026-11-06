@@ -5,9 +5,12 @@
   "compatibility_date": "2026-10-01",
   "observability": { "enabled": true },
   "durable_objects": {
-    "bindings": [{ "name": "DRONE", "class_name": "DroneState" }]
+    "bindings": [{ "name": "DRONE", "class_name": "DroneState" }, { "name": "ORDERS", "class_name": "Orders" }]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DroneState"] }]
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["DroneState"] },
+    { "tag": "v2", "new_sqlite_classes": ["Orders"] }
+  ]
   // Secrets (set with `wrangler secret put NAME`, or in .dev.vars for local dev):
   //   INGEST_TOKEN  - the laptop ground control server uses it to POST telemetry
   //   READ_TOKEN    - the app team uses it to read

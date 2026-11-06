@@ -65,6 +65,12 @@ struct TrackingView: View {
         }
         .background(Color.appBackground)
         .navigationBarTitleDisplayMode(.inline)
+        .task(id: state.activeOrder?.id) {
+            guard let id = state.activeOrder?.id else { return }
+            for await updated in state.orderService.watchOrder(id: id) {
+                await MainActor.run { state.activeOrder = updated }
+            }
+        }
     }
 
     private func statusRow(for status: OrderStatus) -> some View {

@@ -1,0 +1,21 @@
+{
+  "origin": { "lat": 47.66885, "lng": -122.31504, "note": "NW corner of the map in WGS84; x east / y south in meters. Hand-tuned to real streets, approximate." },
+  "layers": [60, 80, 100],
+  "streets": {
+    "note": "Real arterials the corridors follow: 25th Ave NE (N-S, west edge of U Village), NE 45th St (E-W, south edge), NE 55th St (E-W, north edge), Montlake Blvd NE (diagonal SW toward campus/stadium)."
+  },
+  "waypoints": [
+    { "id": "hub", "name": "U Village Hub", "kind": "hub", "x": 1150, "y": 550 },
+    { "id": "c-25th", "name": "25th Ave corridor", "kind": "corridor", "x": 860, "y": 550 },
+    { "id": "c-45th", "name": "NE 45th corridor", "kind": "corridor", "x": 1150, "y": 810 },
+    { "id": "c-north", "name": "NE 55th corridor", "kind": "corridor", "x": 900, "y": 250 },
+    { "id": "c-west", "name": "Campus corridor", "kind": "corridor", "x": 450, "y": 700 },
+    { "id": "c-east", "name": "35th Ave corridor", "kind": "corridor", "x": 1450, "y": 700 },
+    { "id": "ramen", "name": "Ramen pickup", "kind": "pickup", "x": 1080, "y": 500 },
+    { "id": "bowls", "name": "Bowl pickup", "kind": "pickup", "x": 1220, "y": 580 },
+    { "id": "dorms-n", "name": "North campus dorms", "kind": "dropoff", "x": 340, "y": 1040 },
+    { "id": "mercer", "name": "Mercer Court", "kind": "dropoff", "x": 190, "y": 1095 },
+    { "id": "ave", "name": "The Ave housing", "kind": "dropoff", "x": 110, "y": 990 },
+    { "id": "bryant", "name": "Bryant homes", "kind": "dropoff", "x": 1427, "y": 206 }
+  ]
+}

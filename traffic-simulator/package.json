@@ -1,0 +1,16 @@
+{
+  "name": "packet-traffic-simulator",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 5177",
+    "test": "tsc src/sim/types.ts src/sim/world.ts --outDir .test-out --module commonjs --target es2020 --skipLibCheck && printf '{\"type\":\"commonjs\"}' > .test-out/package.json && node tests/sim-smoke.mjs; code=$?; rm -rf .test-out; exit $code"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "vite": "^4.5.3"
+  }
+}

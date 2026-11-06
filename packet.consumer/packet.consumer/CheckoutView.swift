@@ -79,10 +79,10 @@ struct CheckoutView: View {
         error = nil
         defer { placing = false }
         do {
-            // TODO: Stripe PaymentSheet first, then real OrderService.
+            // TODO: Stripe PaymentSheet first, then the real order call.
             try await state.paymentService.pay(amountCents: state.cartTotalCents)
-            let counts = Dictionary(uniqueKeysWithValues: state.cart.map { ($0.item.id, $0.quantity) })
-            state.activeOrder = CustomerOrder(id: UUID().uuidString, status: .placed, itemCounts: counts)
+            state.activeOrder = try await state.orderService.placeOrder(
+                lines: state.cart, customerName: state.customerName, dropoff: state.dropoff)
             state.clearCart()
         } catch {
             self.error = error.localizedDescription

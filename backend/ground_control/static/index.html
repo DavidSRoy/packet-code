@@ -411,19 +411,21 @@
   <button class="btn" id="b-hold" data-air="1"><span>Hold</span><kbd>SPACE</kbd></button>
   <button class="btn kill" id="b-kill"><span class="fill" id="kill-fill"></span><span>Kill motors</span><kbd>HOLD 1 S</kbd></button>
   <div id="hop">
-    <div class="trip-h"><span class="lbl">Test hover · no GPS</span><span class="badge" id="hop-badge">IDLE</span></div>
+    <div class="trip-h"><span class="lbl">Hover test · no GPS</span><span class="badge" id="hop-badge">IDLE</span></div>
     <div class="alt-row">
       <span class="lbl" style="color:var(--text)">Height</span>
       <div class="stepper"><button id="hop-dn">−</button><span id="hop-h">2 cm</span><button id="hop-up">+</button></div>
     </div>
-    <div class="alt-row">
-      <span class="lbl" style="color:var(--text)">Hold for</span>
-      <div class="stepper"><button id="hop-tdn">−</button><span id="hop-t">30 s</span><button id="hop-tup">+</button></div>
-    </div>
     <label id="hop-arm"><input type="checkbox" id="hop-ok"> Props on, area clear, at the SD switch: unlock</label>
-    <button class="btn go" id="b-hop" disabled><span>Run test</span><kbd>TAKEOFF · HOLD · LAND</kbd></button>
-    <button class="btn kill" id="b-hop-stop"><span>Stop</span><kbd>MOTORS OFF</kbd></button>
-    <div id="hop-state">Takes off on the box camera, holds over the start point for the set time, descends and stops the motors. Boxer SD or Stop = motors off. Tags out of view, drift or a lost link also stop the motors.</div>
+    <div class="row2"><button class="btn go" id="b-hop" disabled>Start hover</button><button class="btn" id="b-hop-land" disabled>Land</button></div>
+    <button class="btn kill" id="b-hop-stop"><span>Emergency stop</span><kbd>MOTORS OFF</kbd></button>
+    <div id="hover-moves" style="margin-top:10px">
+      <div class="lbl" style="margin-bottom:6px">Move 1 cm</div>
+      <div class="alt-row"><span>X</span><div class="stepper"><button data-axis="x" data-dir="-1" aria-label="Move X minus 1 cm" disabled>−</button><span>1 cm</span><button data-axis="x" data-dir="1" aria-label="Move X plus 1 cm" disabled>+</button></div></div>
+      <div class="alt-row"><span>Y</span><div class="stepper"><button data-axis="y" data-dir="-1" aria-label="Move Y minus 1 cm" disabled>−</button><span>1 cm</span><button data-axis="y" data-dir="1" aria-label="Move Y plus 1 cm" disabled>+</button></div></div>
+      <div class="alt-row"><span>Z · up / down</span><div class="stepper"><button data-axis="z" data-dir="-1" aria-label="Move Z minus 1 cm" disabled>−</button><span>1 cm</span><button data-axis="z" data-dir="1" aria-label="Move Z plus 1 cm" disabled>+</button></div></div>
+    </div>
+    <div id="hop-state">Holds until Land. X/Y follow the box axes; +Z moves up. X/Y travel is limited to 5 cm per axis. Emergency stop cuts motors immediately. Lost camera or link also cuts motors.</div>
   </div>
   <div id="flyto">
     <div class="trip-h"><span class="lbl">Fly to point</span><span class="badge" id="ft-badge">IDLE</span></div>
@@ -725,22 +727,28 @@ $("trips").addEventListener("click", e => {
 });
 
 /* ---------- hold to hop (no GPS): release = motors off ---------- */
-let hopCm = 2, hopSec = 30;          // test run: height above where it sat (cm), time held there (s)
+let hopCm = 2, hoverActive = false;
 function hopSetH(v) { hopCm = Math.max(1, Math.min(38, Math.round(v))); $("hop-h").textContent = hopCm + " cm"; }
-function hopSetT(v) { hopSec = Math.max(5, Math.min(120, Math.round(v / 5) * 5)); $("hop-t").textContent = hopSec + " s"; }
 $("hop-up").onclick = () => hopSetH(hopCm + 1);
 $("hop-dn").onclick = () => hopSetH(hopCm - 1);
-$("hop-tup").onclick = () => hopSetT(hopSec + 5);
-$("hop-tdn").onclick = () => hopSetT(hopSec - 5);
-$("hop-ok").onchange = () => { $("b-hop").disabled = !$("hop-ok").checked; };
+$("hop-ok").onchange = () => { $("b-hop").disabled = hoverActive || !$("hop-ok").checked; };
 $("b-hop").onclick = () => {
   if ($("b-hop").disabled) return;
-  send({ type: "hop_test", height: hopCm / 100, duration: hopSec });
-  $("hop-ok").checked = false; $("b-hop").disabled = true;   // unlock again for the next run
+  send({ type: "hover_start", height: hopCm / 100 });
+  $("hop-ok").checked = false; $("b-hop").disabled = true;
 };
+setInterval(() => { if (hoverActive) send({type: "hop_alive"}); }, 200);
+document.querySelectorAll("#hover-moves button").forEach(b => b.onclick = () =>
+  send({type: "hover_move", axis: b.dataset.axis, direction: Number(b.dataset.dir)}));
+$("b-hop-land").onclick = () => send({type: "hover_land"});
 $("b-hop-stop").onclick = () => send({ type: "hop_stop" });
 function renderHop(h) {
   if (!h) return;
+  hoverActive = !!h.active;
+  $("b-hop").disabled = hoverActive || !$("hop-ok").checked;
+  $("hop-up").disabled = $("hop-dn").disabled = hoverActive;
+  $("b-hop-land").disabled = !h.active || h.state !== "locked";
+  document.querySelectorAll("#hover-moves button").forEach(b => b.disabled = !h.active || h.state !== "locked");
   const b = $("hop-badge");
   b.textContent = (h.state || "idle").toUpperCase();
   b.className = "badge" + (h.active ? " on" : "");

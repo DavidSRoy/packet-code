@@ -12,8 +12,8 @@ spot it started from, on the box camera and the IMU only (no GPS, compass or bar
   the laptop switches the FC EKF to source set 2 (EK3_SRC2_POSXY/POSZ/YAW = 6,
   ExternalNav): position, height and heading from the camera, with the IMU between
   frames. It waits for the FC to accept the switch. After the hover it switches back
-  to set 1. Indoors with no GPS home, it gives the EKF an origin from the last known
-  position: only a map label, the camera position is relative to it.
+  to set 1. Indoors with no GPS home, it restores the configured box-test EKF
+  reference from hover_origin.json: a geographic reference, not a live GPS fix.
 - Start point: the FC's own camera-based position (LOCAL_POSITION_NED) just before
   arming. Then GUIDED and arm: lua/hop_takeoff.lua on the FC flies the takeoff (holds
   the start point on the skids, lifts off, hands over to position control, HOPT 4).
@@ -37,6 +37,7 @@ import math
 import threading
 import time
 import urllib.request
+from pathlib import Path
 
 from pymavlink import mavutil
 
@@ -84,6 +85,9 @@ class Hop:
         self.active = False
         self.gen = 0                 # one id per hop: an old hop's loop never acts on a new one
         self.last_alive = 0.0
+        self.interactive = False
+        self.offset = [0.0, 0.0]
+        self.land_requested = False
         self.test_s = None           # a timed test run (Run test button): hold this long, land, motors off
         self.height = 0.127
         self.h0 = None               # tag height of the drone on the ground (= 0 for the hover height)
@@ -183,7 +187,7 @@ class Hop:
             return "box tags not in view: the hover needs them for its height"
         return None
 
-    def press(self, height, duration=None):
+    def press(self, height, duration=None, interactive=False):
         """Start a hover. With duration (s): a timed test run that holds at the height that long,
         descends and stops the motors itself, with no button held (the Boxer SD kill, the Stop
         button, hop_guard.lua and the safety cuts stay). Without: hold to hover."""
@@ -192,6 +196,8 @@ class Hop:
             test_s = None if duration is None else max(TEST_MIN_S, min(TEST_MAX_S, float(duration)))
         except (TypeError, ValueError):
             return self.link.note("Laptop: hop refused, bad height or duration", 4)
+        if not math.isfinite(h) or (test_s is not None and not math.isfinite(test_s)):
+            return self.link.note("Laptop: hover refused, invalid number", 4)
         with self.lock:
             if self.active:
                 self.last_alive = time.time()
@@ -203,17 +209,42 @@ class Hop:
             self.height = max(HEIGHT_MIN, min(HEIGHT_MAX, h))
             self.h0 = self.pose()[2]          # tag height on the ground: the hover height counts from here
             self.test_s = test_s
+            self.interactive = interactive
+            self.offset = [0.0, 0.0]
+            self.land_requested = False
             self.gen += 1
             self.active = True
             self.last_alive = time.time()
             self.status = {"state": "arming", "height": self.height, "reason": None}
-            if test_s is None:
+            if interactive:
+                self.link.note("Laptop: hover until Land; emergency stop or SD cuts motors.", 4)
+            elif test_s is None:
                 self.link.note(f"Laptop: hover {self.height * 100:.0f} cm over the start (camera + IMU, GUIDED). "
                                "Release = motors off.", 4)
             else:
                 self.link.note(f"Laptop: test run, {self.height * 100:.0f} cm for {test_s:.0f} s, then it lands. "
                                "Stop button or SD = motors off.", 4)
             threading.Thread(target=self._run, args=(self.gen,), daemon=True).start()
+
+    def move(self, axis, direction):
+        """One centimetre in local camera-aligned NED X/Y, or up for +Z."""
+        with self.lock:
+            if (not self.active or not self.interactive or self.land_requested
+                    or self.status.get("state") != "locked"):
+                return
+            if axis not in ("x", "y", "z") or type(direction) is not int or direction not in (-1, 1):
+                return
+            step = direction * 0.01
+            if axis == "z":
+                self.height = round(max(HEIGHT_MIN, min(HEIGHT_MAX, self.height + step)), 3)
+            else:
+                i = 0 if axis == "x" else 1
+                self.offset[i] = round(max(-0.05, min(0.05, self.offset[i] + step)), 3)
+
+    def land(self):
+        with self.lock:
+            if self.active and self.status.get("state") == "locked":
+                self.land_requested = True
 
     def alive(self):
         if self.active:
@@ -223,13 +254,65 @@ class Hop:
         if self.active:
             self.kill(why)
 
+    def origin_reference(self):
+        """Use a complete FC coordinate pair, otherwise the persisted box-test reference."""
+        s = self.link.state
+        for lat_key, lon_key in (("lat_fc", "lon_fc"), ("lat", "lon")):
+            lat, lon, alt = s.get(lat_key), s.get(lon_key), s.get("alt_msl")
+            if self.valid_origin(lat, lon, alt):
+                return lat, lon, alt
+        config = json.loads(Path(__file__).with_name("hover_origin.json").read_text())
+        origin = tuple(config[k] for k in ("latitude", "longitude", "altitude_msl_m"))
+        if not self.valid_origin(*origin):
+            raise ValueError("invalid saved hover origin")
+        return origin
+
+    @staticmethod
+    def valid_origin(lat, lon, alt):
+        return (all(type(v) in (int, float) and math.isfinite(v) for v in (lat, lon, alt))
+                and -90 <= lat <= 90 and -180 <= lon <= 180
+                and (lat != 0 or lon != 0) and -1000 <= alt <= 10000)
+
+    def ensure_origin(self, keep):
+        """Request first; if absent, restore and confirm GPS_GLOBAL_ORIGIN before proceeding.
+
+        keep(cond, send, timeout) retries until cond, timeout, or cancellation. No arming here.
+        """
+        L, s = self.link, self.link.state
+        requested = time.time()
+        fresh = lambda: (s.get("origin_t") or 0) >= requested
+        ask = lambda: L.command(MAV.MAV_CMD_REQUEST_MESSAGE, 49)
+        if not keep(fresh, ask, ORIGIN_ASK_S):
+            return False
+        if fresh():
+            return True
+        try:
+            lat, lon, alt = self.origin_reference()
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            self.kill(f"cannot read the saved box-test origin: {exc}")
+            return False
+        requested = time.time()
+        expected = (round(lat * 1e7), round(lon * 1e7), round(alt * 1000))
+        confirmed = lambda: fresh() and s.get("origin") == expected
+
+        def set_origin():
+            L.send(L.m.mav.set_gps_global_origin_send, L.sysid, *expected, int(time.time() * 1e6))
+            ask()
+        if not keep(confirmed, set_origin, 6.0):
+            return False
+        if not confirmed():
+            self.kill("the FC did not confirm the box-test EKF origin")
+            return False
+        L.note("Laptop: box-test EKF reference restored and verified (camera navigation, no GPS fix)", 6)
+        return True
+
     # ---- the hover --------------------------------------------------------------
     def _hold_target(self, start, yaw, height=None):
         """Position target exactly over the start point, at the button height (local NED, z down),
         nose on the start heading (rad)."""
         L = self.link
         L.send(L.m.mav.set_position_target_local_ned_send, 0, L.sysid, L.compid,
-               MAV.MAV_FRAME_LOCAL_NED, POS_YAW_MASK, start[0], start[1],
+               MAV.MAV_FRAME_LOCAL_NED, POS_YAW_MASK, start[0] + self.offset[0], start[1] + self.offset[1],
                start[2] - (self.height if height is None else height),
                0, 0, 0, 0, 0, 0, yaw, 0)
 
@@ -240,7 +323,7 @@ class Hop:
         def held():
             if not self.active or gen != self.gen:
                 return False
-            if self.test_s is None and time.time() - self.last_alive > KEEPALIVE_S:
+            if self.test_s is None and time.time() - self.last_alive > (1.0 if self.interactive else KEEPALIVE_S):
                 self.kill("button signal lost")
                 return False
             return True
@@ -283,28 +366,9 @@ class Hop:
                 return self.kill("the FC did not answer the switch to camera navigation")
             if a[0] != MAV.MAV_RESULT_ACCEPTED:
                 return self.kill(f"the FC refused the switch to camera navigation (result {a[0]})")
-            # 2. An EKF origin (indoors there is no GPS to set one): only a map label for the camera
-            # position, but GUIDED needs it to turn the takeoff height into a target. Ask the FC
-            # itself: the laptop's home can be from before an FC reboot, and then the takeoff fails
-            t_org = time.time()
-            has_origin = lambda: (s.get("origin_t") or 0) >= t_org
-            if not keep(has_origin, lambda: L.command(MAV.MAV_CMD_REQUEST_MESSAGE, 49), ORIGIN_ASK_S):   # GPS_GLOBAL_ORIGIN
+            # 2. Restore a geographic reference even after a cold indoor boot.
+            if not self.ensure_origin(keep):
                 return
-            if not has_origin():
-                lat, lon = s.get("lat_fc") or s.get("lat"), s.get("lon_fc") or s.get("lon")
-                if not lat or not lon:
-                    return self.kill("the FC has no EKF origin and there is no last known position to give it one")
-                L.note(f"Laptop: EKF origin set at {lat:.6f}, {lon:.6f} (a label only, no GPS home indoors)", 4)
-                t_org = time.time()
-
-                def set_origin():
-                    L.send(L.m.mav.set_gps_global_origin_send, L.sysid, int(lat * 1e7), int(lon * 1e7),
-                           int((s.get("alt_msl") or 0.0) * 1000), int(time.time() * 1e6))
-                    L.command(MAV.MAV_CMD_REQUEST_MESSAGE, 49)
-                if not keep(has_origin, set_origin, 4.0):
-                    return
-                if not has_origin():
-                    return self.kill("the FC did not take the EKF origin")
             # 3. Zero on the box: the box is the origin. The Pi sends its next camera pose with a
             # new reset counter, so the EKF jumps to it instead of walking over from where it was
             t_zero = time.time()
@@ -465,10 +529,10 @@ class Hop:
                     climbing = h_tgt < self.height
                     # test run: hold at the height for test_s, then descend at CLIMB_MPS to LAND_BELOW_M under
                     # the start (pressed onto its legs) and stop once the tags say it is down
-                    if self.test_s is not None:
+                    if self.test_s is not None or self.land_requested:
                         if not climbing and t_level is None:
                             t_level = now
-                        if t_level is not None and now - t_level >= self.test_s:
+                        if self.land_requested or (t_level is not None and self.test_s is not None and now - t_level >= self.test_s):
                             t_down = t_down or now
                             h_tgt = max(-LAND_BELOW_M, self.height - CLIMB_MPS * (now - t_down))
                             climbing = True                    # moving target: resend at 5 Hz
@@ -480,11 +544,11 @@ class Hop:
                                 t_ground = None
                             if now - t_down > (self.height + LAND_BELOW_M) / CLIMB_MPS + LAND_EXTRA_S:
                                 return self.kill(TEST_DONE)
-                    if now - last_lock >= (0.2 if climbing else 1.0):   # resent: a lost message cannot unlock it
+                    if now - last_lock >= (0.2 if climbing or self.interactive else 1.0):   # resent: a lost message cannot unlock it
                         self._hold_target(start, yaw0, h_tgt)
                         last_lock = now
                 self.status = {"state": ("landing" if t_down else "locked") if locked else "climbing",
-                               "height": self.height, "reason": None,
+                               "height": self.height, "reason": None, "offset": list(self.offset),
                                "test_left": None if self.test_s is None or t_level is None
                                else round(max(0.0, self.test_s - (now - t_level)), 1),
                                "height_now": round(est, 3), "drift_m": None if drift is None else round(drift, 3),

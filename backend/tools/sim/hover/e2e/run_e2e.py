@@ -151,25 +151,13 @@ def main():
         for _ in range(5):
             rc.sendto(struct.pack("<8H", 0, 0, 0, 0, 0, 0, 0, 1000), ("127.0.0.1", 5501 + 10 * I))
             time.sleep(0.05)
-        # Indoors on the drone the FC/laptop has a last known position; SITL has GPS off and no
-        # origin, so GLOBAL_POSITION_INT lat/lon are 0 and hop.py would refuse. Give the origin
-        # first (then hop.py's own REQUEST_MESSAGE 49 finds it).
-        lat, lon, alt = simrun.HOME
+        # Cold indoor boot: no origin is seeded by the harness. The real hover code
+        # must restore it from its persisted reference, just as on the drone.
         if a.pre_source:
-            for _ in range(3):
-                link.command(42007, 2)
-                time.sleep(0.3)
-            log("diagnostic: source set 2 before the press")
+            link.command(42007, 2)
         while time.time() - t_sitl < a.settle_wait:
             time.sleep(0.2)
-        t_org = time.time()
-        while time.time() - t_org < 15 and (link.state.get("origin_t") or 0) < t_org:
-            link.send(link.m.mav.set_gps_global_origin_send, link.sysid, int(lat * 1e7), int(lon * 1e7),
-                      int(alt * 1000), int(time.time() * 1e6))
-            link.command(server.mavutil.mavlink.MAV_CMD_REQUEST_MESSAGE, 49)
-            time.sleep(1.0)
-        log(f"EKF origin before press: {(link.state.get('origin_t') or 0) >= t_org}")
-        time.sleep(3.0)                           # GLOBAL_POSITION_INT with the origin
+        log(f"Cold-boot origin before press: {link.state.get('origin')}")
         st = link.state
         res["pre_press"] = {k: st.get(k) for k in ("link", "mode", "armed", "pi_url", "rc_override_time",
                                                    "fc_params", "sd_stop", "alt", "lat_fc", "lon_fc")}

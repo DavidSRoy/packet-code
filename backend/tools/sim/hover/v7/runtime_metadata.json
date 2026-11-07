@@ -1,0 +1,8 @@
+{
+  "ardupilot_commit": "fb773567896014da007bca58358704d4a0d8516f",
+  "sitl_binary_sha256": "f67ad3d0c790db69c8a84ad56c0942aa8aed0b1f94ced8a115a3ad3f8317fda7",
+  "base_model_sha256": "c3fc58aba17afccdef4a5552dbf1b5aa886b5fba939569ad64c0ebfeeb7e7e38",
+  "parameter_file_sha256": "35b9b0819c2d8eef675b052d492254472a9c0b943357f872891521396d1c6bac",
+  "source_log": "00000049.BIN",
+  "physical_deployment": false
+}

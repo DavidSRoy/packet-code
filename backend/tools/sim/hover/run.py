@@ -291,8 +291,15 @@ def score(truth, events, wall_map, height):
         settle = float(T["t"][sw][out[-1] + 1] - t_h) if len(out) and out[-1] + 1 < sw.sum() else (0.0 if not len(out) else None)
     # wobble a person sees: tilt above 1 Hz
     tilt_hp = np.hypot(*(np.array([hp_rms_series(np.radians(rp[:, i]), fs, 1.0) for i in (0, 1)])))
+    tilt_1_3 = np.column_stack([
+        hp_rms_series(rp[:, i], fs, 1.0) - hp_rms_series(rp[:, i], fs, 3.0)
+        for i in (0, 1)
+    ])
     return {
         "settle10_s": settle,
+        "roll_ptp_deg": float(np.ptp(rp[:, 0])),
+        "pitch_ptp_deg": float(np.ptp(rp[:, 1])),
+        "tilt_1_3_rms_deg": float(np.sqrt(np.mean(np.sum(tilt_1_3 ** 2, axis=1)))),
         "tilt_hp_rms_deg": float(np.degrees(np.sqrt(np.mean(tilt_hp ** 2)))),
         "tilt_hp_p99_deg": float(np.degrees(np.percentile(tilt_hp, 99))),
         "hold_s": float(t_b - t_a),

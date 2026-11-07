@@ -1,0 +1,13 @@
+11 runs in 135 s
+run                         status        xy_rms_mm    xy_p95_mm    xy_max_mm    x_mean_mm    y_mean_mm     z_rms_mm     z_max_mm tilt_rms_deg tilt_hp_rms_ tilt_hp_p99_ rate_hp_rms_ tilt_peak_hz   settle10_s
+v7final_nom1_v7             ok (force          4.04         6.32         7.96         0.12        -1.92         3.59         7.42         0.28         0.25         0.49         3.10         0.18         0.00
+v7final_nom2_v7             ok (force          4.72         8.42         9.74         1.89        -1.61         3.41         8.57         0.26         0.25         0.54         3.20         0.39         0.00
+v7final_nom3_v7             ok (force          4.72         7.38        10.62         2.00        -0.89         3.57         9.78         0.26         0.23         0.49         2.99         0.18         8.83
+v7final_low_v7              ok (force          5.27         9.22        12.53         1.78        -1.67         2.93         8.70         0.29         0.25         0.53         3.24         0.39        24.00
+v7final_old_v7              ok (force          5.63         8.74        12.78         3.30        -2.15         3.10         6.98         0.28         0.26         0.56         3.43         0.29          nan
+v7final_strong_v7           ok (force          3.98         6.57         8.74         1.21        -0.23         2.73         6.40         0.24         0.19         0.42         3.31         0.32         2.13
+v7final_weak_v7             ok (force          5.00         9.41        11.21         0.50        -1.08         2.63         7.55         0.49         0.60         1.30         6.55         1.57        31.18
+v7final_latency_v7          ok (force         12.14        22.85        26.23         1.41        -0.57         3.07         7.79         0.34         0.30         0.62         3.49         0.32          nan
+v7final_noise_v7            ok (force          5.27         9.20        13.12        -0.72        -1.29         3.54         7.50         0.29         0.26         0.55         3.43         0.11        30.46
+v7final_gust_v7             ok (force          6.96        13.93        20.52        -2.82        -2.34         2.69        11.32         0.40         0.25         0.72         3.21         0.14        19.22
+v7final_slow_v7             ok (force          4.38         8.28         9.97         0.09        -0.24         3.18         6.61         0.34         0.36         0.78         5.26         0.39         0.00

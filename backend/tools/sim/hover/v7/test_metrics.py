@@ -34,8 +34,7 @@ class LandingValidationTest(unittest.TestCase):
   with self.assertRaises(ValueError):validate_result(self.result(),'camera_loss')
  def test_missing_or_early_disarm(self):
   from e2e_validation import validate_result
-  for t in (None,0,3):
+  for t in (None,0,3,float("nan"),float("inf")):
    r=self.result();r['events_rel_s']['disarmed']=t
    with self.assertRaises(ValueError):validate_result(r,'nominal')
 if __name__=='__main__':unittest.main()
-

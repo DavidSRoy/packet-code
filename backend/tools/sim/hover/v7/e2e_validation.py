@@ -1,5 +1,5 @@
 """Run the real ground-control code against isolated SITL, never a serial device."""
-import concurrent.futures,json,subprocess,sys
+import concurrent.futures,json,math,subprocess,sys
 from pathlib import Path
 from experiment import config
 H=Path(__file__).resolve().parent
@@ -17,7 +17,7 @@ def validate_result(result, case):
         raise ValueError(f'{case}: unsuccessful landing: {status}')
     events = result.get('events_rel_s', {})
     times = [events.get(k) for k in ('armed', 'handover', 'at height', 'descend', 'disarmed')]
-    if any(not isinstance(t, (int, float)) for t in times):
+    if any(not isinstance(t, (int, float)) or not math.isfinite(t) for t in times):
         raise ValueError(f'{case}: missing flight/landing events: {events}')
     if not all(0 <= a < b for a, b in zip(times, times[1:])):
         raise ValueError(f'{case}: flight/landing events out of order: {events}')

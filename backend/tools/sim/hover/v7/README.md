@@ -1,5 +1,8 @@
 # v7 simulation-only development
 
+**Stillness requirement update:** v7 does not meet the user’s absolute, visually imperceptible
+hover goal. It remains an experimental baseline. See `../stillness/RESULTS.md`.
+
 No command in this directory connects to the physical vehicle. The existing v6 remains
 installed. This work uses `logs/pi/bin/00000049.BIN` and the matching Pi camera recording
 `20261106-205327`. The log49 parameter snapshot is `../flown_log49.parm`.

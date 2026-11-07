@@ -1,0 +1,28 @@
+{
+  "PIDN": {
+    "P": {
+      "equivalent_tilt_std_deg": 0.1752647761228582,
+      "slow_band_rms_deg": 0.1116363808961982,
+      "rocking_band_rms_deg": 0.08827784118752402
+    },
+    "I": {
+      "equivalent_tilt_std_deg": 0.07176561880462311,
+      "slow_band_rms_deg": 0.06456794284749977,
+      "rocking_band_rms_deg": 0.010362980376008427
+    },
+    "P_I_correlation": 0.008028146233163013
+  },
+  "PIDE": {
+    "P": {
+      "equivalent_tilt_std_deg": 0.21786304672728854,
+      "slow_band_rms_deg": 0.1776785248889389,
+      "rocking_band_rms_deg": 0.09371224437009922
+    },
+    "I": {
+      "equivalent_tilt_std_deg": 0.1319122983431561,
+      "slow_band_rms_deg": 0.1095774640393967,
+      "rocking_band_rms_deg": 0.01712390599745967
+    },
+    "P_I_correlation": -0.02549480582030844
+  }
+}

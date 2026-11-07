@@ -1,0 +1,11 @@
+9 runs in 110 s
+run                         status        xy_rms_mm    xy_p95_mm    xy_max_mm    x_mean_mm    y_mean_mm     z_rms_mm     z_max_mm tilt_rms_deg tilt_hp_rms_ tilt_hp_p99_ rate_hp_rms_ tilt_peak_hz   settle10_s
+lqg_ff_b1_default           ok (force          3.83         6.49         8.05         0.77        -1.75         3.96         7.97         0.22         0.13         0.30         2.35         0.18         0.00
+lqg_ff_b1_mid               ok (force          3.54         5.23         7.32         2.09        -0.67         3.86         8.32         0.32         0.38         0.77        11.44         8.75         0.00
+lqg_ff_b1_slow              disarmed            nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan
+lqg_ff_b1_gust              ok (force          5.37         9.39        23.17         0.80        -1.58         2.36         6.43         0.28         0.14         0.37         2.59         0.17        40.25
+lqg_ff_b2_default           takeoff a           nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan
+lqg_ff_b2_mid               ok (force          7.08        13.65        16.16         1.50        -5.72         4.47         9.18         0.70         0.96         1.93        18.55         2.43        12.36
+lqg_ff_b2_slow              disarmed            nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan
+lqg_ff_b2_gust              ok (force          5.58         9.95        24.96         1.38        -1.26         2.87         7.93         0.29         0.12         0.33         3.35         0.17        40.63
+lqg_ff_reference_gust       ok (force          5.49        10.27        23.59         1.04        -1.00         2.41         7.12         0.34         0.27         0.63         3.39         0.44        55.62

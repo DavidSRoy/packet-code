@@ -337,10 +337,10 @@
     <div><span class="lbl">Gnd speed</span><b id="v-gs">—<small>m/s</small></b></div>
     <div><span class="lbl">Heading</span><b id="v-hdg">—<small>°</small></b></div>
     <div><span class="lbl">From home</span><b id="v-home">—<small>m</small></b></div>
-    <div><span class="lbl">Cell</span><b id="v-cell">—<small>V</small></b></div>
+    <div><span class="lbl">Cell avg.</span><b id="v-cell">—<small>V</small></b></div>
     <div><span class="lbl">Current</span><b id="v-amp">—<small>A</small></b></div>
     <div><span class="lbl">Sats</span><b id="v-sats">—</b></div>
-    <div><span class="lbl">Battery</span><b id="v-pct">—<small>%</small></b></div>
+    <div><span class="lbl">Battery</span><b id="v-pct">—<small>%</small></b><span class="lbl" id="v-pack">— V pack</span></div>
     <div><span class="lbl">Time left</span><b id="v-tleft">—<small>min</small></b></div>
   </div>
   <div class="battbar"><div class="track"><div class="fill" id="b-fill"></div></div>
@@ -380,7 +380,7 @@
         <div><span class="lbl">Tilt</span><b id="cam-tilt">—<small>°</small></b></div>
       </div>
     </div>
-    <canvas id="cam-top" width="232" height="232" title="Top view: lid (grey), drone centre and nose (blue), camera (white)"></canvas>
+    <canvas id="cam-top" width="232" height="232" title="Movement axes: +X right, +Y down. Lid grey, drone blue, camera white."></canvas>
   </div>
   <div class="cam-url"><span class="lbl">Pi</span><input id="cam-url" spellcheck="false"></div>
 </div>
@@ -411,19 +411,21 @@
   <button class="btn" id="b-hold" data-air="1"><span>Hold</span><kbd>SPACE</kbd></button>
   <button class="btn kill" id="b-kill"><span class="fill" id="kill-fill"></span><span>Kill motors</span><kbd>HOLD 1 S</kbd></button>
   <div id="hop">
-    <div class="trip-h"><span class="lbl">Test hover · no GPS</span><span class="badge" id="hop-badge">IDLE</span></div>
+    <div class="trip-h"><span class="lbl">Hover test · no GPS</span><span class="badge" id="hop-badge">IDLE</span></div>
     <div class="alt-row">
       <span class="lbl" style="color:var(--text)">Height</span>
       <div class="stepper"><button id="hop-dn">−</button><span id="hop-h">2 cm</span><button id="hop-up">+</button></div>
     </div>
-    <div class="alt-row">
-      <span class="lbl" style="color:var(--text)">Hold for</span>
-      <div class="stepper"><button id="hop-tdn">−</button><span id="hop-t">30 s</span><button id="hop-tup">+</button></div>
-    </div>
     <label id="hop-arm"><input type="checkbox" id="hop-ok"> Props on, area clear, at the SD switch: unlock</label>
-    <button class="btn go" id="b-hop" disabled><span>Run test</span><kbd>TAKEOFF · HOLD · LAND</kbd></button>
-    <button class="btn kill" id="b-hop-stop"><span>Stop</span><kbd>MOTORS OFF</kbd></button>
-    <div id="hop-state">Takes off on the box camera, holds over the start point for the set time, descends and stops the motors. Boxer SD or Stop = motors off. Tags out of view, drift or a lost link also stop the motors.</div>
+    <div class="row2"><button class="btn go" id="b-hop" disabled>Start hover</button><button class="btn" id="b-hop-land" disabled>Land</button></div>
+    <button class="btn kill" id="b-hop-stop"><span>Emergency stop</span><kbd>MOTORS OFF</kbd></button>
+    <div id="hover-moves" style="margin-top:10px">
+      <div class="lbl" style="margin-bottom:6px">Move 1 cm</div>
+      <div class="alt-row"><span>X</span><div class="stepper"><button data-axis="x" data-dir="-1" aria-label="Move X minus 1 cm" disabled>−</button><span>1 cm</span><button data-axis="x" data-dir="1" aria-label="Move X plus 1 cm" disabled>+</button></div></div>
+      <div class="alt-row"><span>Y</span><div class="stepper"><button data-axis="y" data-dir="-1" aria-label="Move Y minus 1 cm" disabled>−</button><span>1 cm</span><button data-axis="y" data-dir="1" aria-label="Move Y plus 1 cm" disabled>+</button></div></div>
+      <div class="alt-row"><span>Z · up / down</span><div class="stepper"><button data-axis="z" data-dir="-1" aria-label="Move Z minus 1 cm" disabled>−</button><span>1 cm</span><button data-axis="z" data-dir="1" aria-label="Move Z plus 1 cm" disabled>+</button></div></div>
+    </div>
+    <div id="hop-state">Holds until Land. X/Y follow the box axes; +Z moves up. X/Y travel is limited to 5 cm per axis. Emergency stop cuts motors immediately. Camera loss for 0.5 s requests Land. Lost link still cuts motors.</div>
   </div>
   <div id="flyto">
     <div class="trip-h"><span class="lbl">Fly to point</span><span class="badge" id="ft-badge">IDLE</span></div>
@@ -725,29 +727,35 @@ $("trips").addEventListener("click", e => {
 });
 
 /* ---------- hold to hop (no GPS): release = motors off ---------- */
-let hopCm = 2, hopSec = 30;          // test run: height above where it sat (cm), time held there (s)
+let hopCm = 2, hoverActive = false;
 function hopSetH(v) { hopCm = Math.max(1, Math.min(38, Math.round(v))); $("hop-h").textContent = hopCm + " cm"; }
-function hopSetT(v) { hopSec = Math.max(5, Math.min(120, Math.round(v / 5) * 5)); $("hop-t").textContent = hopSec + " s"; }
 $("hop-up").onclick = () => hopSetH(hopCm + 1);
 $("hop-dn").onclick = () => hopSetH(hopCm - 1);
-$("hop-tup").onclick = () => hopSetT(hopSec + 5);
-$("hop-tdn").onclick = () => hopSetT(hopSec - 5);
-$("hop-ok").onchange = () => { $("b-hop").disabled = !$("hop-ok").checked; };
+$("hop-ok").onchange = () => { $("b-hop").disabled = hoverActive || !$("hop-ok").checked; };
 $("b-hop").onclick = () => {
   if ($("b-hop").disabled) return;
-  send({ type: "hop_test", height: hopCm / 100, duration: hopSec });
-  $("hop-ok").checked = false; $("b-hop").disabled = true;   // unlock again for the next run
+  send({ type: "hover_start", height: hopCm / 100 });
+  $("hop-ok").checked = false; $("b-hop").disabled = true;
 };
+setInterval(() => { if (hoverActive) send({type: "hop_alive"}); }, 200);
+document.querySelectorAll("#hover-moves button").forEach(b => b.onclick = () =>
+  send({type: "hover_move", axis: b.dataset.axis, direction: Number(b.dataset.dir)}));
+$("b-hop-land").onclick = () => send({type: "hover_land"});
 $("b-hop-stop").onclick = () => send({ type: "hop_stop" });
 function renderHop(h) {
   if (!h) return;
+  hoverActive = !!h.active;
+  $("b-hop").disabled = hoverActive || !$("hop-ok").checked;
+  $("hop-up").disabled = $("hop-dn").disabled = hoverActive;
+  $("b-hop-land").disabled = !h.active || h.state !== "locked";
+  document.querySelectorAll("#hover-moves button").forEach(b => b.disabled = !h.active || h.state !== "locked");
   const b = $("hop-badge");
   b.textContent = (h.state || "idle").toUpperCase();
   b.className = "badge" + (h.active ? " on" : "");
   if (h.state === "refused" || h.state === "killed" || h.state === "done")
     $("hop-state").textContent = `${h.state.toUpperCase()}: ${h.reason || ""}`;
   else if (h.active)
-    $("hop-state").textContent = `${h.state === "landing" ? "Landing" : "Holding"} ${Math.round((h.height || 0) * 100)} cm · tag height now ${h.height_now != null ? (h.height_now * 100).toFixed(1) : "?"} cm`
+    $("hop-state").textContent = `${h.reason ? h.reason + " · " : ""}${h.state === "landing" ? "Landing" : "Holding"} ${Math.round((h.height || 0) * 100)} cm · tag height now ${h.height_now != null ? (h.height_now * 100).toFixed(1) : "?"} cm`
       + (h.drift_m != null ? ` · off the start ${(h.drift_m * 100).toFixed(1)} cm` : "")
       + (h.test_left != null && h.state !== "landing" ? ` · lands in ${h.test_left.toFixed(0)} s` : "")
       + (h.pose ? ` (${h.pose.toUpperCase()})` : "") + " · SD or Stop = motors off";
@@ -1140,6 +1148,7 @@ function render(down) {
   setNum("v-amp", fx(s.batt_a));
   setNum("v-sats", s.sats != null ? String(s.sats) : "—");
   setNum("v-pct", pct != null ? String(pct) : "—");
+  $("v-pack").textContent = s.batt_v != null ? `${s.batt_v.toFixed(2)} V pack` : "— V pack";
   setNum("v-tleft", s.batt_min != null ? (s.armed ? "" : "~") + s.batt_min.toFixed(1) : "—");
   $("b-fill").style.width = `${pct != null ? Math.max(0, Math.min(100, pct)) : 0}%`;
   $("b-fill").className = "fill " + (bcls === "ok" ? "" : bcls);
@@ -1399,6 +1408,12 @@ connect();
     let [x, y] = P(-LID_W / 2, LID_H / 2); g.fillRect(x, y, LID_W * sc, LID_H * sc); g.strokeRect(x, y, LID_W * sc, LID_H * sc);
     g.strokeStyle = "rgba(255,255,255,.15)"; [x, y] = P(-STK_W / 2, STK_H / 2); g.strokeRect(x, y, STK_W * sc, STK_H * sc);
     g.strokeStyle = "rgba(255,255,255,.12)"; g.beginPath(); g.moveTo(cx, 8); g.lineTo(cx, H - 8); g.moveTo(8, cy); g.lineTo(W - 8, cy); g.stroke();
+    // Movement controls use NED: X = lid X, Y = -lid Y.
+    g.fillStyle = getComputedStyle(top).getPropertyValue("--muted").trim() || "#9aa3ad";
+    g.font = "22px monospace"; g.textBaseline = "middle";
+    g.textAlign = "left"; g.fillText("−X", 9, cy - 12);
+    g.textAlign = "right"; g.fillText("+X", W - 9, cy - 12);
+    g.textAlign = "center"; g.fillText("−Y", cx, 15); g.fillText("+Y", cx, H - 15);
     if (!b) return;
     const [dx, dy] = P(b.drone_m[0], b.drone_m[1]);
     const cam = b.camera_m[0] != null, [kx, ky] = cam ? P(b.camera_m[0], b.camera_m[1]) : [dx, dy];

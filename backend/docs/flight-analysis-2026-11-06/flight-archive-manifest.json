@@ -1,0 +1,323 @@
+{
+  "log_count": 50,
+  "total_log_bytes": 293040401,
+  "fresh_fc_verified_logs": [
+    16,
+    17,
+    46,
+    47,
+    48,
+    49,
+    50
+  ],
+  "camera_recording_folders": 40,
+  "logs": [
+    {
+      "log": 1,
+      "size_bytes": 2326528,
+      "sha256": "16807d443f85867cd6c53a3fe33253c5cc345ab7c3447be03dc4ca93f19c71cb",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 2,
+      "size_bytes": 434176,
+      "sha256": "a26577409eeff51601e9f3b5bf8981755b285a0f538382043200944b479f5aaf",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 3,
+      "size_bytes": 1081344,
+      "sha256": "582bda323a2698a8f6438d61e412b01eefcbe06033242ed20fbf44d109b39dcd",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 4,
+      "size_bytes": 1683456,
+      "sha256": "f46ceeac5fe1e8532557da53eec59d663a813d35caf4dc1b07e62e978f33cd47",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 5,
+      "size_bytes": 519774,
+      "sha256": "840611cf42007d02cf1f3107ad7a1dada563a2dc62e9948381fee51eea6068ee",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 6,
+      "size_bytes": 1220608,
+      "sha256": "2bf601d1649e54a91759e6bb418104931bcc94ac14aabb129889b9cef276902f",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 7,
+      "size_bytes": 2506752,
+      "sha256": "03962261ced3fbd72c726eab151315321d90861c0ece13d70057abcde29c8b1c",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 8,
+      "size_bytes": 3641344,
+      "sha256": "b65eef5207792cb311c3306ff59e417d9b13ece88e59e0fafb484e17a957c270",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 9,
+      "size_bytes": 593920,
+      "sha256": "dd61f9ec032aa9e5a443cc9e071b5bb28406765b30f177c18fec0599e738a53d",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 10,
+      "size_bytes": 3739872,
+      "sha256": "20d1f970fa1a91d5d2f71bc72a4be033bf34fed16c644b074cbda085397e0d59",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 11,
+      "size_bytes": 3112960,
+      "sha256": "ba8ab0b313e0fc67b84b2223ea0de6584d8d9aa6ff4138d9371f4bdfd7926ab8",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 12,
+      "size_bytes": 2555904,
+      "sha256": "626b5c663b337c03d3beea3a2793467bda0767b9364aaccbcd64411206948fb1",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 13,
+      "size_bytes": 3567616,
+      "sha256": "0e14498e53befcb12355b3ec51d8522aec0249d26aa9e57354b5e2924730ef3c",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 14,
+      "size_bytes": 8179712,
+      "sha256": "907839dc20160f1982f1a8fe1ac785a680f9bb4d753c4c33c8d1f8bc6d2fb1e7",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 15,
+      "size_bytes": 3850240,
+      "sha256": "9987ae6378581bcf5d6bf09f2546ce517ae5c2b7aa5f89f74609404ab29076ba",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 16,
+      "size_bytes": 4890624,
+      "sha256": "044de2e4aa25c4916e0d600af752245da2381e1f780ea86bf8d8daaa163c5086",
+      "source": "new FC download; FC CRC32 and laptop SHA256 verified",
+      "fc_crc32": 3706872517
+    },
+    {
+      "log": 17,
+      "size_bytes": 1155072,
+      "sha256": "44ebdefc6f756627fab63ba767c85493e372b1760190dd4398e4b16a70ec031c",
+      "source": "new FC download; FC CRC32 and laptop SHA256 verified",
+      "fc_crc32": 2333595211
+    },
+    {
+      "log": 18,
+      "size_bytes": 3444736,
+      "sha256": "55cc660c8ffe141acbfd1dcf84423edccf7d67aba69db478918d350f92b162c8",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 19,
+      "size_bytes": 16887808,
+      "sha256": "6f530bb27552f7461de26f25525ef2906c88b7f303831ef7d135ece41eabf8be",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 20,
+      "size_bytes": 4972544,
+      "sha256": "d07a5d0216a6de668ca5b57a769e39ef03ece6c1d1a60333c33b0f915c9e930f",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 21,
+      "size_bytes": 3198976,
+      "sha256": "1b8260a59393eedabf25f5cebeddf7b13c8d5697af0483881e1ce412f5a8368b",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 22,
+      "size_bytes": 5500928,
+      "sha256": "260723a9e624674efd1536fcc44d1dcefe00b743724a79904e9bce8b089a7c5b",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 23,
+      "size_bytes": 1601536,
+      "sha256": "6366e2c282428b42e0614c39f730f2cc7422bda6ee8ad12a85606ad6dbd935c9",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 24,
+      "size_bytes": 6269082,
+      "sha256": "e34d656ceed6e48bc6fc58ea31745f12f447cd4e0ebc582ce7f614069a4a0406",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 25,
+      "size_bytes": 7163973,
+      "sha256": "5cc4d07a409d70c8ada97d8d1ce056f706026aeefd162c8a5846019a99fc6838",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 26,
+      "size_bytes": 2252248,
+      "sha256": "3d403e051947e325ed67be0942923db7b035174a2ae1257e24c5c2ca7e50f043",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 27,
+      "size_bytes": 6889472,
+      "sha256": "e8d393570bad7e88b578bf6cc41cd11f47d5d2b846ac83a05af96fb59d27fcb6",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 28,
+      "size_bytes": 2979839,
+      "sha256": "fe9f421ccd0ddf73b1e4d7001d861626caa532cd658e830d72f0944c2f263015",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 29,
+      "size_bytes": 7698371,
+      "sha256": "5d50040cc5b16f9205ecb257b9f68614d59e515c61ddbed18e6302bbf6e3a6b1",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 30,
+      "size_bytes": 3751558,
+      "sha256": "59eae2f15d28422903c509cee1cacab0ba6197ca45b7b4b73d9dec2d4800fb6e",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 31,
+      "size_bytes": 26198024,
+      "sha256": "3dd1bfee301200dfe82a4621d87bbb7be5fd2415c5f0e7b10c58199df35f01c7",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 32,
+      "size_bytes": 4767744,
+      "sha256": "ad94039b363ccb5dddaaa6c199f7293167f58d43463a5250bb81a8b20004f8ef",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 33,
+      "size_bytes": 6852608,
+      "sha256": "5402c5e019f88f0b46f83a20e8a1b90656731dc48933e2380a13dddf180c8c7f",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 34,
+      "size_bytes": 1986560,
+      "sha256": "d864a12538c7f4e7de97f41534370046605a44f0201019f861c67c809bfeaa31",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 35,
+      "size_bytes": 17203200,
+      "sha256": "e69837bd83debfea5ef5744702afcdf3e56a787dbda64748c8836fa2abb5ecc7",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 36,
+      "size_bytes": 12058624,
+      "sha256": "1f03b9e3539435861ec8b59348fcf191e820bd8dae88c0022581b4e3bacfe51f",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 37,
+      "size_bytes": 4345856,
+      "sha256": "0155acbed49a97a446226be8d45f6310b9c300026cdc749ed9da7efe048b6a3a",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 38,
+      "size_bytes": 9879552,
+      "sha256": "adfbbd3eccd1b963cb918b650e88050384290c077eb198f402c2171f7404f20a",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 39,
+      "size_bytes": 8015872,
+      "sha256": "c86285a6e5ce15cb97be37fa3fa1441bffcda061f564887ab5bf5efb77f2555f",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 40,
+      "size_bytes": 2469888,
+      "sha256": "8b72a15f50a5949fe08d5f19fae2f19f6c270e86bb1108e374340b1dc10eb2e8",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 41,
+      "size_bytes": 4407296,
+      "sha256": "95302a6f5195faa6477d013bcc00cc973ef985c93aa8ca7c2383e5dde9b3d903",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 42,
+      "size_bytes": 4411392,
+      "sha256": "ef1433f6d3b022bfd22473ea811387b0bcd014b7e0dd5e4d442280d408c9e087",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 43,
+      "size_bytes": 9416704,
+      "sha256": "fe87a6cd27894021fc9120b8fbcd363d3c9f282e05c02357e574a5ecf79a33a6",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 44,
+      "size_bytes": 5996544,
+      "sha256": "e6edfa46ff2348471e76a374fd03272d4b6f9fa3f71df3eb5f58c316a4ddccf6",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 45,
+      "size_bytes": 7528448,
+      "sha256": "6cfe25e18f84030ccf486ad0e6dc0c8ad6788c75b02be33947b44de2a9efea87",
+      "source": "historical local archive; size matches current FC inventory"
+    },
+    {
+      "log": 46,
+      "size_bytes": 5124096,
+      "sha256": "11eb6cb40b22be630c434ce3bbe501298ac32cdb88b28ec6cd16e533fcc4041c",
+      "source": "new FC download; FC CRC32 and laptop SHA256 verified",
+      "fc_crc32": 3601569759
+    },
+    {
+      "log": 47,
+      "size_bytes": 6651084,
+      "sha256": "150a09edaf6b05b5475151c7f198866d9125a08166729d152c6500af2e5d708f",
+      "source": "new FC download; FC CRC32 and laptop SHA256 verified",
+      "fc_crc32": 2810859700
+    },
+    {
+      "log": 48,
+      "size_bytes": 10158080,
+      "sha256": "893ffa74ffab9d5b9868a8b29ee36717b4d39e8ff41e1ea2161a6ccd384773e2",
+      "source": "new FC download; FC CRC32 and laptop SHA256 verified",
+      "fc_crc32": 1137760390
+    },
+    {
+      "log": 49,
+      "size_bytes": 21110784,
+      "sha256": "1ee98670f54078c3cb903de3caed003d7d86ceed9e8ce781c7a96779cc012d43",
+      "source": "new FC download; FC CRC32 and laptop SHA256 verified",
+      "fc_crc32": 3632326675
+    },
+    {
+      "log": 50,
+      "size_bytes": 6787072,
+      "sha256": "5070b713024278370a511f0c339825f0844bf7fc254b40086e09fa03b734e4e6",
+      "source": "new FC download; FC CRC32 and laptop SHA256 verified",
+      "fc_crc32": 1330006828
+    }
+  ]
+}

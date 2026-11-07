@@ -1,0 +1,14 @@
+[Unit]
+Description=Packet passive flight telemetry and landing summary
+After=packet-tunnel.service
+
+[Service]
+User=packet
+WorkingDirectory=/home/packet/companion
+ExecStart=/home/packet/companion/.venv/bin/python -u flight_recorder.py
+Restart=always
+RestartSec=2
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

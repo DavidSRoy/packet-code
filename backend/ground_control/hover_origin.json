@@ -1,0 +1,7 @@
+{
+  "latitude": 47.6625072,
+  "longitude": -122.2951904,
+  "altitude_msl_m": 18.79,
+  "source": "logs/track/2026-11-03_142805.csv, time 1793745211.75, 11 satellites",
+  "purpose": "Persistent geographic reference for local box-camera hover; not a current GPS fix. Update when relocating the test site."
+}

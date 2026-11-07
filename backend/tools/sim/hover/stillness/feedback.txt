@@ -1,0 +1,10 @@
+8 runs in 102 s
+run                         status        xy_rms_mm    xy_p95_mm    xy_max_mm    x_mean_mm    y_mean_mm     z_rms_mm     z_max_mm tilt_rms_deg tilt_hp_rms_ tilt_hp_p99_ rate_hp_rms_ tilt_peak_hz   settle10_s
+still_feedback_velocity_noise_01ok (force          3.96         6.15         7.04         0.69        -2.15         3.26         7.65         0.27         0.24         0.48         3.04         0.18         0.00
+still_feedback_velocity_noise_02ok (force          4.23         6.46         7.16         1.15        -2.53         3.09         6.51         0.27         0.24         0.48         3.03         0.18         0.00
+still_feedback_position_onlyok (force          4.24         6.52         7.09         1.23        -2.48         3.02         6.55         0.28         0.24         0.47         3.03         0.18         0.00
+still_feedback_velocity_filter_2ok (force          4.49         7.00         8.78         0.10        -1.76         3.48         8.44         0.33         0.27         0.52         3.17         1.14         0.00
+still_feedback_velocity_filter_4ok (force          4.13         6.38         8.31         0.20        -1.76         3.47         7.48         0.30         0.26         0.53         3.15         1.14         0.00
+still_feedback_less_integralok (force          5.08         7.83         8.43         1.88        -2.40         5.10         9.87         0.26         0.23         0.46         2.97         0.18         2.46
+still_feedback_less_positionok (force          5.46         8.42        10.44         1.42        -3.05         4.86         9.22         0.26         0.22         0.44         2.89         0.18         8.87
+still_feedback_strong_velocityok (force          3.46         5.48         5.99         0.51        -1.48         4.71         9.10         0.28         0.28         0.57         3.51         0.14         0.00

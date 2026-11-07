@@ -14,6 +14,8 @@ Laptop side: tools/mav_ssh.py (an SSH ProxyCommand).
 import os
 os.environ.setdefault("MAVLINK20", "1")   # TUNNEL is a MAVLink2-only message
 import argparse
+import errno
+import collections
 import select
 import socket
 import time
@@ -32,7 +34,50 @@ a = ap.parse_args()
 COMP = mavutil.mavlink.MAV_COMP_ID_ONBOARD_COMPUTER   # 191
 fc = mavutil.mavlink_connection(a.dev, baud=a.baud, source_system=1, source_component=COMP)
 fc.mav.srcSystem, fc.mav.srcComponent = 1, COMP
-local = None if a.local == "none" else mavutil.mavlink_connection(a.local, source_system=1, source_component=COMP)
+class SharedUDP(mavutil.mavudp):
+    """Retain the sender address so bulk replies go only to their requester."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pending_messages = collections.deque()
+        self.peer_parsers = {}
+
+    def recv_msg(self):
+        self.pre_message()
+        if not self.pending_messages:
+            data = self.recv()
+            if not data:
+                return None
+            peer = self.last_peer
+            decoder = self.peer_parsers.get(peer)
+            if decoder is None:
+                decoder = mavutil.mavlink.MAVLink(None)
+                decoder.robust_parsing = True
+                self.peer_parsers[peer] = decoder
+            for msg in decoder.parse_buffer(data) or []:
+                self.pending_messages.append((peer, msg))
+            for stale in set(self.peer_parsers) - self.clients:
+                self.peer_parsers.pop(stale, None)
+        if not self.pending_messages:
+            return None
+        self.last_peer, msg = self.pending_messages.popleft()
+        self.post_message(msg)
+        return msg
+
+    def recv(self, n=None):
+        try:
+            data, peer = self.port.recvfrom(65535)
+        except OSError as exc:
+            if exc.errno in (errno.EAGAIN, errno.EWOULDBLOCK, errno.ECONNREFUSED):
+                return b''
+            raise
+        self.last_peer = peer
+        self.clients.add(peer)
+        self.clients_last_alive[peer] = time.time()
+        return data
+
+local = None if a.local == "none" else SharedUDP(a.local.removeprefix('udpin:'), input=True, source_system=1, source_component=COMP, timeout=10)
+peers = {}
+log_peer = None
 
 sessions = {}   # (sysid, compid, session) -> {"stream", "sock", "peer"}
 next_hb = 0.0
@@ -78,7 +123,7 @@ while True:
         next_hb = now + 1.0
 
     busy = False
-    while True:
+    for _ in range(64):
         m = fc.recv_msg()
         if m is None:
             break
@@ -109,15 +154,26 @@ while True:
                     close(key, "peer closed")
         elif local is not None and t != "BAD_DATA":
             try:
-                local.write(m.get_msgbuf())
+                if t in ('LOG_DATA', 'LOG_ENTRY'):
+                    if log_peer is not None:
+                        local.port.sendto(m.get_msgbuf(), log_peer)
+                elif t == 'FILE_TRANSFER_PROTOCOL':
+                    peer = peers.get((m.target_system, m.target_component))
+                    if peer:
+                        local.port.sendto(m.get_msgbuf(), peer)
+                else:
+                    local.write(m.get_msgbuf())
             except OSError:
                 pass
 
     if local is not None:
-        while True:
+        for _ in range(32):
             q = local.recv_msg()
             if q is None or q.get_type() == "BAD_DATA":
                 break
+            peers[(q.get_srcSystem(), q.get_srcComponent())] = local.last_peer
+            if q.get_type() in ('LOG_REQUEST_LIST', 'LOG_REQUEST_DATA'):
+                log_peer = local.last_peer
             fc.write(q.get_msgbuf())
 
     socks = {s["sock"]: k for k, s in sessions.items()}

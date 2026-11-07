@@ -1,0 +1,106 @@
+# V7 control experiments — unfinished
+
+Offline single-axis experiments and an isolated full ArduPilot SITL controller
+overlay. None connects to hardware or qualifies a controller for flight. V6
+remains the physical baseline. See `firmware/README.md` for the SITL build.
+
+## Acceptance
+
+The user accepts **smooth gust correction, then stillness**. Brief leaning during
+an externally specified gust is allowed. Settled hover retains the provisional
+absolute limits: each roll/pitch/yaw axis below 0.1 degrees peak-to-peak and each
+XYZ axis below 2 mm peak-to-peak for at least 20 seconds. Ordinary sustained
+rocking must not be relabelled as gust response. Gust tests must report peak
+displacement, recovery time and residual rocking separately. A numerical gust
+recovery deadline has not yet been established.
+
+The original linear screens have no position dynamics. The full SITL runs now
+include the actual estimator, position loop and mixer. Neither experiment set
+has met the absolute targets or qualified physical flight.
+
+## Findings
+
+- The fixed motor-delay predictor improves nominal motion but deteriorates or
+  becomes unstable with slower actuators. It is rejected as a flight candidate.
+- A simulation-only multisine probe fits actuator gain, delay and lag using a
+  known independent excitation. This is not an authorized physical probe.
+- LQG with models fitted from those probes stays below the bench's 25-degree
+  instability cutoff in 12/12 held-out disturbance/noise runs for each of two
+  control-effort weights. This is a finite-run screen, not proof of stability.
+- With effort weight 0.001, peak-to-peak angle is 0.217–0.476 degrees; maximum
+  normalized output reaches 0.310. With weight 0.01, motion is 0.315–0.592
+  degrees and maximum output 0.060. **Both fail the 0.1-degree target.** Physical
+  mixer authority and motor headroom have not been tested.
+
+The reference PID is an approximation, not bit-exact ArduPilot. Sensor noise is
+independent and simplified; real AHRS correlations, outer-loop commands, yaw,
+thrust coupling, motor mixing, saturation allocation and camera outages are
+absent. No improvement percentage here establishes a real-flight improvement.
+
+`force_batches.py` inspects sparse high-rate accelerometer windows from log 49.
+Its force residual is sensitive to alignment and calibration and is averaged
+over short windows separated by gaps. It is not independent continuous force
+ground truth and must not justify reducing disturbance strength just to pass.
+
+## Reproduce
+
+From `backend`, with requirements plus SciPy installed:
+
+```sh
+python -m unittest discover -s tools/sim/hover/control_lab -p 'test_*.py'
+python tools/sim/hover/control_lab/screen.py
+python tools/sim/hover/control_lab/identify_probe.py
+python tools/sim/hover/control_lab/screen_lqg.py
+python tools/sim/hover/control_lab/validate_identified.py
+```
+
+JSON files retain failed cases as well as successful finite-run screens.
+
+## Full-firmware iteration
+
+- `full_sitl.json`: first integration, gyro observation delay omitted. Stronger
+  banks caused ~6 Hz rocking; rejected.
+- `sitl_sensor_fit.json`: position-aligned truth comparison exposed approximately
+  7 ms of extra gyro-path delay. This identifies the simulator sensor path, not
+  new physical hardware parameters.
+- `delay_sitl.json`: a 7.5 ms observation history corrected that model mismatch.
+  Bank 2 reduced faster rocking RMS from about 0.25 to 0.13 degrees in this
+  exploratory seed and yaw peak-to-peak from 1.50 to 0.21 degrees, but roll/pitch
+  remained 1.35/1.19 degrees and XYZ motion remained far above target.
+- `outer_sitl.json`: 12 position-loop combinations. Several aggressive settings
+  triggered simulated takeoff/tilt aborts. Gentler settings traded motion for
+  drift; no complete target pass. Failures are retained in the metrics.
+- `feedforward_sitl.json`: subsequent attitude-rate feedforward, gust and motor
+  mismatch tests. Consult its metrics for outcomes; no claim of qualification.
+
+The first integration is reproducible with `generate.py --gyro-delay 0`; the
+corrected observer uses the default `--gyro-delay 0.0075`. Feedforward is disabled
+unless `CC1_PARAM3=1`. Run names separate the historical controller versions.
+`score_full_sitl.py` verifies the experimental controller ran during the hold
+and includes every XYZ/RPY axis in acceptance. Gust recovery requires a full
+20-second stillness window and return within 2 mm per axis of the pre-gust mean;
+this is an additional engineering check, not permission to relabel baseline
+wobble as a gust. No numerical recovery-time deadline is asserted.
+
+## Rejected robustness assumption
+
+`conservative_sitl.json` designs the observer/controller for 45 ms motor delay
+and 25 ms lag, then evaluates nominal and slow plants using held-out seed 43.
+Use `generate.py --motor-delay .045 --motor-tau .025` to reproduce that build.
+The change does not solve model uncertainty: nominal-plant roll/pitch ranges
+exceed 5 degrees in two completed cases. This design is rejected. The checked-in
+matrices have been restored to the nominal 30 ms / 15 ms model; they remain
+experimental and unqualified. `lqg_reject_800hz` intentionally verifies refusal
+of custom activation at an unsupported scheduler rate, before arming.
+
+The nominal feedforward bank-1 run has XYZ ranges 11.38/12.26/15.26 mm and RPY
+ranges 1.183/1.111/0.281 degrees. Both slower-motor feedforward cases disarm after
+exceeding the simulator's tilt guard. Gust runs complete but never attain the
+required persistent stillness. No experiment meets the complete user target.
+
+Independent review prompted fixes for two scoring loopholes (late rocking after
+an initially quiet interval and incomplete truth/controller-log coverage), plus
+an unsupported-rate fallback that could reset main-controller integrators.
+Scoring now requires continued stillness through the remaining recorded
+interval, complete sampled coverage, and frontend activation refusal at
+unsupported loop rates. Failed historical runs have been rescored.

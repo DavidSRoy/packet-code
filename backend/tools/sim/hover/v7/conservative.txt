@@ -1,0 +1,8 @@
+6 runs in 123 s
+run                         status        xy_rms_mm    xy_p95_mm    xy_max_mm    x_mean_mm    y_mean_mm     z_rms_mm     z_max_mm tilt_rms_deg tilt_hp_rms_ tilt_hp_p99_ rate_hp_rms_ tilt_peak_hz   settle10_s
+v7safe_nom1_p26a6           ok (force          4.19         6.68         7.78         0.18        -2.01         3.48         7.52         0.29         0.26         0.52         3.06         0.18         0.00
+v7safe_strong_p26a6         ok (force          4.13         6.76         9.31         1.25        -0.12         2.75         6.42         0.25         0.19         0.42         3.06         0.32         2.02
+v7safe_nom1_p26a75          ok (force          4.03         6.27         8.03         0.23        -1.90         3.55         7.45         0.28         0.24         0.49         3.09         0.18         0.00
+v7safe_strong_p26a75        ok (force          3.99         6.44         8.93         1.23        -0.15         2.71         6.19         0.24         0.19         0.42         3.29         0.32         2.00
+v7safe_nom1_p24a75          ok (force          4.03         6.39         8.15         0.11        -1.88         3.51         7.30         0.29         0.27         0.54         3.24         0.18         0.00
+v7safe_strong_p24a75        ok (force          4.03         6.67         8.82         1.24        -0.21         2.74         6.64         0.25         0.20         0.44         3.07         0.32         2.07

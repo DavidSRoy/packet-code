@@ -1,0 +1,302 @@
+[
+  {
+    "name": "lqg_outer_damped_slow_b1",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 28.045422226998156,
+    "position_ptp_mm": [
+      13.64936866351961,
+      16.188998700485826,
+      17.589680269153252
+    ],
+    "angle_ptp_deg": [
+      1.1909843701934444,
+      1.0944102314943107,
+      0.2725348103887082
+    ],
+    "score": {
+      "settle10_s": 18.521984562063217,
+      "roll_ptp_deg": 1.1909843701934444,
+      "pitch_ptp_deg": 1.0944102314943107,
+      "tilt_1_3_rms_deg": 0.16755101306860049,
+      "tilt_hp_rms_deg": 0.1739431990264902,
+      "tilt_hp_p99_deg": 0.36752507088232045,
+      "hold_s": 28.045422226998156,
+      "xy_rms_mm": 7.5444028954122375,
+      "xy_max_mm": 13.990159651559749,
+      "xy_p95_mm": 12.20071101167893,
+      "x_mean_mm": 1.038013757349577,
+      "y_mean_mm": -5.36959680120081,
+      "z_rms_mm": 4.075006608749958,
+      "z_max_mm": 11.250491001760372,
+      "tilt_rms_deg": 0.21976061483660167,
+      "rate_hp_rms_dps": 2.3470985090369245,
+      "tilt_peak_hz": 0.14262791941535524,
+      "xy_peak_hz": 0.24959885897687167
+    },
+    "custom_samples": 281,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.06266245245933533,
+      0.051546089351177216,
+      0.05947159230709076
+    ],
+    "meets_target": false
+  },
+  {
+    "name": "lqg_outer_damped_slow_b2",
+    "status": "takeoff aborted (HOPT 9, armed True)",
+    "custom_control": true,
+    "meets_target": false
+  },
+  {
+    "name": "lqg_outer_damped_mid_b1",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 28.033261573776898,
+    "position_ptp_mm": [
+      9.158688952263201,
+      10.22248244522633,
+      17.429942896449557
+    ],
+    "angle_ptp_deg": [
+      1.8621580412922467,
+      1.7064690035073038,
+      0.27948946844485534
+    ],
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.8621580412922467,
+      "pitch_ptp_deg": 1.7064690035073038,
+      "tilt_1_3_rms_deg": 0.3466069897938335,
+      "tilt_hp_rms_deg": 0.3505112340836069,
+      "tilt_hp_p99_deg": 0.720674721672025,
+      "hold_s": 28.033261573776898,
+      "xy_rms_mm": 3.3121801394582255,
+      "xy_max_mm": 7.064734861595891,
+      "xy_p95_mm": 5.539439519126129,
+      "x_mean_mm": -0.849213124387841,
+      "y_mean_mm": -1.2519562302503036,
+      "z_rms_mm": 4.045288128107415,
+      "z_max_mm": 11.647052752811666,
+      "tilt_rms_deg": 0.3122454576399834,
+      "rate_hp_rms_dps": 3.6706529736028926,
+      "tilt_peak_hz": 1.3197788478699357,
+      "xy_peak_hz": 0.2496878901375554
+    },
+    "custom_samples": 280,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.08265700936317444,
+      0.054749976843595505,
+      0.06312283128499985
+    ],
+    "meets_target": false
+  },
+  {
+    "name": "lqg_outer_damped_mid_b2",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 28.0120552100094,
+    "position_ptp_mm": [
+      8.518585006601027,
+      10.165967371013881,
+      18.320292869544396
+    ],
+    "angle_ptp_deg": [
+      1.4187721378323177,
+      1.392927747726985,
+      0.1970532441090444
+    ],
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.4187721378323177,
+      "pitch_ptp_deg": 1.392927747726985,
+      "tilt_1_3_rms_deg": 0.2521319844599062,
+      "tilt_hp_rms_deg": 0.2561562490593409,
+      "tilt_hp_p99_deg": 0.5504754535355117,
+      "hold_s": 28.0120552100094,
+      "xy_rms_mm": 3.9875574195155528,
+      "xy_max_mm": 9.156345001924512,
+      "xy_p95_mm": 6.764109165046207,
+      "x_mean_mm": 1.2988865989200957,
+      "y_mean_mm": -2.750691331600314,
+      "z_rms_mm": 4.118797980649779,
+      "z_max_mm": 12.102598088809396,
+      "tilt_rms_deg": 0.2604570362462781,
+      "rate_hp_rms_dps": 3.1470940162845906,
+      "tilt_peak_hz": 0.14279339580557388,
+      "xy_peak_hz": 0.2498884426597543
+    },
+    "custom_samples": 280,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.09077674150466919,
+      0.08688152581453323,
+      0.09584255516529083
+    ],
+    "meets_target": false
+  },
+  {
+    "name": "lqg_outer_damped_fast_b1",
+    "status": "disarmed in the hold",
+    "custom_control": true,
+    "meets_target": false
+  },
+  {
+    "name": "lqg_outer_damped_fast_b2",
+    "status": "disarmed in the hold",
+    "custom_control": true,
+    "meets_target": false
+  },
+  {
+    "name": "lqg_outer_stiff_b1",
+    "status": "disarmed in the hold",
+    "custom_control": true,
+    "meets_target": false
+  },
+  {
+    "name": "lqg_outer_stiff_b2",
+    "status": "disarmed in the hold",
+    "custom_control": true,
+    "meets_target": false
+  },
+  {
+    "name": "lqg_outer_integral_light_b1",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 28.010519433526483,
+    "position_ptp_mm": [
+      11.849032178194403,
+      14.356757135842052,
+      14.835063077428822
+    ],
+    "angle_ptp_deg": [
+      1.2916568444624403,
+      1.1137644134680624,
+      0.29649256136032665
+    ],
+    "score": {
+      "settle10_s": 16.497738254021282,
+      "roll_ptp_deg": 1.2916568444624403,
+      "pitch_ptp_deg": 1.1137644134680624,
+      "tilt_1_3_rms_deg": 0.12601204188899506,
+      "tilt_hp_rms_deg": 0.1343654312833888,
+      "tilt_hp_p99_deg": 0.2838474894877543,
+      "hold_s": 28.010519433526483,
+      "xy_rms_mm": 5.283075181153578,
+      "xy_max_mm": 10.714250639309357,
+      "xy_p95_mm": 8.516837095309034,
+      "x_mean_mm": 0.6061464030637913,
+      "y_mean_mm": -3.0499624597553487,
+      "z_rms_mm": 4.107718716765721,
+      "z_max_mm": 7.797053749916044,
+      "tilt_rms_deg": 0.2281868134646251,
+      "rate_hp_rms_dps": 2.1523644912338833,
+      "tilt_peak_hz": 0.14279339580557388,
+      "xy_peak_hz": 0.2498884426597543
+    },
+    "custom_samples": 280,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.05677361786365509,
+      0.04491611570119858,
+      0.056017108261585236
+    ],
+    "meets_target": false
+  },
+  {
+    "name": "lqg_outer_integral_light_b2",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 28.01295144784943,
+    "position_ptp_mm": [
+      12.065513286054388,
+      14.214904857286944,
+      14.592539027182438
+    ],
+    "angle_ptp_deg": [
+      1.150527851691532,
+      1.0272487116077005,
+      0.210723413114769
+    ],
+    "score": {
+      "settle10_s": 16.512782737081373,
+      "roll_ptp_deg": 1.150527851691532,
+      "pitch_ptp_deg": 1.0272487116077005,
+      "tilt_1_3_rms_deg": 0.10744135980537244,
+      "tilt_hp_rms_deg": 0.11432372286320135,
+      "tilt_hp_p99_deg": 0.24225348153122694,
+      "hold_s": 28.01295144784943,
+      "xy_rms_mm": 5.303870237148133,
+      "xy_max_mm": 11.293622819520198,
+      "xy_p95_mm": 8.47270083366495,
+      "x_mean_mm": -0.15230592555563396,
+      "y_mean_mm": -3.072972651760882,
+      "z_rms_mm": 3.7843278844319217,
+      "z_max_mm": 7.348444595652509,
+      "tilt_rms_deg": 0.21603953199742104,
+      "rate_hp_rms_dps": 2.107017782081152,
+      "tilt_peak_hz": 0.17849174475696733,
+      "xy_peak_hz": 0.2498884426597543
+    },
+    "custom_samples": 280,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.09305017441511154,
+      0.08008987456560135,
+      0.07361646741628647
+    ],
+    "meets_target": false
+  },
+  {
+    "name": "lqg_outer_integral_mid_b1",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 28.006793255973932,
+    "position_ptp_mm": [
+      8.85301249126323,
+      12.189489089803587,
+      17.3442940136333
+    ],
+    "angle_ptp_deg": [
+      1.8011353513046517,
+      1.4693596535478994,
+      0.29279278958859656
+    ],
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.8011353513046517,
+      "pitch_ptp_deg": 1.4693596535478994,
+      "tilt_1_3_rms_deg": 0.2588136879177927,
+      "tilt_hp_rms_deg": 0.2653873918955835,
+      "tilt_hp_p99_deg": 0.5635859760742723,
+      "hold_s": 28.006793255973932,
+      "xy_rms_mm": 4.011251800185668,
+      "xy_max_mm": 7.778057513351253,
+      "xy_p95_mm": 6.1796311265663215,
+      "x_mean_mm": 0.7902631119769294,
+      "y_mean_mm": -2.530651996370741,
+      "z_rms_mm": 4.0857327518792355,
+      "z_max_mm": 10.079698607623117,
+      "tilt_rms_deg": 0.2790150106518901,
+      "rate_hp_rms_dps": 2.902678469396326,
+      "tilt_peak_hz": 1.3210747121318809,
+      "xy_peak_hz": 0.24993305364657203
+    },
+    "custom_samples": 280,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.05869734659790993,
+      0.05372050404548645,
+      0.05986741930246353
+    ],
+    "meets_target": false
+  },
+  {
+    "name": "lqg_outer_integral_mid_b2",
+    "status": "takeoff aborted (HOPT 9, armed True)",
+    "custom_control": true,
+    "meets_target": false
+  }
+]

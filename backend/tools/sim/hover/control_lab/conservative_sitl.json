@@ -1,0 +1,205 @@
+[
+  {
+    "name": "lqg_conservative_b0_nominal",
+    "flown": "tools/sim/hover/flown_log49.parm",
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "height": 0.1,
+    "hold": 30,
+    "seed": 43,
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "CC_TYPE=1",
+      "CC_AXIS_MASK=7",
+      "CC1_PARAM1=0",
+      "CC1_PARAM2=0.15",
+      "CC1_PARAM3=1"
+    ],
+    "custom_control": true
+  },
+  {
+    "name": "lqg_conservative_b0_slow",
+    "flown": "tools/sim/hover/flown_log49.parm",
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "height": 0.1,
+    "hold": 30,
+    "seed": 43,
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004",
+      "motor_delay=0.045",
+      "motor_tau=0.025"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "CC_TYPE=1",
+      "CC_AXIS_MASK=7",
+      "CC1_PARAM1=0",
+      "CC1_PARAM2=0.15",
+      "CC1_PARAM3=1"
+    ],
+    "custom_control": true
+  },
+  {
+    "name": "lqg_conservative_b1_nominal",
+    "flown": "tools/sim/hover/flown_log49.parm",
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "height": 0.1,
+    "hold": 30,
+    "seed": 43,
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "CC_TYPE=1",
+      "CC_AXIS_MASK=7",
+      "CC1_PARAM1=1",
+      "CC1_PARAM2=0.15",
+      "CC1_PARAM3=1"
+    ],
+    "custom_control": true
+  },
+  {
+    "name": "lqg_conservative_b1_slow",
+    "flown": "tools/sim/hover/flown_log49.parm",
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "height": 0.1,
+    "hold": 30,
+    "seed": 43,
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004",
+      "motor_delay=0.045",
+      "motor_tau=0.025"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "CC_TYPE=1",
+      "CC_AXIS_MASK=7",
+      "CC1_PARAM1=1",
+      "CC1_PARAM2=0.15",
+      "CC1_PARAM3=1"
+    ],
+    "custom_control": true
+  },
+  {
+    "name": "lqg_conservative_b2_nominal",
+    "flown": "tools/sim/hover/flown_log49.parm",
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "height": 0.1,
+    "hold": 30,
+    "seed": 43,
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "CC_TYPE=1",
+      "CC_AXIS_MASK=7",
+      "CC1_PARAM1=2",
+      "CC1_PARAM2=0.15",
+      "CC1_PARAM3=1"
+    ],
+    "custom_control": true
+  },
+  {
+    "name": "lqg_conservative_b2_slow",
+    "flown": "tools/sim/hover/flown_log49.parm",
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "height": 0.1,
+    "hold": 30,
+    "seed": 43,
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004",
+      "motor_delay=0.045",
+      "motor_tau=0.025"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "CC_TYPE=1",
+      "CC_AXIS_MASK=7",
+      "CC1_PARAM1=2",
+      "CC1_PARAM2=0.15",
+      "CC1_PARAM3=1"
+    ],
+    "custom_control": true
+  },
+  {
+    "name": "lqg_reject_800hz",
+    "flown": "tools/sim/hover/flown_log49.parm",
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "height": 0.1,
+    "hold": 30,
+    "seed": 1,
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "CC_TYPE=1",
+      "CC_AXIS_MASK=7",
+      "CC1_PARAM1=0",
+      "CC1_PARAM2=0.15",
+      "SCHED_LOOP_RATE=800"
+    ],
+    "custom_control": true
+  }
+]

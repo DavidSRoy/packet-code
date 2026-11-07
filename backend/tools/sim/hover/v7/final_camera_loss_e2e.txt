@@ -1,0 +1,120 @@
+1794032069.283 FC: RCInput: decoding UDP (Pulses)
+1794032069.390 FC: Calibrating barometer
+1794032070.996 FC: Barometer 1 calibration complete
+1794032070.996 FC: Barometer 2 calibration complete
+1794032071.527 FC: INS: alloc 6144 bytes for ISB (free=524288)
+1794032071.527 FC: ArduPilot Ready
+1794032071.527 FC: AHRS: DCM active
+1794032071.527 FC: Hop guard on (HOP_CH 12)
+1794032071.527 FC: HTO: hover takeoff script on
+1794032071.814 FC: RC7: SaveWaypoint LOW
+1794032072.465 param HTO_TRIM_P = 0.8500000238418579 (want 0.85)
+1794032072.973 param HTO_TRIM_R = 0.0 (want 0.0)
+1794032073.523 FC: EKF3 IMU0 initialised
+1794032073.523 FC: EKF3 IMU1 initialised
+1794032073.523 FC: AHRS: EKF3 active
+1794032074.885 FC: EKF3 IMU0 tilt alignment complete
+1794032074.885 FC: EKF3 IMU1 tilt alignment complete
+1794032074.980 FC: EKF3 IMU0 MAG0 initial yaw alignment complete
+1794032074.980 FC: EKF3 IMU1 MAG0 initial yaw alignment complete
+1794032087.170 Cold-boot origin before press: None
+1794032087.170 pre-press: {'link': True, 'mode': 'STABILIZE', 'armed': False, 'pi_url': 'http://127.0.0.1:28621', 'rc_override_time': 0.30000001192092896, 'fc_params': {'VISO_TYPE': 1.0, 'EK3_SRC2_POSXY': 6.0, 'EK3_SRC2_POSZ': 6.0, 'EK3_SRC2_YAW': 6.0}, 'sd_stop': False, 'alt': 0.008, 'lat_fc': 0.0, 'lon_fc': 0.0, 'check': None}
+1794032087.170 hop status: {'state': 'arming', 'height': 0.1, 'reason': None}
+1794032087.276 FC: EKF3 IMU0 yaw aligned
+1794032087.276 FC: EKF3 IMU0 is using external nav data
+1794032087.276 FC: EKF3 IMU0 initial pos NED = -0.0,-0.0,-0.3 (m)
+1794032087.276 FC: EKF3 IMU0 initial vel NED = -0.0,-0.0,0.0 (m/s)
+1794032087.276 FC: EKF3 IMU1 yaw aligned
+1794032087.281 hop status: {'state': 'camera source', 'height': 0.1, 'reason': None}
+1794032087.283 FC: EKF3 IMU1 is using external nav data
+1794032087.284 FC: EKF3 IMU1 initial pos NED = -0.0,-0.0,-0.3 (m)
+1794032087.284 FC: EKF3 IMU1 initial vel NED = -0.0,-0.0,0.0 (m/s)
+1794032088.836 FC: EKF3 IMU0 origin set
+1794032088.836 FC: EKF3 IMU1 origin set
+1794032088.923 FC: Field Elevation Set: 19m
+1794032091.300 FC: Arm: Gyros inconsistent
+1794032091.849 FC: Arm: Gyros inconsistent
+1794032092.357 FC: Arm: Gyros inconsistent
+1794032092.914 FC: Arming motors
+1794032092.917 FC: HTO: takeoff, holding the start point
+1794032092.917 FC: Hop guard: hover on
+1794032093.722 hop status: {'state': 'climbing', 'height': 0.1, 'reason': None, 'offset': [0.0, 0.0], 'test_left': None, 'height_now': -0.001, 'drift_m': 0.001, 'pose': 'wifi', 'pose_age': 0.08}
+1794032097.019 FC: HTO: liftoff at T/W 0.80 (hover 0.80), slid 0.1 cm
+1794032098.507 FC: HTO: handed over at 1.5 cm climbing -0 cm/s, slid
+1794032098.507 FC: 0.1 cm
+1794032098.576 hop status: {'state': 'locked', 'height': 0.1, 'reason': None, 'offset': [0.0, 0.0], 'test_left': None, 'height_now': 0.002, 'drift_m': 0.008, 'pose': 'wifi', 'pose_age': 0.12}
+1794032100.556 hop status: {'state': 'locked', 'height': 0.1, 'reason': None, 'offset': [0.0, 0.0], 'test_left': 20.0, 'height_now': 0.004, 'drift_m': 0.006, 'pose': 'wifi', 'pose_age': 0.09}
+1794032116.404 hop status: {'state': 'landing', 'height': 0.1, 'reason': 'camera pose lost for 0.5 s'}
+1794032118.839 FC: Disarming motors
+1794032119.316 hop status: {'state': 'done', 'height': 0.1, 'reason': 'camera-loss landing ended; FC disarmed'}
+{
+ "final_status": {
+  "state": "done",
+  "height": 0.1,
+  "reason": "camera-loss landing ended; FC disarmed"
+ },
+ "events_rel_s": {
+  "press": 0.0,
+  "armed": 6.11,
+  "handover": 11.41,
+  "at height": 13.39,
+  "descend": 29.23,
+  "disarmed": 32.15
+ },
+ "start_fc": [
+  -0.000207,
+  0.00012800000000000002,
+  -0.6246766805648803
+ ],
+ "true_start": [
+  0.0,
+  0.0,
+  -0.29964205727499943
+ ],
+ "start_minus_true_mm": [
+  -0.21,
+  0.13,
+  -325.03
+ ],
+ "last_sample_minus_true_mm": [
+  -0.97,
+  1.25,
+  -322.67
+ ],
+ "start_window": {
+  "n_samples": 6,
+  "span_s": 1.001,
+  "match_err": 0.0004688721264298074,
+  "single_last_sample": [
+   -0.0009705207776278257,
+   0.0012507062638178468,
+   -0.6223160028457642
+  ],
+  "window_spread_mm": [
+   3.17,
+   1.42,
+   8.38
+  ]
+ },
+ "score": {
+  "settle10_s": 2.6710182029902327,
+  "roll_ptp_deg": 1.581008874187264,
+  "pitch_ptp_deg": 1.2822551444622023,
+  "tilt_1_3_rms_deg": 0.24494898086760186,
+  "tilt_hp_rms_deg": 0.25306305315164096,
+  "tilt_hp_p99_deg": 0.5657022666058953,
+  "hold_s": 13.846582543168601,
+  "xy_rms_mm": 4.05892455983184,
+  "xy_max_mm": 7.187547403065967,
+  "xy_p95_mm": 6.17173485521907,
+  "x_mean_mm": 1.45706376340902,
+  "y_mean_mm": -0.7725040516449316,
+  "z_rms_mm": 25.15813971587716,
+  "z_max_mm": 39.679372361581336,
+  "tilt_rms_deg": 0.2736615507063805,
+  "rate_hp_rms_dps": 3.1755262199535768,
+  "tilt_peak_hz": 0.722152012999393,
+  "xy_peak_hz": 0.3610760064996965
+ },
+ "sim_over_wall": 1.000074857853896
+}

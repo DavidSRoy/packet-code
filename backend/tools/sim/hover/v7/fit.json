@@ -1,0 +1,50 @@
+{
+  "source": "00000049.BIN",
+  "source_sha256": "1ee98670f54078c3cb903de3caed003d7d86ceed9e8ce781c7a96779cc012d43",
+  "train_s": [
+    150,
+    180
+  ],
+  "validation_s": [
+    180,
+    205
+  ],
+  "caveat": "Closed-loop regression can be biased by correlated disturbances. Lag/delay split is uncertain.",
+  "roll": {
+    "K": 58.80296135955491,
+    "tau_s": 0.016,
+    "delay_s": 0.038,
+    "train_r2": 0.2807691279364417,
+    "validation_r2": 0.25085977013731364,
+    "K_within_5pct_loss": [
+      49.833071232757625,
+      67.16821235954909
+    ],
+    "total_delay_within_5pct_loss_s": [
+      0.041999999999999996,
+      0.07600000000000001
+    ]
+  },
+  "pitch": {
+    "K": 49.14261156734341,
+    "tau_s": 0.014,
+    "delay_s": 0.042,
+    "train_r2": 0.42749009388033465,
+    "validation_r2": 0.4729510724404007,
+    "K_within_5pct_loss": [
+      45.421916881170475,
+      53.46487050950215
+    ],
+    "total_delay_within_5pct_loss_s": [
+      0.046,
+      0.07
+    ]
+  },
+  "camera": {
+    "processing_median_s": 0.06870007514953613,
+    "processing_p95_s": 0.1535300016403198,
+    "period_median_s": 0.09060001373291016,
+    "gap_p99_s": 0.18539700746536256,
+    "frames": 1003
+  }
+}

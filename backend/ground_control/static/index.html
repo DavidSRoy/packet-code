@@ -337,10 +337,10 @@
     <div><span class="lbl">Gnd speed</span><b id="v-gs">—<small>m/s</small></b></div>
     <div><span class="lbl">Heading</span><b id="v-hdg">—<small>°</small></b></div>
     <div><span class="lbl">From home</span><b id="v-home">—<small>m</small></b></div>
-    <div><span class="lbl">Cell</span><b id="v-cell">—<small>V</small></b></div>
+    <div><span class="lbl">Cell avg.</span><b id="v-cell">—<small>V</small></b></div>
     <div><span class="lbl">Current</span><b id="v-amp">—<small>A</small></b></div>
     <div><span class="lbl">Sats</span><b id="v-sats">—</b></div>
-    <div><span class="lbl">Battery</span><b id="v-pct">—<small>%</small></b></div>
+    <div><span class="lbl">Battery</span><b id="v-pct">—<small>%</small></b><span class="lbl" id="v-pack">— V pack</span></div>
     <div><span class="lbl">Time left</span><b id="v-tleft">—<small>min</small></b></div>
   </div>
   <div class="battbar"><div class="track"><div class="fill" id="b-fill"></div></div>
@@ -1148,6 +1148,7 @@ function render(down) {
   setNum("v-amp", fx(s.batt_a));
   setNum("v-sats", s.sats != null ? String(s.sats) : "—");
   setNum("v-pct", pct != null ? String(pct) : "—");
+  $("v-pack").textContent = s.batt_v != null ? `${s.batt_v.toFixed(2)} V pack` : "— V pack";
   setNum("v-tleft", s.batt_min != null ? (s.armed ? "" : "~") + s.batt_min.toFixed(1) : "—");
   $("b-fill").style.width = `${pct != null ? Math.max(0, Math.min(100, pct)) : 0}%`;
   $("b-fill").className = "fill " + (bcls === "ok" ? "" : bcls);

@@ -175,4 +175,11 @@ class CameraLanding(unittest.TestCase):
         h.link.set_mode.assert_not_called()
         h.link.command.assert_not_called()
 
+class ArmRefusal(unittest.TestCase):
+    def test_current_fc_reason_is_shown_instead_of_generic_failure(self):
+        h = Hop.__new__(Hop); h.link = Mock()
+        h.link.messages = [(9, 2, 'Arm: old error'), (11, 2, 'Arm: Internal errors 0x100000 l:66 flow_of_ctrl'), (12, 6, 'Lights: status')]
+        self.assertEqual(h.arm_refusal(10), 'Arm: Internal errors 0x100000 l:66 flow_of_ctrl')
+        self.assertEqual(h.arm_refusal(13), 'drone refused to arm; no reason received from the FC')
+
 if __name__ == '__main__': unittest.main()

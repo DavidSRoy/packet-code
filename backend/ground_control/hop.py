@@ -274,6 +274,12 @@ class Hop:
         if self.active:
             self.kill(why)
 
+    def arm_refusal(self, since):
+        for stamp, severity, text in reversed(self.link.messages):
+            if stamp >= since and text.startswith(("Arm:", "PreArm:")):
+                return text
+        return "drone refused to arm; no reason received from the FC"
+
     def camera_loss_land(self, held):
         """Hand off to the FC's LAND controller; never force-disarm for camera loss.
 
@@ -510,10 +516,11 @@ class Hop:
                 return
             if s["mode"] != "GUIDED":
                 return self.kill("the drone did not enter GUIDED (no position from the camera?)")
+            arm_since = time.time()
             if not keep(lambda: s["armed"], lambda: L.command(MAV.MAV_CMD_COMPONENT_ARM_DISARM, 1), 3.0):
                 return
             if not s["armed"]:
-                return self.kill("drone refused to arm (see its PreArm message)")
+                return self.kill(self.arm_refusal(arm_since))
             t_to = time.time()
             if not wait(lambda: False, 0.4):                   # a datum reset at arming shows within this
                 return

@@ -1,0 +1,39 @@
+{
+  "caveat": "Necessary-bound diagnostic, NOT a flight controller or hardware feasibility proof.\nSmall-angle, per-world-axis ideal control with no sensing/motor lag or rate limits.\nDisturbance reconstructed from simulator truth and logged motor thrust.\nFinite differences and small-angle dynamics introduce approximation error.\n",
+  "hold_s": 28.014999097353858,
+  "grids": {
+    "0.025": {
+      "world_angle_half_range_rad": 0.0008966207244452847,
+      "minimum_common_target_scale": {
+        "N": 4.323315209676446,
+        "E": 3.960426600841792
+      },
+      "disturbance_std_mps2": [
+        0.02846960255011849,
+        0.03090245536400139
+      ]
+    },
+    "0.05": {
+      "world_angle_half_range_rad": 0.0008966207244452847,
+      "minimum_common_target_scale": {
+        "N": 4.323554169721683,
+        "E": 3.960239069615216
+      },
+      "disturbance_std_mps2": [
+        0.028243567687560915,
+        0.030682425157922275
+      ]
+    },
+    "0.1": {
+      "world_angle_half_range_rad": 0.0008966207244452847,
+      "minimum_common_target_scale": {
+        "N": 4.322179409473073,
+        "E": 3.9586905839113258
+      },
+      "disturbance_std_mps2": [
+        0.02778823140779884,
+        0.03027518525575917
+      ]
+    }
+  }
+}

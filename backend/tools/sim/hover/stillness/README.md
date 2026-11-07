@@ -39,3 +39,14 @@ partly fitted assumptions; this does not establish a physical propeller/frame/mo
 
 See `RESULTS.md` for observations and the gap to the target. All tests use localhost SITL;
 no physical flight, parameter update or service restart is performed.
+
+Further in-progress searches: `response.json` (10 cases) and `response_metrics.json`.
+The ideal-controller diagnostic is reproducible with scipy:
+
+```sh
+uv run --with-requirements requirements.txt --with scipy python tools/sim/hover/stillness/test_ideal_bound.py
+uv run --with-requirements requirements.txt --with scipy python tools/sim/hover/stillness/ideal_bound.py
+```
+
+The optimizer is a feasibility diagnostic on a fixed synthetic disturbance history, not a
+flight-control implementation, permission to relax targets, or proof of hardware limitations.

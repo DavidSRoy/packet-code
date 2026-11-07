@@ -1,8 +1,8 @@
 # V7 control experiments — unfinished
 
-Offline single-axis linear experiments only. These scripts do not connect to
-hardware, replace ArduPilot, or qualify a controller for flight. V6 remains the
-physical baseline.
+Offline single-axis experiments and an isolated full ArduPilot SITL controller
+overlay. None connects to hardware or qualifies a controller for flight. V6
+remains the physical baseline. See `firmware/README.md` for the SITL build.
 
 ## Acceptance
 
@@ -14,8 +14,9 @@ rocking must not be relabelled as gust response. Gust tests must report peak
 displacement, recovery time and residual rocking separately. A numerical gust
 recovery deadline has not yet been established.
 
-These experiments have no position dynamics or gust-recovery qualification;
-none demonstrates those requirements.
+The original linear screens have no position dynamics. The full SITL runs now
+include the actual estimator, position loop and mixer. Neither experiment set
+has met the absolute targets or qualified physical flight.
 
 ## Findings
 
@@ -54,3 +55,29 @@ python tools/sim/hover/control_lab/validate_identified.py
 ```
 
 JSON files retain failed cases as well as successful finite-run screens.
+
+## Full-firmware iteration
+
+- `full_sitl.json`: first integration, gyro observation delay omitted. Stronger
+  banks caused ~6 Hz rocking; rejected.
+- `sitl_sensor_fit.json`: position-aligned truth comparison exposed approximately
+  7 ms of extra gyro-path delay. This identifies the simulator sensor path, not
+  new physical hardware parameters.
+- `delay_sitl.json`: a 7.5 ms observation history corrected that model mismatch.
+  Bank 2 reduced faster rocking RMS from about 0.25 to 0.13 degrees in this
+  exploratory seed and yaw peak-to-peak from 1.50 to 0.21 degrees, but roll/pitch
+  remained 1.35/1.19 degrees and XYZ motion remained far above target.
+- `outer_sitl.json`: 12 position-loop combinations. Several aggressive settings
+  triggered simulated takeoff/tilt aborts. Gentler settings traded motion for
+  drift; no complete target pass. Failures are retained in the metrics.
+- `feedforward_sitl.json`: subsequent attitude-rate feedforward, gust and motor
+  mismatch tests. Consult its metrics for outcomes; no claim of qualification.
+
+The first integration is reproducible with `generate.py --gyro-delay 0`; the
+corrected observer uses the default `--gyro-delay 0.0075`. Feedforward is disabled
+unless `CC1_PARAM3=1`. Run names separate the historical controller versions.
+`score_full_sitl.py` verifies the experimental controller ran during the hold
+and includes every XYZ/RPY axis in acceptance. Gust recovery requires a full
+20-second stillness window and return within 2 mm per axis of the pre-gust mean;
+this is an additional engineering check, not permission to relabel baseline
+wobble as a gust. No numerical recovery-time deadline is asserted.

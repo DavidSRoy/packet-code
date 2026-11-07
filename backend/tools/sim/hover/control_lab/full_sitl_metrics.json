@@ -1,0 +1,171 @@
+[
+  {
+    "name": "lqg_full_reference",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": false,
+    "hold_s": 28.020344669804032,
+    "position_ptp_mm": [
+      11.762035079712685,
+      11.409442004914862,
+      13.765311753404008
+    ],
+    "angle_ptp_deg": [
+      1.5472243936191852,
+      1.5989732668167083,
+      1.4974807933583798
+    ],
+    "score": {
+      "settle10_s": 0.30678049943569974,
+      "roll_ptp_deg": 1.5472243936191852,
+      "pitch_ptp_deg": 1.5989732668167083,
+      "tilt_1_3_rms_deg": 0.23726093360486344,
+      "tilt_hp_rms_deg": 0.24472473703563927,
+      "tilt_hp_p99_deg": 0.49704158522503766,
+      "hold_s": 28.020344669804032,
+      "xy_rms_mm": 3.9141796163667997,
+      "xy_max_mm": 7.3081676807409135,
+      "xy_p95_mm": 6.227738802373,
+      "x_mean_mm": 0.5889627604683624,
+      "y_mean_mm": -1.6841102536749453,
+      "z_rms_mm": 3.805260329618297,
+      "z_max_mm": 7.4653370304713915,
+      "tilt_rms_deg": 0.2768807085826449,
+      "rate_hp_rms_dps": 3.0950216986352843,
+      "tilt_peak_hz": 0.14274243911155815,
+      "xy_peak_hz": 0.24979926844522676
+    },
+    "meets_target": false
+  },
+  {
+    "name": "lqg_full_bank0",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 28.009621711499598,
+    "position_ptp_mm": [
+      15.827434449902286,
+      13.88307250541836,
+      14.458444194761888
+    ],
+    "angle_ptp_deg": [
+      1.6693496844137958,
+      1.5405857871578608,
+      0.4262957737058486
+    ],
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.6693496844137958,
+      "pitch_ptp_deg": 1.5405857871578608,
+      "tilt_1_3_rms_deg": 0.15290124520919174,
+      "tilt_hp_rms_deg": 0.16940416770273756,
+      "tilt_hp_p99_deg": 0.36567396518668405,
+      "hold_s": 28.009621711499598,
+      "xy_rms_mm": 4.873071073776666,
+      "xy_max_mm": 9.319404970960138,
+      "xy_p95_mm": 8.089896627480362,
+      "x_mean_mm": 0.8014248751037716,
+      "y_mean_mm": -2.427930544117135,
+      "z_rms_mm": 3.7769237148075883,
+      "z_max_mm": 7.34241333244115,
+      "tilt_rms_deg": 0.2877212577738212,
+      "rate_hp_rms_dps": 2.822189457085237,
+      "tilt_peak_hz": 0.9282399143171598,
+      "xy_peak_hz": 0.24991074616231226
+    },
+    "custom_samples": 280,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.04286763072013855,
+      0.03882819786667824,
+      0.05245688557624817
+    ],
+    "meets_target": false
+  },
+  {
+    "name": "lqg_full_bank1",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 28.02514087430154,
+    "position_ptp_mm": [
+      13.769603938340328,
+      12.611553349796635,
+      14.485498468005954
+    ],
+    "angle_ptp_deg": [
+      2.164432991877147,
+      1.9871474440328405,
+      0.25903735435178604
+    ],
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 2.164432991877147,
+      "pitch_ptp_deg": 1.9871474440328405,
+      "tilt_1_3_rms_deg": 0.14159997001406457,
+      "tilt_hp_rms_deg": 0.404826282191418,
+      "tilt_hp_p99_deg": 0.7561969369039143,
+      "hold_s": 28.02514087430154,
+      "xy_rms_mm": 4.630275594200353,
+      "xy_max_mm": 8.625588801631793,
+      "xy_p95_mm": 7.575205249669384,
+      "x_mean_mm": 0.9176239778209592,
+      "y_mean_mm": -2.48322289595879,
+      "z_rms_mm": 3.719696671070545,
+      "z_max_mm": 7.294069013085908,
+      "tilt_rms_deg": 0.3692301807399038,
+      "rate_hp_rms_dps": 14.952828600663121,
+      "tilt_peak_hz": 6.279546873611991,
+      "xy_peak_hz": 0.24975470520047688
+    },
+    "custom_samples": 280,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.15000000596046448,
+      0.15000000596046448,
+      0.06337270885705948
+    ],
+    "meets_target": false
+  },
+  {
+    "name": "lqg_full_bank2",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 28.016060508569282,
+    "position_ptp_mm": [
+      12.466674018516505,
+      12.367165907662587,
+      14.675116399713028
+    ],
+    "angle_ptp_deg": [
+      2.457654023904039,
+      2.404086052643791,
+      0.23075902011038055
+    ],
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 2.457654023904039,
+      "pitch_ptp_deg": 2.404086052643791,
+      "tilt_1_3_rms_deg": 0.17412557201694304,
+      "tilt_hp_rms_deg": 0.5664678878081837,
+      "tilt_hp_p99_deg": 0.9474492973472066,
+      "hold_s": 28.016060508569282,
+      "xy_rms_mm": 4.6301304202657265,
+      "xy_max_mm": 8.552768554914314,
+      "xy_p95_mm": 7.619120676787596,
+      "x_mean_mm": 1.3217910627,
+      "y_mean_mm": -2.522665995173304,
+      "z_rms_mm": 4.628574449806442,
+      "z_max_mm": 8.863089806849993,
+      "tilt_rms_deg": 0.45948998101755767,
+      "rate_hp_rms_dps": 19.571596737939185,
+      "tilt_peak_hz": 5.782616455475543,
+      "xy_peak_hz": 0.2498661431378321
+    },
+    "custom_samples": 280,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.15000000596046448,
+      0.15000000596046448,
+      0.10072395950555801
+    ],
+    "meets_target": false
+  }
+]

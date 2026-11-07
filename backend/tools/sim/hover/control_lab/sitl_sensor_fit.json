@@ -1,0 +1,65 @@
+[
+  {
+    "name": "lqg_full_reference",
+    "truth_clock_offset_s": 0.0200000000000001,
+    "clock_position_rms_mm": 0.02023443362955705,
+    "axes": [
+      {
+        "axis": 0,
+        "effective_gyro_hz": 40,
+        "extra_delay_s": 0.007,
+        "rate_residual_rms_dps": 0.1288089323093155,
+        "angle_error_std_deg": 0.012837605883817231
+      },
+      {
+        "axis": 1,
+        "effective_gyro_hz": 40,
+        "extra_delay_s": 0.007,
+        "rate_residual_rms_dps": 0.13134200359183104,
+        "angle_error_std_deg": 0.012260116015575404
+      }
+    ]
+  },
+  {
+    "name": "lqg_full_bank0",
+    "truth_clock_offset_s": 0.0195000000000001,
+    "clock_position_rms_mm": 0.025139555125454374,
+    "axes": [
+      {
+        "axis": 0,
+        "effective_gyro_hz": 60,
+        "extra_delay_s": 0.008,
+        "rate_residual_rms_dps": 0.15742756080712417,
+        "angle_error_std_deg": 0.013383992619592893
+      },
+      {
+        "axis": 1,
+        "effective_gyro_hz": 30,
+        "extra_delay_s": 0.005,
+        "rate_residual_rms_dps": 0.16271528319997822,
+        "angle_error_std_deg": 0.012375971136873247
+      }
+    ]
+  },
+  {
+    "name": "lqg_full_bank1",
+    "truth_clock_offset_s": 0.0200000000000001,
+    "clock_position_rms_mm": 0.022214470805067027,
+    "axes": [
+      {
+        "axis": 0,
+        "effective_gyro_hz": 60,
+        "extra_delay_s": 0.008,
+        "rate_residual_rms_dps": 1.1895133049791216,
+        "angle_error_std_deg": 0.0375966219328778
+      },
+      {
+        "axis": 1,
+        "effective_gyro_hz": 40,
+        "extra_delay_s": 0.007,
+        "rate_residual_rms_dps": 1.1795314310958602,
+        "angle_error_std_deg": 0.03718847136638514
+      }
+    ]
+  }
+]

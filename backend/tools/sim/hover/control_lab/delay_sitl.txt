@@ -1,0 +1,6 @@
+4 runs in 49 s
+run                         status        xy_rms_mm    xy_p95_mm    xy_max_mm    x_mean_mm    y_mean_mm     z_rms_mm     z_max_mm tilt_rms_deg tilt_hp_rms_ tilt_hp_p99_ rate_hp_rms_ tilt_peak_hz   settle10_s
+lqg_delay_reference         ok (force          4.11         6.55         7.23         0.91        -1.94         4.20         8.25         0.28         0.25         0.50         3.10         0.14         0.30
+lqg_delay_bank0             ok (force          4.54         7.83         8.91         0.55        -1.68         3.71         7.34         0.31         0.19         0.38         2.56         0.93         0.00
+lqg_delay_bank1             ok (force          4.62         7.60         8.49         1.19        -2.42         4.58         8.94         0.26         0.15         0.32         2.28         0.14         0.00
+lqg_delay_bank2             ok (force          4.67         7.79         8.85         1.32        -2.58         4.16         8.30         0.24         0.13         0.29         2.21         0.14         0.00

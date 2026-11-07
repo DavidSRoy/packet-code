@@ -21,6 +21,8 @@ def cmd_for(c, inst, speedup):
          "--hold", str(c.get("hold", 30)), "--height", str(c.get("height", 0.02)), "--seed", str(c.get("seed", 1))]
     if c.get("flown"):
         a += ["--flown", c["flown"]]
+    if c.get("custom_control"):
+        a += ["--custom-control"]
     for k, flag in (("set", "--set"), ("p", "--p"), ("parm", "--parm")):
         for v in c.get(k, []):
             a += [flag, v]

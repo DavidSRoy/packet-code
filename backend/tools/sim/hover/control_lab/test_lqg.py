@@ -46,9 +46,30 @@ class LQGTest(unittest.TestCase):
         self.assertEqual(controller.state[-1], output)
         self.assertTrue(np.isfinite(controller.state).all())
 
-    def test_nonzero_target_is_explicitly_unsupported(self):
-        with self.assertRaises(ValueError):
-            LQG(.0025).update(0., 0., target=.1)
+    def test_constant_target_is_an_equilibrium(self):
+        controller = LQG(.0025)
+        controller.state[0] = .1
+        for _ in range(1000):
+            self.assertAlmostEqual(controller.update(.1, 0., target=.1), 0., places=10)
+
+    def test_gyro_measurement_history_has_exact_delay(self):
+        controller = LQG(.0025, gyro_delay=.0075)
+        state = np.zeros(21)
+        state[5] = 1.
+        for _ in range(3):
+            self.assertEqual((controller.C @ state)[1], 0.)
+            state = controller.A @ state
+        self.assertEqual((controller.C @ state)[1], 1.)
+        self.assertEqual(np.flatnonzero(controller.B[:, 0]).tolist(), [17])
+
+    def test_rate_feedforward_tracks_constant_ramp(self):
+        c = LQG(.0025,gyro_delay=.0075)
+        c.state[0]=.01
+        c.state[1]=c.state[5]=.02
+        c.state[18:]=.02
+        for i in range(1000):
+            target=.01+i*.0025*.02
+            self.assertAlmostEqual(c.update(target,.02,target=target,target_rate=.02),0.,places=9)
 
 
 if __name__ == '__main__':

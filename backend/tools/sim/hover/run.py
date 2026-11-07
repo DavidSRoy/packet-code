@@ -16,6 +16,7 @@ error, roll/pitch angle RMS and the angular rate RMS above 0.5 Hz (wobble), and 
 roll/pitch frequency. Result: runs/<name>/result.json.
 """
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -141,7 +142,7 @@ class Driver:
         return False
 
 
-def fly(d, height, hold_s, log, live=None):
+def fly(d, height, hold_s, log, live=None, custom_control=False):
     d.wait(lambda: d.t > 2.0, 120)
     # parameters that exist only once a Lua script made them (HTO_*): set over MAVLink and read back
     for name, val in (live or {}).items():
@@ -185,6 +186,14 @@ def fly(d, height, hold_s, log, live=None):
     start = tuple(float(np.mean([q[i] for q in recent])) for i in range(3))
     yaw0 = d.att[2]
     d.ev("settled")
+    if custom_control:
+        # This driver connects only to the local SITL instance created by main().
+        aux = MAV.MAV_CMD_DO_AUX_FUNCTION
+        if not d.wait(lambda: d.acks.get(aux, (None,))[0] == MAV.MAV_RESULT_ACCEPTED
+                      and any(text == "Custom controller is ON" for _, text in d.texts), 5,
+                      tick=lambda: d.cmd(aux, 109, 2), every=1.0):
+            return "simulation custom controller activation not confirmed"
+        d.ev("custom controller on")
     d.events["start_fc"] = list(start)
     # 4. home here, GUIDED, arm with HOP_CH high
     d.cmd(MAV.MAV_CMD_DO_SET_HOME, 1)
@@ -328,6 +337,7 @@ def main():
     ap.add_argument("--speedup", type=int, default=4)
     ap.add_argument("--runs", default=str(HERE / "runs"))
     ap.add_argument("--rescore", action="store_true", help="only score the existing run --name again")
+    ap.add_argument("--custom-control", action="store_true", help="activate experimental controller in local SITL")
     a = ap.parse_args()
     if a.rescore:
         work = Path(a.runs) / a.name
@@ -357,6 +367,8 @@ def main():
     procs = []
     wall_map_file = work / "wallmap.txt"
     result = {"name": a.name, "flown": a.flown, "seed": a.seed, "height": a.height, "hold": a.hold, "parm": a.parm, "p": a.p, "set": a.set}
+    result["custom_control"] = a.custom_control
+    result["sitl_binary_sha256"] = hashlib.sha256((ARDU / "build/sitl/bin/arducopter").read_bytes()).hexdigest()
     try:
         phys = subprocess.Popen([py, str(HERE / "physics.py"), "--out", str(work / "truth.npz"), "--seed", str(a.seed),
                                  "--port", str(9002 + 10 * I), "--cam-url", f"tcp:127.0.0.1:{5762 + 10 * I}",
@@ -381,7 +393,7 @@ def main():
                 if len(f) >= 2 and f[0].startswith("HTO_"):
                     live[f[0]] = float(f[1])
         live.update({kv.split("=")[0]: float(kv.split("=")[1]) for kv in a.p if kv.startswith("HTO_")})
-        status = fly(d, a.height, a.hold, log, live)
+        status = fly(d, a.height, a.hold, log, live, custom_control=a.custom_control)
         result["status"] = status
         result["events"] = d.events
         log("status: " + status)

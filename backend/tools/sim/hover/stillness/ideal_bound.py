@@ -26,6 +26,29 @@ def solve_bound(disturbance, dt, angle_amp, drag=.3/2.92):
         raise ValueError(fit.message)
     return float(fit.fun)
 
+def adjusted_thrust(trace, model):
+    """The log stores motor thrust before the simulator's per-rotor ground effect."""
+    raw = trace[:,13:17]
+    effect = model['ground_effect']
+    if not effect:
+        return raw
+    roll, pitch = trace[:,7], trace[:,8]
+    row_z = np.column_stack([-np.sin(pitch), np.cos(pitch)*np.sin(roll),
+                             np.cos(pitch)*np.cos(roll)])
+    angles = np.radians(model['motor_angles_deg'])
+    rotors = np.column_stack([model['arm_len']*np.cos(angles),
+                              model['arm_len']*np.sin(angles),
+                              np.full(4,model['motor_z'])])
+    rotor_z = trace[:,3,None] + row_z @ rotors.T
+    if effect == 'cb':
+        ratio = np.minimum(model['prop_radius']/(4*np.maximum(-rotor_z,.001)),.5)
+        factor = 1/(1-ratio*ratio)
+    else:
+        rest_z = -(max(p[2] for p in model['skid_points'])-model['motor_z'])
+        height = np.maximum(rest_z-rotor_z,0)
+        factor = 1+model['ge_a']*np.exp(-height/model['ge_b'])
+    return raw*factor
+
 def main():
     H=Path(__file__).resolve().parent
     run=H.parent/'runs/still_baseline'
@@ -42,7 +65,7 @@ def main():
     force_acc=acc+vel*drag;force_acc[:,2]-=9.80665
     if T.shape[1] < 17:
         raise ValueError('Motor-thrust trace is required')
-    scale=T[:,13:17].sum(axis=1)/mass
+    scale=adjusted_thrust(T,model).sum(axis=1)/mass
     d=force_acc[:,:2]-scale[:,None]*thrust[:,:2]
     out={'caveat':__doc__,'hold_s':float(end-start),'grids':{}}
     # Liberal projection: permits any fixed heading, even if it differs from the flown target.

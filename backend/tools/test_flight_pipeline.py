@@ -111,6 +111,14 @@ class PipelineTests(unittest.TestCase):
             meta=json.loads((Path(tmp)/'00000050.json').read_text())
             self.assertIn('fc_crc32',meta)
 
+    def test_attitude_wobble_band(self):
+        import math
+        stats=fr.Summary();stats.handover=0
+        stats.attitude=[(1+i/50,0,0,math.radians(2)*math.sin(2*math.pi*4*i/50),0) for i in range(251)]
+        result=stats.attitude_summary()
+        self.assertEqual(result['status'],'available')
+        self.assertAlmostEqual(result['roll_pitch_rate_3_5_to_5_5_hz_rms_deg_s'][0],math.sqrt(2),places=2)
+
     def test_camera_coordinates_and_partial_record(self):
         started=1794027130
         stats=fr.Summary();stats.handover=started+2

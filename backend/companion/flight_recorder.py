@@ -16,6 +16,7 @@ import struct
 import time
 from pathlib import Path
 from pymavlink import mavutil
+import numpy as np
 
 class Summary:
     def __init__(self):
@@ -25,6 +26,7 @@ class Summary:
         self.targets = []
         self.handover = None
         self.events = []
+        self.attitude = []
         self.types = collections.Counter()
 
     def add(self, msg, now):
@@ -39,6 +41,8 @@ class Summary:
             e2 = (msg.x-self.target[1])**2+(msg.y-self.target[2])**2
             if math.isfinite(e2):
                 self.error2.append(e2)
+        elif typ == 'ATTITUDE':
+            self.attitude.append((now, msg.roll, msg.pitch, msg.rollspeed, msg.pitchspeed))
         elif typ == 'STATUSTEXT':
             self.events.append({'t':now, 'text':msg.text})
             if 'handed over' in msg.text and self.handover is None:
@@ -53,7 +57,35 @@ class Summary:
                 'minimum_pack_voltage': min(self.volts) if self.volts else None,
                 'message_counts': dict(self.types),
                 'events': self.events,
+                'attitude': self.attitude_summary(),
                 'limitations': 'Existing telemetry rates only; high-rate IMU and actuator analysis requires DataFlash. Camera truth comparison is separate.'}
+
+
+    def attitude_summary(self):
+        if self.handover is None:
+            return {'status':'unavailable', 'reason':'no takeoff handover'}
+        rows=[row for row in self.attitude if row[0]>=self.handover+1]
+        if len(rows)<100 or rows[-1][0]-rows[0][0]<3:
+            return {'status':'unavailable', 'reason':'less than three seconds of attitude samples'}
+        a=np.asarray(rows)
+        dt=np.diff(a[:,0])
+        if np.any(dt<=0) or np.max(dt)>.2 or np.median(dt)>.05:
+            return {'status':'unavailable', 'reason':'attitude telemetry too sparse for wobble spectrum'}
+        fs=min(50.,1/float(np.median(dt)))
+        grid=np.arange(a[0,0],a[-1,0],1/fs)
+        values=np.column_stack([np.interp(grid,a[:,0],a[:,i]) for i in range(1,5)])*180/np.pi
+        centered=values-values.mean(axis=0)
+        spectrum=np.fft.rfft(centered,axis=0)
+        freq=np.fft.rfftfreq(len(grid),1/fs)
+        band=spectrum[:,2:].copy()
+        band[(freq<3.5)|(freq>5.5)]=0
+        rate=np.fft.irfft(band,n=len(grid),axis=0)
+        return {'status':'available', 'samples':len(rows), 'duration_s':float(grid[-1]-grid[0]),
+                'roll_pitch_std_deg':np.std(values[:,:2],axis=0).tolist(),
+                'roll_pitch_rate_3_5_to_5_5_hz_rms_deg_s':np.sqrt(np.mean(rate*rate,axis=0)).tolist(),
+                'source':'FC ATTITUDE telemetry; interpolated at at most 50 Hz',
+                'window':'handover + 1 second through disarm, including moves and landing',
+                'limitations':'Not raw high-rate RATE/IMU data; not a matched fixed-height simulation comparison.'}
 
 
 def camera_summary(rec_dir, stats, started, ended):

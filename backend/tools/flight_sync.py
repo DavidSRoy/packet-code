@@ -11,9 +11,9 @@ import subprocess
 import time
 from pathlib import Path
 
-def sync(host, remote, local, filters=()):
+def sync(host, remote, local, filters=(), compress=True):
     local.mkdir(parents=True, exist_ok=True)
-    subprocess.run(['rsync','-az','--partial','--timeout=10','--bwlimit=1500',
+    subprocess.run(['rsync','-a',*(['-z'] if compress else []),'--partial','--timeout=10','--bwlimit=1500',
                     '-e','ssh -o ConnectTimeout=5 -o BatchMode=yes',*filters,
                     f'{host}:{remote}/',str(local)+'/'], check=True, timeout=60)
 
@@ -28,7 +28,7 @@ def main():
     def bulk():
         sync(a.host, '/home/packet/flight-data/bin', a.out/'bin', ('--exclude=*.part*',))
         if a.frames:
-            sync(a.host, '/home/packet/rec', a.out/'rec', ('--exclude=cv.jsonl',))
+            sync(a.host, '/home/packet/rec', a.out/'rec', ('--exclude=cv.jsonl',), compress=False)
     pool=concurrent.futures.ThreadPoolExecutor(max_workers=1)
     transfer=None
     while True:

@@ -8,7 +8,7 @@ Existing camera attitude traffic remains at its configured rate.
 While armed it writes a standard timestamped `telemetry.tlog` under
 `~/flight-data/telemetry/<flight>/`, including five seconds before arm. On the
 first FC disarmed heartbeat it atomically publishes `summary.json`: voltage,
-FC-estimated tracking, and camera-derived tracking if the matching camera
+FC-estimated tracking, a telemetry-band wobble estimate, and camera-derived tracking if the matching camera
 recording and takeoff handover are available. Missing inputs produce an explicit
 unavailable result, never zero error. Heartbeat loss is not treated as landing.
 The camera comparison covers handover +1 second through disarm, including
@@ -52,5 +52,5 @@ Install the recorder script, both downloader scripts and the three systemd files
 from `companion/systemd/`, then enable the recorder and download timer. Restart
 the tunnel only when disarmed. No firmware or battery failsafes are changed.
 
-Verification: `uv run --with pymavlink python tools/test_flight_pipeline.py`.
+Verification: `uv run --with-requirements requirements.txt python tools/test_flight_pipeline.py`.
 Tests use isolated local UDP endpoints and synthetic heartbeats, never the drone.

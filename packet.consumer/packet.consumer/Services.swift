@@ -46,6 +46,47 @@ struct MockPaymentService: PaymentService {
     }
 }
 
+// MARK: - Mock progression (Tracking demo, no backend)
+
+/// Demo seam: an order placed in the app walks the Tracking timeline
+/// (placed → accepted → picked up → loaded → in flight → delivered) over a
+/// few seconds, with no backend involved. Swap AppState.orderService to use it.
+final class MockOrderService: OrderService {
+    private let stepDelay: UInt64
+
+    /// - Parameter stepDelay: nanoseconds between timeline steps (2 s default).
+    init(stepDelay: UInt64 = 2_000_000_000) {
+        self.stepDelay = stepDelay
+    }
+
+    func placeOrder(lines: [CartLine], customerName: String, dropoff: String) async throws -> CustomerOrder {
+        CustomerOrder(id: "ord_mock_\(Int(Date().timeIntervalSince1970))",
+                      status: .placed,
+                      itemCounts: Dictionary(lines.map { ($0.item.name, $0.quantity) },
+                                            uniquingKeysWith: { _, last in last }),
+                      pickup: "qfc",
+                      dropoffPad: slugPad(dropoff))
+    }
+
+    func watchOrder(id: String) -> AsyncStream<CustomerOrder> {
+        let steps: [OrderStatus] = [.placed, .accepted, .pickedUp, .loaded, .inFlight, .delivered]
+        return AsyncStream { continuation in
+            let task = Task {
+                var order = CustomerOrder(id: id, status: .placed, pickup: "qfc", dropoffPad: "uw-u-village")
+                for status in steps {
+                    if Task.isCancelled { break }
+                    order.status = status
+                    if status == .accepted { order.droneId = "packet-v0" }
+                    continuation.yield(order)
+                    try? await Task.sleep(nanoseconds: self.stepDelay)
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}
+
 // MARK: - Live orders API (telemetry worker /v1/orders)
 
 /// Points the app at the telemetry worker. Dev default is local `wrangler dev`.
@@ -176,7 +217,12 @@ final class AppState: ObservableObject {
 
     var menuRepository: any MenuRepository = MockMenuRepository()
     var paymentService: any PaymentService = MockPaymentService()
+#if DEBUG
+    /// Demo builds replay the Tracking timeline with no backend (see MockOrderService).
+    var orderService: any OrderService = MockOrderService()
+#else
     var orderService: any OrderService = APIOrderService()
+#endif
 
     var cartTotalCents: Int {
         cart.reduce(0) { $0 + $1.lineTotalCents }

@@ -52,6 +52,19 @@ final class packet_consumerTests: XCTestCase {
         XCTAssertEqual(OrderStatus(rawValue: "delivered"), .delivered)
     }
 
+    @MainActor
+    func testMockOrderServiceProgresses() async throws {
+        let svc = MockOrderService(stepDelay: 1_000_000)
+        let line = CartLine(item: MenuItem(id: "b", name: "Bowl", description: "", priceCents: 100), quantity: 2)
+        let placed = try await svc.placeOrder(lines: [line], customerName: "T", dropoff: "UW / U Village")
+        XCTAssertEqual(placed.status, .placed)
+        XCTAssertEqual(placed.dropoffPad, "uw-u-village")
+        var seen: [OrderStatus] = []
+        for await o in svc.watchOrder(id: placed.id) { seen.append(o.status) }
+        XCTAssertEqual(seen, [.placed, .accepted, .pickedUp, .loaded, .inFlight, .delivered])
+    }
+
+    @MainActor
     func testCustomerOrderDecodesAPIJSON() throws {
         let json = """
         {"id":"ord_mw4erwt19baa42","status":"accepted",

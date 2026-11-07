@@ -45,7 +45,8 @@ def main():
     scale=T[:,13:17].sum(axis=1)/mass
     d=force_acc[:,:2]-scale[:,None]*thrust[:,:2]
     out={'caveat':__doc__,'hold_s':float(end-start),'grids':{}}
-    angle_amp=np.radians(.1)/2*float(np.max(np.abs(cy)+np.abs(sy)))
+    # Liberal projection: permits any fixed heading, even if it differs from the flown target.
+    angle_amp=np.radians(.1)/2*np.sqrt(2)
     for dt in (.025,.05,.1):
         u=np.arange(start,end,dt)
         down=np.array([d[(t>=tt)&(t<min(tt+dt,end))].mean(0) for tt in u])

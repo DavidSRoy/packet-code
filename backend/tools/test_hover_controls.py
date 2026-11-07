@@ -6,7 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'ground_control'))
-from hop import Hop, HEIGHT_MIN, HEIGHT_MAX
+from hop import Hop, PoseWatch, HEIGHT_MIN, HEIGHT_MAX
 
 class HoverControls(unittest.TestCase):
     def setUp(self):
@@ -112,5 +112,67 @@ class HoverOrigin(unittest.TestCase):
         self.assertFalse(Hop.valid_origin(91, 10, 0))
         self.h.link.state.update(lat_fc=47, lon_fc=None, lat=None, lon=-122)
         self.assertEqual(self.h.origin_reference(), (47.6625072, -122.2951904, 18.79))
+
+class CameraMisses(unittest.TestCase):
+    def pose(self, t, seen=True, source='wifi'):
+        return (t, seen, .35 if seen else None, source,
+                .01 if seen else None, .02 if seen else None)
+
+    def test_recorded_single_frame_miss_recovers(self):
+        watch = PoseWatch()
+        good = self.pose(1794026631.2756)
+        self.assertEqual(watch.update(good, 1794026631.30)[0], good)
+        self.assertEqual(watch.update(self.pose(1794026631.3537, False), 1794026631.442)[0], good)
+        recovered = self.pose(1794026631.4535)
+        self.assertEqual(watch.update(recovered, 1794026631.46)[0], recovered)
+
+    def test_empty_frames_do_not_extend_deadline(self):
+        watch = PoseWatch(); watch.update(self.pose(10), 10)
+        for t in (10.1, 10.2, 10.49):
+            self.assertIsNotNone(watch.update(self.pose(t, False), t)[0])
+        self.assertIsNone(watch.update(self.pose(10.5, False), 10.5)[0])
+
+    def test_silent_stale_out_of_order_and_nonfinite(self):
+        watch = PoseWatch(); watch.update(self.pose(10), 10)
+        watch.update(self.pose(9), 10.1)
+        watch.update((10.4, True, float('nan'), 'wifi', 0, 0), 10.4)
+        self.assertEqual(watch.last[0], 10)
+        self.assertIsNone(watch.update(None, 10.5)[0])
+
+    def test_no_initial_pose_and_radio_timeout(self):
+        watch = PoseWatch()
+        self.assertIsNone(watch.update(self.pose(10, False), 10)[0])
+        watch.update(self.pose(10, source='radio'), 10)
+        self.assertIsNotNone(watch.update(None, 10.49)[0])
+        self.assertIsNone(watch.update(None, 10.5)[0])
+
+class CameraLanding(unittest.TestCase):
+    def test_land_handoff_keeps_guard_and_does_not_force_disarm(self):
+        from unittest.mock import patch
+        h = Hop.__new__(Hop)
+        h.height = .05; h.active = True; h.land_requested = False
+        h.link = Mock(); h.link.state = {"armed": True, "mode": "GUIDED"}
+        h._override = Mock()
+        calls = [0]
+        def tick():
+            calls[0] += 1
+            if calls[0] == 2: h.link.state['mode'] = 'LAND'
+            if calls[0] == 3: h.link.state['armed'] = False
+            return h.active
+        with patch('hop.time.sleep'):
+            h.camera_loss_land(tick)
+        h.link.set_mode.assert_called_once_with('LAND')
+        self.assertIn(((2000,),), [tuple([c.args]) for c in h._override.call_args_list])
+        self.assertFalse(h.active)
+        self.assertEqual(h.status['state'], 'done')
+        # Only restore navigation sources after the FC disarms itself.
+        self.assertEqual([c.args for c in h.link.command.call_args_list], [(42007, 1)])
+
+    def test_emergency_cancellation_does_not_restart_landing(self):
+        h = Hop.__new__(Hop); h.height = .05; h.link = Mock()
+        h.link.state = {"armed": True, "mode": "GUIDED"}
+        h.camera_loss_land(lambda: False)
+        h.link.set_mode.assert_not_called()
+        h.link.command.assert_not_called()
 
 if __name__ == '__main__': unittest.main()

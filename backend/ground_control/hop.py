@@ -4,7 +4,7 @@ spot it started from, on the box camera and the IMU only (no GPS, compass or bar
 - Run test (the page button now): a timed run with no button held. It holds at the height for
   the set time, descends at CLIMB_MPS to LAND_BELOW_M under the start and stops the motors once
   the tags put it back down. The pilot stays at the Boxer SD kill; the page Stop button, a page
-  close, hop_guard.lua (link lost) and every cut below still stop the motors.
+  close, hop_guard.lua (link lost) and the independent guards below still stop the motors.
 - Hold to hover (press without a duration): only while the button is held; release = motors off.
 
 - Camera navigation: the Pi sends every lid pose straight to the FC
@@ -23,10 +23,11 @@ spot it started from, on the box camera and the IMU only (no GPS, compass or bar
 - The laptop watches with the tags directly: height = tag height above where it sat
   (zero = on the ground); sideways drift = the tag position against where it started.
 - MOTORS OFF when: the button is released (hop_up, or no hop_alive for KEEPALIVE_S, or
-  the page closes: force disarm, sent 3 times, and HOP_CH low); the tags are out of view
-  or no pose for POSE_LOST_S / POSE_LOST_WIFI_S; tag height over target + CAM_CEILING_M;
+  the page closes: force disarm, sent 3 times, and HOP_CH low); tag height over target + CAM_CEILING_M;
   drift over DRIFT_MAX_M; the FC height does not follow the camera (HEIGHT_AGREE_M);
   the mode changes.
+- Camera loss: individual misses keep the last valid pose only until POSE_LOST_S.
+  At that deadline request FC LAND, keep the guard heartbeat, and let the FC disarm.
 - On the drone, lua/hop_guard.lua latches on when HOP_CH goes high while armed and stops
   the motors when HOP_CH is not high (laptop, page or radio gone: RC_OVERRIDE_TIME 0.3 s),
   over HOP_MAX_M, or over HOP_TILT. The laptop refuses unless it hears that script (HOPG)
@@ -58,8 +59,7 @@ POS_YAW_MASK = 0b0000_1001_1111_1000    # SET_POSITION_TARGET: use x, y, z and y
 CLIMB_MPS = 0.05             # climb rate after the handover (a fast climb blurred the tags out of detection, 2026-11-02)
 DRIFT_MAX_M = 0.20           # tags say it moved this far sideways from the start = motors off
 POSE_START_S = 1.0           # a tag pose this fresh, with the box in view, is needed to start
-POSE_LOST_S = 1.2            # radio pose (about 2 Hz): none for this long = motors off
-POSE_LOST_WIFI_S = 0.5       # Wi-Fi pose (about 10 Hz)
+POSE_LOST_S = 0.5            # no valid camera pose this long requests FC LAND
 CAM_CEILING_M = 0.25         # tag height more than this above the target = motors off
 ZERO_PAYLOAD_TYPE = 39003    # TUNNEL to the Pi: zero the FC on the box camera (cam_stream.py)
 ZERO_ACK_S = 2.0             # the Pi must answer the zero this soon
@@ -76,6 +76,26 @@ SOURCE_ACK_S = 3.0           # the FC must accept the source switch this soon
 HEIGHT_AGREE_M = 0.15        # FC height change vs camera height change: more than this ...
 HEIGHT_AGREE_S = 1.0         # ... for this long = the FC is not on the camera = motors off
 SOURCE_SET_CMD = 42007       # MAV_CMD_SET_EKF_SOURCE_SET
+
+
+class PoseWatch:
+    """Keep only a fresh valid pose across individual detector misses.
+
+    Empty frames never renew the deadline. The FC continues its IMU prediction;
+    no stale pose is sent back to its estimator.
+    """
+    def __init__(self):
+        self.last = None
+
+    def update(self, pose, now):
+        if (pose and pose[1] and all(v is not None and math.isfinite(v)
+                                    for v in (pose[0], pose[2], pose[4], pose[5]))
+                and (self.last is None or pose[0] > self.last[0])):
+            self.last = pose
+        limit = POSE_LOST_S  # one deadline, regardless of transport
+        if self.last is None or now - self.last[0] >= limit:
+            return None, limit
+        return self.last, limit
 
 
 class Hop:
@@ -254,6 +274,35 @@ class Hop:
         if self.active:
             self.kill(why)
 
+    def camera_loss_land(self, held):
+        """Hand off to the FC's LAND controller; never force-disarm for camera loss.
+
+        Maintain the existing onboard dead-man while landing. Emergency stop,
+        page/link loss, and onboard tilt/height guards still apply independently.
+        """
+        L, s = self.link, self.link.state
+        reason = "camera pose lost for 0.5 s"
+        self.land_requested = True
+        self.status = {"state": "landing", "height": self.height, "reason": reason}
+        L.note("Laptop: camera pose lost for 0.5 s; requesting LAND", 4)
+        accepted, last_request = False, 0.0
+        while held():
+            if not s["armed"]:
+                self.active = False
+                self._override(1000)
+                L.command(SOURCE_SET_CMD, 1)
+                self.status = {"state": "done", "height": self.height,
+                               "reason": "camera-loss landing ended; FC disarmed"}
+                return
+            if s["mode"] == "LAND":
+                accepted = True
+            # Once LAND is confirmed, do not fight a later pilot mode change.
+            if not accepted and time.time() - last_request >= RESEND_S:
+                L.set_mode("LAND")
+                last_request = time.time()
+            self._override(2000)
+            time.sleep(1.0 / RATE_HZ)
+
     def origin_reference(self):
         """Use a complete FC coordinate pair, otherwise the persisted box-test reference."""
         s = self.link.state
@@ -319,10 +368,12 @@ class Hop:
     def _run(self, gen):
         L, s = self.link, self.link.state
         period = 1.0 / RATE_HZ
+        pose_watch = PoseWatch()
 
         def held():
             if not self.active or gen != self.gen:
                 return False
+            pose_watch.update(self.pose(), time.time())
             if self.test_s is None and time.time() - self.last_alive > (1.0 if self.interactive else KEEPALIVE_S):
                 self.kill("button signal lost")
                 return False
@@ -480,15 +531,11 @@ class Hop:
             cam_t, cam_h = None, None
             fc0, disagree_t = s["alt"], None                   # FC height at arming: its change must follow the camera
             while held():
-                p = self.pose()
                 now = time.time()
-                if p is not None and p[0] != cam_t:            # a new camera pose
-                    if not p[1]:
-                        return self.kill("box tags out of view")
-                    cam_t, cam_h = p[0], p[2]
-                lost = POSE_LOST_WIFI_S if p and p[3] == "wifi" else POSE_LOST_S
-                if cam_t is None or now - cam_t > lost:
-                    return self.kill(f"no box camera pose for {lost:g} s")
+                p, lost = pose_watch.update(self.pose(), now)
+                if p is None:
+                    return self.camera_loss_land(held)
+                cam_t, cam_h = p[0], p[2]
                 if not s["armed"]:
                     self.active = False
                     L.command(SOURCE_SET_CMD, 1)               # back to the normal sources

@@ -23,7 +23,8 @@ A fresh indoor boot restores and confirms the EKF reference from
 `ground_control/hover_origin.json` when the FC has no origin or GPS position.
 This saved box-test reference is not a current GPS fix; update it when moving the
 test site. Existing FC origins are preserved. The camera still supplies local
-position. Lost camera/link and drift guards remain active.
+position. Camera loss for 0.5 s requests FC LAND. Invalid frames do not renew the
+deadline. Link-loss, height, tilt, drift, and emergency motor-cut guards remain active.
 
 Open http://localhost:8650. QGroundControl can stay open: the server forwards all MAVLink to UDP 14550, and QGC connects to it by itself.
 

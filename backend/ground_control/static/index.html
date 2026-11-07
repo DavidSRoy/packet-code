@@ -380,7 +380,7 @@
         <div><span class="lbl">Tilt</span><b id="cam-tilt">—<small>°</small></b></div>
       </div>
     </div>
-    <canvas id="cam-top" width="232" height="232" title="Top view: lid (grey), drone centre and nose (blue), camera (white)"></canvas>
+    <canvas id="cam-top" width="232" height="232" title="Movement axes: +X right, +Y down. Lid grey, drone blue, camera white."></canvas>
   </div>
   <div class="cam-url"><span class="lbl">Pi</span><input id="cam-url" spellcheck="false"></div>
 </div>
@@ -425,7 +425,7 @@
       <div class="alt-row"><span>Y</span><div class="stepper"><button data-axis="y" data-dir="-1" aria-label="Move Y minus 1 cm" disabled>−</button><span>1 cm</span><button data-axis="y" data-dir="1" aria-label="Move Y plus 1 cm" disabled>+</button></div></div>
       <div class="alt-row"><span>Z · up / down</span><div class="stepper"><button data-axis="z" data-dir="-1" aria-label="Move Z minus 1 cm" disabled>−</button><span>1 cm</span><button data-axis="z" data-dir="1" aria-label="Move Z plus 1 cm" disabled>+</button></div></div>
     </div>
-    <div id="hop-state">Holds until Land. X/Y follow the box axes; +Z moves up. X/Y travel is limited to 5 cm per axis. Emergency stop cuts motors immediately. Lost camera or link also cuts motors.</div>
+    <div id="hop-state">Holds until Land. X/Y follow the box axes; +Z moves up. X/Y travel is limited to 5 cm per axis. Emergency stop cuts motors immediately. Camera loss for 0.5 s requests Land. Lost link still cuts motors.</div>
   </div>
   <div id="flyto">
     <div class="trip-h"><span class="lbl">Fly to point</span><span class="badge" id="ft-badge">IDLE</span></div>
@@ -755,7 +755,7 @@ function renderHop(h) {
   if (h.state === "refused" || h.state === "killed" || h.state === "done")
     $("hop-state").textContent = `${h.state.toUpperCase()}: ${h.reason || ""}`;
   else if (h.active)
-    $("hop-state").textContent = `${h.state === "landing" ? "Landing" : "Holding"} ${Math.round((h.height || 0) * 100)} cm · tag height now ${h.height_now != null ? (h.height_now * 100).toFixed(1) : "?"} cm`
+    $("hop-state").textContent = `${h.reason ? h.reason + " · " : ""}${h.state === "landing" ? "Landing" : "Holding"} ${Math.round((h.height || 0) * 100)} cm · tag height now ${h.height_now != null ? (h.height_now * 100).toFixed(1) : "?"} cm`
       + (h.drift_m != null ? ` · off the start ${(h.drift_m * 100).toFixed(1)} cm` : "")
       + (h.test_left != null && h.state !== "landing" ? ` · lands in ${h.test_left.toFixed(0)} s` : "")
       + (h.pose ? ` (${h.pose.toUpperCase()})` : "") + " · SD or Stop = motors off";
@@ -1407,6 +1407,12 @@ connect();
     let [x, y] = P(-LID_W / 2, LID_H / 2); g.fillRect(x, y, LID_W * sc, LID_H * sc); g.strokeRect(x, y, LID_W * sc, LID_H * sc);
     g.strokeStyle = "rgba(255,255,255,.15)"; [x, y] = P(-STK_W / 2, STK_H / 2); g.strokeRect(x, y, STK_W * sc, STK_H * sc);
     g.strokeStyle = "rgba(255,255,255,.12)"; g.beginPath(); g.moveTo(cx, 8); g.lineTo(cx, H - 8); g.moveTo(8, cy); g.lineTo(W - 8, cy); g.stroke();
+    // Movement controls use NED: X = lid X, Y = -lid Y.
+    g.fillStyle = getComputedStyle(top).getPropertyValue("--muted").trim() || "#9aa3ad";
+    g.font = "22px monospace"; g.textBaseline = "middle";
+    g.textAlign = "left"; g.fillText("−X", 9, cy - 12);
+    g.textAlign = "right"; g.fillText("+X", W - 9, cy - 12);
+    g.textAlign = "center"; g.fillText("−Y", cx, 15); g.fillText("+Y", cx, H - 15);
     if (!b) return;
     const [dx, dy] = P(b.drone_m[0], b.drone_m[1]);
     const cam = b.camera_m[0] != null, [kx, ky] = cam ? P(b.camera_m[0], b.camera_m[1]) : [dx, dy];

@@ -64,7 +64,7 @@ Calibration uses a fixed-target 11.136 s window (150.369345–161.505510 s), hig
 ## Verification and limits
 
 - 11/11 exact-v7-file hover scenarios completed and produced scores; both final-file real-code landing checks completed with FC disarm.
-- Synthetic known-motion test: 1 passed; hover controls and flight pipeline: 26 passed. Python compilation passed. No configured static Python type checker was run.
+- Known-motion and landing-result validation tests: 4 passed; hover controls and flight pipeline: 26 passed. Python compilation passed. No configured static Python type checker was run.
 - The original simulator model and v6 parameter file are preserved. No production flight-control code or live parameters were changed.
 - This reduces simulated wobble; it does **not** establish a rock-still physical hover. Prop/frame flexibility, thermal effects, hardware vibration and long-duration flights are not qualified. No independent external position ground truth is available.
 - Physical v7 performance and transfer of the predicted improvement remain unverified. The next physical comparison needs the same height, targets, battery/payload configuration and a sufficiently long stationary hold; compare ANG/RATE spectra and position error with log49.

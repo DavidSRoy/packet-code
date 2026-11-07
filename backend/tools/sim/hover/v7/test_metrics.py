@@ -17,4 +17,25 @@ class MetricsTest(unittest.TestCase):
   self.assertAlmostEqual(r['pitch_ptp_deg'],.2,places=3)
   self.assertAlmostEqual(r['xy_rms_mm'],0)
   self.assertAlmostEqual(r['z_rms_mm'],0)
+class LandingValidationTest(unittest.TestCase):
+ def result(self):
+  return {'final_status': {'state':'done','reason':'test run done: landed, motors off'},
+          'events_rel_s': dict(zip(['armed','handover','at height','descend','disarmed'],[1,2,3,4,5]))}
+ def test_success(self):
+  from e2e_validation import validate_result
+  validate_result(self.result(),'nominal')
+  r=self.result();r['final_status']['reason']='camera-loss landing ended; FC disarmed'
+  validate_result(r,'camera_loss')
+ def test_failure_status_and_wrong_landing_path(self):
+  from e2e_validation import validate_result
+  for state in ('killed','refused'):
+   r=self.result();r['final_status']['state']=state
+   with self.assertRaises(ValueError):validate_result(r,'nominal')
+  with self.assertRaises(ValueError):validate_result(self.result(),'camera_loss')
+ def test_missing_or_early_disarm(self):
+  from e2e_validation import validate_result
+  for t in (None,0,3):
+   r=self.result();r['events_rel_s']['disarmed']=t
+   with self.assertRaises(ValueError):validate_result(r,'nominal')
 if __name__=='__main__':unittest.main()
+

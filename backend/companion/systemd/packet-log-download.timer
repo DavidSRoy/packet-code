@@ -1,0 +1,10 @@
+[Unit]
+Description=Check for completed Packet flight logs
+
+[Timer]
+OnBootSec=60
+OnUnitInactiveSec=30
+Unit=packet-log-download.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,93 @@
+[
+  {
+    "log": 43,
+    "window_s": 18.66001099999994,
+    "start_boot_s": 1957.71557,
+    "end_boot_s": 1976.375581,
+    "horizontal_error_rms_mm": 13.553543298843733,
+    "horizontal_sway_rms_mm": 10.937737687922196,
+    "position_bias_mm": [
+      3.2574997348732464,
+      7.3111644558947715,
+      0.884029936092607
+    ],
+    "vertical_sway_rms_mm": 4.845607989968047,
+    "rate_wobble_roll_pitch_dps": [
+      3.640908989323217,
+      2.696265762168808
+    ],
+    "tilt_std_deg": [
+      0.246757959811486,
+      0.22416375399997832
+    ],
+    "position_gains": {
+      "PSC_NE_VEL_P": 4.0,
+      "PSC_NE_VEL_I": 0.5,
+      "PSC_NE_VEL_D": 0.75
+    }
+  },
+  {
+    "log": 45,
+    "window_s": 9.318313000000217,
+    "start_boot_s": 2832.709641,
+    "end_boot_s": 2842.027954,
+    "horizontal_error_rms_mm": 24.84111178837245,
+    "horizontal_sway_rms_mm": 16.645452413536294,
+    "position_bias_mm": [
+      1.356111933788375,
+      18.389418404456176,
+      -0.04284664013184113
+    ],
+    "vertical_sway_rms_mm": 5.902111017627653,
+    "rate_wobble_roll_pitch_dps": [
+      8.156980872532216,
+      10.43228240377395
+    ],
+    "tilt_std_deg": [
+      0.32087628473570956,
+      0.4748017186117205
+    ],
+    "position_gains": {
+      "PSC_NE_VEL_P": 3.5,
+      "PSC_NE_VEL_I": 0.5,
+      "PSC_NE_VEL_D": 1.0
+    }
+  },
+  {
+    "log": 48,
+    "excluded": "steady window shorter than 3 seconds",
+    "window_s": -0.40771599999999353
+  },
+  {
+    "log": 49,
+    "window_s": 11.136164999999977,
+    "start_boot_s": 150.369345,
+    "end_boot_s": 161.50551,
+    "horizontal_error_rms_mm": 4.547909181860919,
+    "horizontal_sway_rms_mm": 4.537007896516251,
+    "position_bias_mm": [
+      -0.3075947162842797,
+      -0.0665038639331781,
+      -1.1342495169532665
+    ],
+    "vertical_sway_rms_mm": 4.505603304123537,
+    "rate_wobble_roll_pitch_dps": [
+      1.034296970625408,
+      0.9225719699468763
+    ],
+    "tilt_std_deg": [
+      0.2661796769724097,
+      0.22902958970287923
+    ],
+    "position_gains": {
+      "PSC_NE_VEL_P": 4.0,
+      "PSC_NE_VEL_I": 4.0,
+      "PSC_NE_VEL_D": 0.0
+    }
+  },
+  {
+    "log": 50,
+    "excluded": "steady window shorter than 3 seconds",
+    "window_s": 0.13491799999997056
+  }
+]

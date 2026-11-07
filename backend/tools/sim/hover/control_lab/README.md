@@ -81,3 +81,26 @@ and includes every XYZ/RPY axis in acceptance. Gust recovery requires a full
 20-second stillness window and return within 2 mm per axis of the pre-gust mean;
 this is an additional engineering check, not permission to relabel baseline
 wobble as a gust. No numerical recovery-time deadline is asserted.
+
+## Rejected robustness assumption
+
+`conservative_sitl.json` designs the observer/controller for 45 ms motor delay
+and 25 ms lag, then evaluates nominal and slow plants using held-out seed 43.
+Use `generate.py --motor-delay .045 --motor-tau .025` to reproduce that build.
+The change does not solve model uncertainty: nominal-plant roll/pitch ranges
+exceed 5 degrees in two completed cases. This design is rejected. The checked-in
+matrices have been restored to the nominal 30 ms / 15 ms model; they remain
+experimental and unqualified. `lqg_reject_800hz` intentionally verifies refusal
+of custom activation at an unsupported scheduler rate, before arming.
+
+The nominal feedforward bank-1 run has XYZ ranges 11.38/12.26/15.26 mm and RPY
+ranges 1.183/1.111/0.281 degrees. Both slower-motor feedforward cases disarm after
+exceeding the simulator's tilt guard. Gust runs complete but never attain the
+required persistent stillness. No experiment meets the complete user target.
+
+Independent review prompted fixes for two scoring loopholes (late rocking after
+an initially quiet interval and incomplete truth/controller-log coverage), plus
+an unsupported-rate fallback that could reset main-controller integrators.
+Scoring now requires continued stillness through the remaining recorded
+interval, complete sampled coverage, and frontend activation refusal at
+unsupported loop rates. Failed historical runs have been rescored.

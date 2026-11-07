@@ -34,6 +34,18 @@ def install(root):
         if old not in content and new not in content:
             raise ValueError(f'Unexpected frontend: missing {old}')
         content = content.replace(old, new)
+    guard = '''    // Packet SITL matrices require 400 Hz; refuse activation before motor_set.
+    if (enabled && _controller_type == CustomControlType::CONT_EMPTY && fabsf(_dt - 0.0025f) > 0.000001f) {
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Packet LQG requires 400 Hz");
+        return;
+    }
+
+'''
+    anchor = '    if (enabled && _controller_type > CustomControlType::CONT_NONE) {'
+    if guard not in content:
+        if anchor not in content:
+            raise ValueError('Missing custom activation insertion point')
+        content = content.replace(anchor, guard + anchor)
     for name in ('AC_CustomControl_Empty.h', 'AC_CustomControl_Empty.cpp',
                  'PacketLQGCore.h', 'PacketLQGMatrices.h'):
         shutil.copy2(HERE / name, destination / name)

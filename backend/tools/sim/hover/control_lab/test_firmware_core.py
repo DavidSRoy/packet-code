@@ -1,4 +1,5 @@
 """Native C++ implementation agrees with the Python observer/controller."""
+import json
 import subprocess
 import tempfile
 import unittest
@@ -10,6 +11,16 @@ from lqg import LQG
 
 
 class FirmwareCoreTest(unittest.TestCase):
+    def test_hardware_build_is_rejected(self):
+        header = Path(__file__).resolve().parent / 'firmware'
+        with tempfile.TemporaryDirectory() as tmp:
+            p=Path(tmp)
+            (p/'AC_CustomControl_config.h').write_text('#define CONFIG_HAL_BOARD 1\n#define HAL_BOARD_SITL 3\n#define AP_CUSTOMCONTROL_EMPTY_ENABLED 0\n')
+            (p/'check.cpp').write_text('#include "AC_CustomControl_Empty.h"\n')
+            result=subprocess.run(['c++','-E','-I',str(header),'-I',str(p),str(p/'check.cpp')],capture_output=True,text=True)
+            self.assertNotEqual(result.returncode,0)
+            self.assertIn('Packet experimental LQG is simulation-only',result.stderr)
+
     def test_all_generated_banks_against_python(self):
         header = Path(__file__).resolve().parent / 'firmware'
         code = r'''
@@ -37,13 +48,14 @@ int main() {
             subprocess.run(['c++', '-std=c++17', '-O2', '-I', str(header),
                             str(source), '-o', str(binary)], check=True, capture_output=True)
             actual = np.fromstring(subprocess.check_output([str(binary)], text=True), sep='\n')
+        metadata=json.loads((header / "matrices.json").read_text())
         expected = []
         for K, sigma in ((73.5, (.25,.4)), (8., (.08,.1))):
             for effort in (.01,.001,.0001):
-                c = LQG(.0025, K=K, dist_sigma=sigma, effort=effort, rate_cost=.0001,gyro_delay=.0075)
+                c = LQG(.0025, K=K, dist_sigma=sigma, effort=effort, rate_cost=.0001,gyro_delay=metadata["gyro_delay"],delay=metadata["delay"],tau=metadata["tau"])
                 c.state[0]=.01
                 c.state[1]=c.state[5]=-.02
-                c.state[18:]=-.02
+                c.state[6+round(metadata["delay"]/.0025):]=-.02
                 for i in range(400):
                     expected.append(c.update(.01+.001*np.sin(i*.03),
                                              .002*np.cos(i*.03),

@@ -12,6 +12,20 @@ from acceptance import meets_target
 from gust_metrics import evaluate as evaluate_gust
 
 
+def activity_confirmed(samples,start,end,expected_bank):
+    a=np.asarray(samples,float)
+    return bool(a.ndim==2 and a.shape[1]==5 and len(a)>=int((end-start)*8)
+                and len(a)>1 and np.isfinite(a).all() and np.all(a[:,1]==expected_bank)
+                and start<=a[0,0]<=start+.15 and end-.15<=a[-1,0]<=end
+                and np.all(np.diff(a[:,0])>0) and np.max(np.diff(a[:,0]))<.15)
+
+
+def truth_covered(hold,start,end):
+    return bool(hold.ndim==2 and hold.shape[1]>=10 and len(hold)>=2 and np.isfinite(hold).all()
+                and hold[0,0]<=start+.01 and hold[-1,0]>=end-.01
+                and np.all(np.diff(hold[:,0])>0) and np.max(np.diff(hold[:,0]))<=.02)
+
+
 def score(config):
     result=[]
     for c in json.loads(config.read_text()):
@@ -22,9 +36,17 @@ def score(config):
             item['meets_target']=False;result.append(item);continue
         archive=np.load(root/'truth.npz');truth=archive['truth']
         wm=np.loadtxt(root/'wallmap.txt');events=r['events']
+        walls=[events['at height']['wall'],events['descend']['wall']]
+        if (wm.ndim!=2 or wm.shape[1]!=2 or len(wm)<2 or not np.isfinite(wm).all()
+                or not np.isfinite(walls).all() or not walls[0]<walls[1]
+                or np.any(np.diff(wm[:,0])<=0) or np.any(np.diff(wm[:,1])<=0)
+                or walls[0]<wm[0,0] or walls[1]>wm[-1,0]):
+            item.update(meets_target=False,invalid_wall_clock=True);result.append(item);continue
         start=np.interp(events['at height']['wall'],wm[:,0],wm[:,1])+2
         end=np.interp(events['descend']['wall'],wm[:,0],wm[:,1])
         hold=truth[(truth[:,0]>=start)&(truth[:,0]<=end)]
+        if not truth_covered(hold,start,end):
+            item.update(meets_target=False,invalid_truth_coverage=True);result.append(item);continue
         position=np.ptp(hold[:,1:4],axis=0)*1000
         angle=np.ptp(np.degrees(np.unwrap(hold[:,7:10],axis=0)),axis=0)
         item.update(hold_s=float(end-start),position_ptp_mm=position.tolist(),angle_ptp_deg=angle.tolist(),score=r['score'])
@@ -38,8 +60,7 @@ def score(config):
             log.close()
             a=np.array(samples)
             expected_bank=int(next(p.split('=')[1] for p in c['p'] if p.startswith('CC1_PARAM1=')))
-            active=(len(a)>0 and len(a)>=int((end-start)*8) and np.all(a[:,1]==expected_bank)
-                    and np.max(np.diff(a[:,0]),initial=0)<.3)
+            active=activity_confirmed(a,events['at height']['fc_t']+2,events['descend']['fc_t'],expected_bank)
             item.update(custom_samples=len(a),custom_activity_confirmed=bool(active))
             if len(a):item['custom_max_output']=np.max(np.abs(a[:,2:]),axis=0).tolist()
         item['meets_target']=bool(active and meets_target(position.tolist(),angle.tolist(),end-start))

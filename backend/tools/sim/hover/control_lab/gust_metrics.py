@@ -28,15 +28,18 @@ def evaluate(t, position, attitude_deg, gust_start, gust_end, settled_start):
         'recovery_confirmed':False,'recovery_start_after_gust_s':None,
         'recovery_window_s':20.,
     }
-    # 0.25 s search resolution, with every raw sample included in each window.
+    # Recovery must persist through the end of the test. A quiet 20 s interval
+    # followed by renewed rocking is not a successful recovery.
     for start in np.arange(gust_end,t[-1]-20+1e-9,.25):
-        keep=(t>=start)&(t<=start+20)
-        if t[keep][-1]-t[keep][0]<19.95:continue
+        first=max(0,int(np.searchsorted(t,start,side='right'))-1)
+        keep=np.arange(first,len(t))
+        if t[keep][-1]-t[keep][0]<20:continue
         position_ptp=1000*np.ptp(p[keep],axis=0)
         angle_ptp=np.ptp(a[keep],axis=0)
         mean_error=1000*np.abs(np.mean(p[keep],axis=0)-anchor)
         if max(position_ptp)<2 and max(angle_ptp)<.1 and max(mean_error)<2:
             result.update(recovery_confirmed=True,recovery_start_after_gust_s=float(start-gust_end),
+                          recovery_window_s=float(t[keep][-1]-t[keep][0]),
                           recovered_position_ptp_mm=position_ptp.tolist(),recovered_angle_ptp_deg=angle_ptp.tolist())
             break
     return result

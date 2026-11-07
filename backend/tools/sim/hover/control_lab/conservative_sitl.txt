@@ -1,0 +1,9 @@
+7 runs in 56 s
+run                         status        xy_rms_mm    xy_p95_mm    xy_max_mm    x_mean_mm    y_mean_mm     z_rms_mm     z_max_mm tilt_rms_deg tilt_hp_rms_ tilt_hp_p99_ rate_hp_rms_ tilt_peak_hz   settle10_s
+lqg_conservative_b0_nominal ok (force          7.50        11.99        17.46         1.51        -0.47         2.93         7.23         1.59         2.22         3.15        20.99         1.28          nan
+lqg_conservative_b0_slow    ok (force          4.34         7.24        13.24         1.60        -0.47         2.44         7.34         0.27         0.24         0.48         3.18         0.18        11.79
+lqg_conservative_b1_nominal takeoff a           nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan
+lqg_conservative_b1_slow    ok (force          4.35         7.19        12.91         1.59        -0.76         3.05         7.98         0.24         0.16         0.34         3.31         0.21         9.92
+lqg_conservative_b2_nominal ok (force          6.13        10.10        16.12         1.67        -0.87         3.04         9.40         1.34         1.86         3.12        20.99         1.50        31.81
+lqg_conservative_b2_slow    ok (force          4.51         8.14        13.67         1.74        -0.76         3.40        11.78         0.31         0.32         0.65        11.90         7.10         8.99
+lqg_reject_800hz            simulatio           nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan

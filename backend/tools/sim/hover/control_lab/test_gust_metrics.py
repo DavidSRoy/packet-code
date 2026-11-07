@@ -26,4 +26,7 @@ class GustMetricsTest(unittest.TestCase):
     def test_nonfinite_data_fails_closed(self):
         t,p,a=self.trace();p[-1,0]=np.nan
         with self.assertRaises(ValueError):evaluate(t,p,a,25,26,2)
+    def test_late_rocking_invalidates_earlier_quiet_window(self):
+        t,p,a=self.trace();a[t>=50,0]=10*np.sin(t[t>=50]*8)
+        self.assertFalse(evaluate(t,p,a,25,26,2)['recovery_confirmed'])
 if __name__=='__main__':unittest.main()

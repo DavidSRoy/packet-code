@@ -1,0 +1,346 @@
+[
+  {
+    "name": "lqg_ff_b1_default",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 28.044570071614643,
+    "position_ptp_mm": [
+      11.380393697617972,
+      12.256710189543885,
+      15.256254710621754
+    ],
+    "angle_ptp_deg": [
+      1.1832760331214263,
+      1.111451044812128,
+      0.2813587604461674
+    ],
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.1832760331214263,
+      "pitch_ptp_deg": 1.111451044812128,
+      "tilt_1_3_rms_deg": 0.11899628805138572,
+      "tilt_hp_rms_deg": 0.13125038997100336,
+      "tilt_hp_p99_deg": 0.3046724538655913,
+      "hold_s": 28.044570071614643,
+      "xy_rms_mm": 3.8339926548521066,
+      "xy_max_mm": 8.053093261529801,
+      "xy_p95_mm": 6.493306182699607,
+      "x_mean_mm": 0.7741908084449737,
+      "y_mean_mm": -1.7498073918293515,
+      "z_rms_mm": 3.964386989474911,
+      "z_max_mm": 7.971010638425619,
+      "tilt_rms_deg": 0.2184528965143185,
+      "rate_hp_rms_dps": 2.345395348103484,
+      "tilt_peak_hz": 0.17828489926919405,
+      "xy_peak_hz": 0.24959885897687167
+    },
+    "custom_samples": 281,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.06191800534725189,
+      0.08341580629348755,
+      0.06521380692720413
+    ],
+    "meets_target": false
+  },
+  {
+    "name": "lqg_ff_b1_mid",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 28.01264642022675,
+    "position_ptp_mm": [
+      9.673878355874244,
+      10.402319090638533,
+      15.389482420464285
+    ],
+    "angle_ptp_deg": [
+      1.8922321677715743,
+      1.967897419689856,
+      0.2729204554512404
+    ],
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.8922321677715743,
+      "pitch_ptp_deg": 1.967897419689856,
+      "tilt_1_3_rms_deg": 0.3294266983031497,
+      "tilt_hp_rms_deg": 0.38420311797543955,
+      "tilt_hp_p99_deg": 0.7668340775344547,
+      "hold_s": 28.01264642022675,
+      "xy_rms_mm": 3.540735642054697,
+      "xy_max_mm": 7.31993019596088,
+      "xy_p95_mm": 5.228210490949578,
+      "x_mean_mm": 2.0922335007442125,
+      "y_mean_mm": -0.666910401535133,
+      "z_rms_mm": 3.861736478024269,
+      "z_max_mm": 8.322622585815258,
+      "tilt_rms_deg": 0.3245661264876708,
+      "rate_hp_rms_dps": 11.44390400683518,
+      "tilt_peak_hz": 8.7460954930914,
+      "xy_peak_hz": 0.2498884426597543
+    },
+    "custom_samples": 280,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.15000000596046448,
+      0.15000000596046448,
+      0.0697748139500618
+    ],
+    "meets_target": false
+  },
+  {
+    "name": "lqg_ff_b1_slow",
+    "status": "disarmed in the hold",
+    "custom_control": true,
+    "meets_target": false
+  },
+  {
+    "name": "lqg_ff_b1_gust",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 63.02953884968065,
+    "position_ptp_mm": [
+      43.277322826354606,
+      18.192147577716366,
+      12.648987216330621
+    ],
+    "angle_ptp_deg": [
+      1.255870031287757,
+      3.1406236956640305,
+      0.31040211575805265
+    ],
+    "score": {
+      "settle10_s": 40.249466286900315,
+      "roll_ptp_deg": 1.255870031287757,
+      "pitch_ptp_deg": 3.1406236956640305,
+      "tilt_1_3_rms_deg": 0.1342311048999363,
+      "tilt_hp_rms_deg": 0.14385523599633562,
+      "tilt_hp_p99_deg": 0.3686784563624351,
+      "hold_s": 63.02953884968065,
+      "xy_rms_mm": 5.373185241441182,
+      "xy_max_mm": 23.16815820276733,
+      "xy_p95_mm": 9.392382410360133,
+      "x_mean_mm": 0.7956598276709245,
+      "y_mean_mm": -1.583511022321182,
+      "z_rms_mm": 2.3610415857883758,
+      "z_max_mm": 6.433890521977043,
+      "tilt_rms_deg": 0.2844679498488711,
+      "rate_hp_rms_dps": 2.5886682290248793,
+      "tilt_peak_hz": 0.17452006980818666,
+      "xy_peak_hz": 0.30144375694141334
+    },
+    "custom_samples": 630,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.07101824134588242,
+      0.08488797396421432,
+      0.06620624661445618
+    ],
+    "meets_target": false,
+    "gust": {
+      "gust_start_s": 59.950199999999995,
+      "gust_end_s": 60.950199999999995,
+      "peak_displacement_from_pre_gust_mean_mm": 23.35728410110432,
+      "gust_and_recovery_angle_ptp_deg": [
+        1.0080214217796628,
+        3.1406236956640305,
+        0.21070344038706357
+      ],
+      "pre_gust_position_ptp_mm": [
+        14.102131854379142,
+        14.96311148487032,
+        12.606804552062755
+      ],
+      "pre_gust_angle_ptp_deg": [
+        1.255870031287757,
+        1.3999000786106222,
+        0.26755421457683204
+      ],
+      "recovery_confirmed": false,
+      "recovery_start_after_gust_s": null,
+      "recovery_window_s": 20.0
+    }
+  },
+  {
+    "name": "lqg_ff_b2_default",
+    "status": "takeoff aborted (HOPT 9, armed True)",
+    "custom_control": true,
+    "meets_target": false
+  },
+  {
+    "name": "lqg_ff_b2_mid",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 28.010122269580954,
+    "position_ptp_mm": [
+      8.62448484826642,
+      16.4496933339367,
+      13.40346517277602
+    ],
+    "angle_ptp_deg": [
+      4.218667754443486,
+      4.108243471292073,
+      0.22801334032310128
+    ],
+    "score": {
+      "settle10_s": 12.362248077698123,
+      "roll_ptp_deg": 4.218667754443486,
+      "pitch_ptp_deg": 4.108243471292073,
+      "tilt_1_3_rms_deg": 0.9153511446053489,
+      "tilt_hp_rms_deg": 0.9621302717786011,
+      "tilt_hp_p99_deg": 1.9325491104231236,
+      "hold_s": 28.010122269580954,
+      "xy_rms_mm": 7.0810569035439475,
+      "xy_max_mm": 16.1635363270778,
+      "xy_p95_mm": 13.654477236286262,
+      "x_mean_mm": 1.50064436855005,
+      "y_mean_mm": -5.7239569824326315,
+      "z_rms_mm": 4.470810819096311,
+      "z_max_mm": 9.18143901090071,
+      "tilt_rms_deg": 0.7027143337763695,
+      "rate_hp_rms_dps": 18.554210191200454,
+      "tilt_peak_hz": 2.427704391291033,
+      "xy_peak_hz": 0.21420921099626766
+    },
+    "custom_samples": 280,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.15000000596046448,
+      0.15000000596046448,
+      0.09628152847290039
+    ],
+    "meets_target": false
+  },
+  {
+    "name": "lqg_ff_b2_slow",
+    "status": "disarmed in the hold",
+    "custom_control": true,
+    "meets_target": false
+  },
+  {
+    "name": "lqg_ff_b2_gust",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 63.030083871032105,
+    "position_ptp_mm": [
+      47.19523265535741,
+      17.590961002347285,
+      13.820007362730092
+    ],
+    "angle_ptp_deg": [
+      1.2567909494216603,
+      3.46768110504032,
+      0.2889556698608256
+    ],
+    "score": {
+      "settle10_s": 40.629442460613035,
+      "roll_ptp_deg": 1.2567909494216603,
+      "pitch_ptp_deg": 3.46768110504032,
+      "tilt_1_3_rms_deg": 0.1116852771606454,
+      "tilt_hp_rms_deg": 0.12449722711738839,
+      "tilt_hp_p99_deg": 0.32809798849792854,
+      "hold_s": 63.030083871032105,
+      "xy_rms_mm": 5.583663803482336,
+      "xy_max_mm": 24.964429436505363,
+      "xy_p95_mm": 9.953266365134947,
+      "x_mean_mm": 1.3832351656324826,
+      "y_mean_mm": -1.255009458782629,
+      "z_rms_mm": 2.866740528071232,
+      "z_max_mm": 7.927294926600187,
+      "tilt_rms_deg": 0.28608778682361713,
+      "rate_hp_rms_dps": 3.350939025860067,
+      "tilt_peak_hz": 0.17452006980818666,
+      "xy_peak_hz": 0.31730921783306665
+    },
+    "custom_samples": 630,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.15000000596046448,
+      0.15000000596046448,
+      0.08630111813545227
+    ],
+    "meets_target": false,
+    "gust": {
+      "gust_start_s": 60.3602,
+      "gust_end_s": 61.3602,
+      "peak_displacement_from_pre_gust_mean_mm": 24.13511113155421,
+      "gust_and_recovery_angle_ptp_deg": [
+        1.0086224014961869,
+        3.46768110504032,
+        0.1583152346293562
+      ],
+      "pre_gust_position_ptp_mm": [
+        14.25107922538071,
+        15.255515342796587,
+        13.820007362730092
+      ],
+      "pre_gust_angle_ptp_deg": [
+        1.2567909494216603,
+        1.3504932181881284,
+        0.23044572840339247
+      ],
+      "recovery_confirmed": false,
+      "recovery_start_after_gust_s": null,
+      "recovery_window_s": 20.0
+    }
+  },
+  {
+    "name": "lqg_ff_reference_gust",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": false,
+    "hold_s": 63.036422865910005,
+    "position_ptp_mm": [
+      44.69115525983275,
+      18.466222315533145,
+      12.84889720618898
+    ],
+    "angle_ptp_deg": [
+      1.7386970567428695,
+      3.8790948708462465,
+      1.347342973608297
+    ],
+    "score": {
+      "settle10_s": 55.619390149111965,
+      "roll_ptp_deg": 1.7386970567428695,
+      "pitch_ptp_deg": 3.8790948708462465,
+      "tilt_1_3_rms_deg": 0.2583241156421072,
+      "tilt_hp_rms_deg": 0.2652171388648755,
+      "tilt_hp_p99_deg": 0.6300460383893055,
+      "hold_s": 63.036422865910005,
+      "xy_rms_mm": 5.491051169641863,
+      "xy_max_mm": 23.587362444951196,
+      "xy_p95_mm": 10.271564891355803,
+      "x_mean_mm": 1.0393366990910884,
+      "y_mean_mm": -1.0043606523085318,
+      "z_rms_mm": 2.4075632197484422,
+      "z_max_mm": 7.1150995179525,
+      "tilt_rms_deg": 0.3423474197468074,
+      "rate_hp_rms_dps": 3.39012289148261,
+      "tilt_peak_hz": 0.4441800515570171,
+      "xy_peak_hz": 0.3172714653978693
+    },
+    "meets_target": false,
+    "gust": {
+      "gust_start_s": 60.4452,
+      "gust_end_s": 61.4452,
+      "peak_displacement_from_pre_gust_mean_mm": 22.856662563830227,
+      "gust_and_recovery_angle_ptp_deg": [
+        1.4429934396152266,
+        3.8790948708462465,
+        1.2230811728543283
+      ],
+      "pre_gust_position_ptp_mm": [
+        14.010269029767011,
+        16.124922015889098,
+        12.84889720618898
+      ],
+      "pre_gust_angle_ptp_deg": [
+        1.7386970567428697,
+        1.8046404737325337,
+        1.2791793365701642
+      ],
+      "recovery_confirmed": false,
+      "recovery_start_after_gust_s": null,
+      "recovery_window_s": 20.0
+    }
+  }
+]

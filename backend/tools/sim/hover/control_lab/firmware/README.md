@@ -18,7 +18,8 @@ history states (7.5 ms); physics and disturbances are unchanged.
 Three fixed effort weights are selected with `CC1_PARAM1`: 0 = 0.01, 1 = 0.001,
 2 = 0.0001. `CC1_PARAM2` limits each axis's output, default 0.15. `CC_TYPE=1` and
 `CC_AXIS_MASK=7` select this experimental backend in the copied simulator.
-The local driver activates it explicitly and requires both acknowledgment and
+The frontend refuses activation unless its configured loop is 400 Hz, leaving
+main-controller integrators alone. The local driver activates it explicitly and requires both acknowledgment and
 activation text before attempting its simulated takeoff. `PKLQ` records the bank
 and outputs at 10 Hz; the scorer checks its presence throughout the hold.
 

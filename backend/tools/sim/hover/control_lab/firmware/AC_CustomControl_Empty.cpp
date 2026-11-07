@@ -15,8 +15,7 @@ AC_CustomControl_Empty::AC_CustomControl_Empty(AC_CustomControl& f,AP_AHRS_View*
 void AC_CustomControl_Empty::reset(void) { ready=false; }
 Vector3f AC_CustomControl_Empty::update(void) {
     const Vector3f main{_motors->get_roll(),_motors->get_pitch(),_motors->get_yaw()};
-    // The fixed matrices are valid only at 400 Hz. Fail closed to main control.
-    if (fabsf(_dt-0.0025f)>0.000001f) return main;
+    // The frontend refuses activation unless the configured loop is 400 Hz.
     const auto spool=_motors->get_spool_state();
     if (spool==AP_Motors::SpoolState::SHUT_DOWN || spool==AP_Motors::SpoolState::GROUND_IDLE) {
         ready=false; return main;
@@ -27,7 +26,7 @@ Vector3f AC_CustomControl_Empty::update(void) {
     q.to_euler(actual.x,actual.y,actual.z);
     _att_control->get_attitude_target_quat().to_euler(target.x,target.y,target.z);
     const Vector3f gyro=_ahrs->get_gyro_latest();
-    Vector3f target_rate;
+    Vector3f target_rate{};
     if (param3.get()>0.5f) {
         _att_control->body_to_euler_derivative(_att_control->get_attitude_target_quat(),
                                               _att_control->get_attitude_target_ang_vel(),target_rate);

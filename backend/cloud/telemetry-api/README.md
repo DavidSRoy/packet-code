@@ -192,7 +192,18 @@ Customer/ops order CRUD. Auth: Bearer `READ_TOKEN` on every order endpoint (gues
 - List: `GET /v1/orders?status=placed&limit=100` — filter by state for the ops queue (`limit` 1–500, default 100). Newest first.
 - Advance: `PATCH /v1/orders/<id>` with `status` and/or `drone_id`. Legal moves: `placed → accepted | cancelled`, `accepted → picked_up | failed | cancelled`, `picked_up → loaded | failed | cancelled`, `loaded → in_flight | failed | cancelled`, `in_flight → delivered | failed`. Anything else is `400`. A no-op patch returns the order unchanged.
 - Delete: `DELETE /v1/orders/<id>` works on terminal orders (`delivered`, `failed`, `cancelled`) only. Cancel a live order instead — the ops queue needs the trail.
-- `404` for an unknown id. Dispatch (phase 2) files the flight plan and sends the command when an order is accepted, linking `command_id` back to the order.
+- `404` for an unknown id. Every order carries its `flight_plan` (filed by dispatch, `null` before accept).
+- Re-PATCH the same status to retry dispatch after fixing a `dispatch deferred: …` reason.
+
+### Dispatch (rule-based, v1)
+
+No new endpoints: dispatch runs inside `PATCH /v1/orders/<id>`.
+
+1. **Accept files the plan.** When an order moves to `accepted` with a `drone_id`, dispatch checks the drone is online, backend control is on (SA switch), battery is at least 60%, the drone sits at the pickup pad, and an approved `pickup → dropoff` route exists in the laptop-uploaded routes. Then it files the whole flight plan (`from`, `to`, `route_path`, `length_m`, `est_time_s`) on the order. Any failed check keeps the order `accepted` with a `dispatch deferred: …` reason.
+2. **Loaded releases the trip.** When the order moves to `loaded` with a filed plan, dispatch issues `{"action": "goto", "pad": "<dropoff>"}` to the drone and links `command_id`.
+3. **Reads mirror the trip.** `GET` (one or list) folds the command status into the order: trip running → `in_flight`, `done` → `delivered`, `failed`/`rejected`/`expired`/`stopped_by_pilot` → `failed` with the command's reason. Only legal state-machine moves are written.
+
+Accepting without a drone is `400`. Auto-retry, multi-drone choice, and reassignment of stuck deliveries are follow-ups.
 
 ### Airspace map
 

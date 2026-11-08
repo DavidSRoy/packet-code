@@ -194,5 +194,60 @@ check("orders list filters by status", r.ok && Array.isArray(j.orders) && j.orde
 r = await del(`/v1/orders/${LIVE}`);
 check("orders delete cancelled -> ok", r.ok);
 
+// ---- dispatch: accept files the plan, loaded releases the goto, reads mirror the trip ----
+const D1 = "dispatch-1";
+const dTel = (mission) => ({ ts: Date.now(), link: true, lat: 47.6625, lon: -122.2950, batt_pct: 80,
+  autonomy: { sa_on: true, pad: "qfc",
+    pads: { qfc: { name: "QFC", lat: 47.6625, lon: -122.2950 }, uplace: { name: "UPLACE", lat: 47.664, lon: -122.299 } },
+    can_goto: ["uplace"], mission: { state: "idle", ...(mission ?? {}) } } });
+r = await post(`/v1/drones/${D1}/telemetry`, dTel());
+check("dispatch drone online", r.ok);
+r = await fetch(`${BASE}/v1/drones/${D1}/routes`, { method: "POST", headers: ING, body: JSON.stringify({
+  pads: { qfc: { name: "QFC", lat: 47.6625, lon: -122.2950 } },
+  routes: [{ from: "qfc", to: "uplace", approved: true,
+             path: [[47.6625, -122.2950], [47.664, -122.299]], length_m: 500, est_time_s: 120 }] }) });
+check("dispatch routes uploaded", r.ok);
+
+r = await post(`/v1/orders`, { items: [item], pickup: "qfc", dropoff: "uplace" }, RD);
+const DORD = (await r.json()).id;
+r = await patch(`/v1/orders/${DORD}`, { status: "accepted", drone_id: D1 });
+j = await r.json();
+check("dispatch accept files plan, no command yet",
+  r.ok && j.status === "accepted" && j.flight_plan?.to === "uplace" && j.command_id === null && j.reason === null, DORD);
+
+r = await patch(`/v1/orders/${DORD}`, { status: "picked_up" });
+check("dispatch -> picked_up", r.ok);
+r = await patch(`/v1/orders/${DORD}`, { status: "loaded" });
+j = await r.json();
+check("dispatch loaded releases goto", r.ok && typeof j.command_id === "string" && j.command_id.startsWith("cmd_"));
+const DCMD = j.command_id;
+r = await get(`/v1/drones/${D1}/commands`);
+j = await r.json();
+check("dispatch goto queued for drone", j.commands.some(c => c.id === DCMD && c.action === "goto" && c.pad === "uplace"));
+
+r = await post(`/v1/drones/${D1}/telemetry`, dTel({ state: "enroute", cmd_id: DCMD }));
+r = await get(`/v1/orders/${DORD}`);
+check("dispatch trip mirrors to in_flight", (await r.json()).status === "in_flight");
+r = await post(`/v1/drones/${D1}/telemetry`, dTel({ state: "arrived", cmd_id: DCMD }));
+r = await get(`/v1/orders/${DORD}`);
+check("dispatch trip mirrors to delivered", (await r.json()).status === "delivered");
+
+r = await post(`/v1/orders`, { items: [item], pickup: "qfc", dropoff: "nowhere" }, RD);
+const NOROUTE = (await r.json()).id;
+r = await patch(`/v1/orders/${NOROUTE}`, { status: "accepted", drone_id: D1 });
+j = await r.json();
+check("dispatch no route stays accepted with reason",
+  r.ok && j.status === "accepted" && j.command_id === null && j.flight_plan === null && /no approved route/.test(j.reason ?? ""));
+r = await post(`/v1/orders`, { items: [item], pickup: "qfc", dropoff: "uplace" }, RD);
+const OFF = (await r.json()).id;
+r = await patch(`/v1/orders/${OFF}`, { status: "accepted", drone_id: "ghost-9" });
+j = await r.json();
+check("dispatch offline drone stays accepted with reason",
+  r.ok && j.command_id === null && /offline/.test(j.reason ?? ""));
+r = await post(`/v1/orders`, { items: [item], pickup: "qfc", dropoff: "uplace" }, RD);
+const NODRONE = (await r.json()).id;
+r = await patch(`/v1/orders/${NODRONE}`, { status: "accepted" });
+check("dispatch accept without drone -> 400", r.status === 400);
+
 console.log(fails ? `${fails} FAILED` : "ALL PASS");
 process.exit(fails ? 1 : 0);

@@ -1,4 +1,5 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { identifiedFetch } from "../../../server/geocode.ts";
 import { INTERSECTIONS } from "../../../server/intersection-index.ts";
 import { handleCheck } from "../../../server/handlers.ts";
 
@@ -11,7 +12,7 @@ export async function POST(request: Request): Promise<Response> {
   }
   const result = await handleCheck(body, {
     db: getCloudflareContext().env.DB,
-    fetchFn: fetch,
+    fetchFn: identifiedFetch(new URL(request.url).origin),
     intersections: INTERSECTIONS,
     log: console.error,
   });

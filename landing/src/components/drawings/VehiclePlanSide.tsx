@@ -3,10 +3,10 @@
 import { useRef, type ReactNode } from "react";
 import { useDrawIn } from "@/components/home/useDrawIn";
 
-/** Dimensions and limits to fill in once Vehicle 01 has real specs. */
+/** Dimension labels. Add the measurements once Vehicle 01 has published specs. */
 const SPECS = {
-	span: "Span [TBD]",
-	height: "Height [TBD]",
+	span: "Span",
+	height: "Height",
 	payloadLimit: "15 lb",
 } as const;
 

@@ -1,18 +1,17 @@
 import { ItemBowl } from "@/components/drawings/ItemBowl";
-import { ItemBox } from "@/components/drawings/ItemBox";
 import { ItemCup } from "@/components/drawings/ItemCup";
 import { ItemWrap } from "@/components/drawings/ItemWrap";
 
 export interface StoreItem {
 	name: string;
-	shop: string;
-	price: string;
+	/** What kind of thing it is. Swap in the shop's name and the price once a shop agrees to be listed. */
+	kind: string;
 	Drawing: () => React.JSX.Element;
 }
 
+/** The first items, drawn. The preview's last card is the open slot for a shop, so this list has three. */
 export const STORE_ITEMS: readonly StoreItem[] = [
-	{ name: "U Village Bowl", shop: "[SHOP]", price: "[PRICE]", Drawing: ItemBowl },
-	{ name: "Drumstick Wrap", shop: "[SHOP]", price: "[PRICE]", Drawing: ItemWrap },
-	{ name: "Cold Brew", shop: "[SHOP]", price: "[PRICE]", Drawing: ItemCup },
-	{ name: "[ITEM]", shop: "[SHOP]", price: "[PRICE]", Drawing: ItemBox },
+	{ name: "U Village Bowl", kind: "Lunch", Drawing: ItemBowl },
+	{ name: "Drumstick Wrap", kind: "Lunch", Drawing: ItemWrap },
+	{ name: "Cold Brew", kind: "Coffee", Drawing: ItemCup },
 ];

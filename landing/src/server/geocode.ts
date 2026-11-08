@@ -11,7 +11,20 @@ export class GeocoderError extends Error {
 }
 
 const TIMEOUT_MS = 6000;
-const USER_AGENT = "PacketLanding/1.0 (+[CONTACT EMAIL])";
+const USER_AGENT = "PacketLanding/1.0";
+
+/**
+ * fetch with a User-Agent that names this site's contact page, as Nominatim's usage policy asks.
+ * The origin comes from the request, so preview and production each name themselves.
+ */
+export function identifiedFetch(origin: string): FetchFn {
+  const userAgent = `${USER_AGENT} (+${origin}/#contact)`;
+  return (input, init) => {
+    const headers = new Headers(init?.headers);
+    headers.set("User-Agent", userAgent);
+    return fetch(input, { ...init, headers });
+  };
+}
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;

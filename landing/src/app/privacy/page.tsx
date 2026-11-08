@@ -24,6 +24,13 @@ const BLOCKS: readonly Block[] = [
     ],
   },
   {
+    id: "contact",
+    title: "When you contact us",
+    paragraphs: [
+      "When you send the contact form, we store your name, email address, the topic you chose, and the shop, building or company and message if you give them, with the same campaign tags as above. We use them only to reply to you.",
+    ],
+  },
+  {
     id: "why",
     title: "Why",
     paragraphs: [
@@ -53,7 +60,7 @@ const BLOCKS: readonly Block[] = [
     id: "removal",
     title: "Removal",
     paragraphs: [
-      "To be removed, email [CONTACT EMAIL] from the address you signed up with.",
+      "To have your sign-up or message removed, send the contact form from the same email address, choose Something else, and ask to be removed. We delete it and reply to confirm.",
     ],
   },
 ];

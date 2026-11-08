@@ -3,6 +3,7 @@
 import { Footer } from "@/components/site/Footer";
 import { EmailForm } from "./EmailForm";
 import { PinnedSection } from "./PinnedSection";
+import { ShareLink } from "./ShareLink";
 import { TunnelCanvas } from "./TunnelCanvas";
 
 /**
@@ -32,7 +33,9 @@ export function ClosingPiece() {
 							</h2>
 							<EmailForm />
 							<p className="m-0 max-w-[60ch]">Sign up now and you will be first in line when Packet reaches your street.</p>
-							<p className="m-0 max-w-[60ch]">Know a neighbor who would want this? Send them the link.</p>
+							<p className="m-0 max-w-[60ch]">
+								Know a neighbor who would want this? <ShareLink />
+							</p>
 							<p className="m-0 text-[14px]">Packet for iPhone is coming to the App Store.</p>
 						</div>
 						<Footer variant="piece" />

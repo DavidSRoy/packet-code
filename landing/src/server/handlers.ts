@@ -1,6 +1,8 @@
+import { isHoneypotFilled, parseContact } from "../lib/contact-input.ts";
 import { round } from "../lib/geo.ts";
 import { parseQuery, parseSignup } from "../lib/signup-input.ts";
 import { checkAddress, type CheckResult } from "./check-address.ts";
+import { insertContact } from "./contact.ts";
 import { GeocoderError, type FetchFn } from "./geocode.ts";
 import type { IntersectionIndex } from "./intersections.ts";
 import { upsertSignup, type SignupDb } from "./signups.ts";
@@ -77,6 +79,26 @@ export async function handleSignup(body: unknown, deps: Deps): Promise<HandlerRe
     // D1 error names carry no bound values, so the name is safe to log.
     const error = e instanceof Error ? e.name : "unknown";
     deps.log(`[Signup:POST] Insert failed — ${JSON.stringify({ in_area: inArea, utm_source: input.utmSource, error })}`);
+    return { status: 500, body: { error: "server" } };
+  }
+  return { status: 200, body: { ok: true } };
+}
+
+export async function handleContact(body: unknown, deps: Pick<Deps, "db" | "log">): Promise<HandlerResult> {
+  // A bot that fills the hidden field gets the same answer as a person, so it has nothing to learn from.
+  if (isHoneypotFilled(body)) return { status: 200, body: { ok: true } };
+  const parsed = parseContact(body);
+  if (!parsed.ok) return { status: 400, body: { error: parsed.error } };
+  if (!deps.db) {
+    deps.log("[Contact:POST] DB binding missing");
+    return { status: 503, body: { error: "unavailable" } };
+  }
+  try {
+    await insertContact(deps.db, parsed.value);
+  } catch (e) {
+    // D1 error names carry no bound values, so the name is safe to log.
+    const error = e instanceof Error ? e.name : "unknown";
+    deps.log(`[Contact:POST] Insert failed — ${JSON.stringify({ topic: parsed.value.topic, error })}`);
     return { status: 500, body: { error: "server" } };
   }
   return { status: 200, body: { ok: true } };

@@ -43,8 +43,7 @@
 		{
 			"binding": "DB",
 			"database_name": "packet-landing",
-			// Placeholder for local use only. Replace with the id from `wrangler d1 create` before merge.
-			"database_id": "local-only-replace-before-merge",
+			"database_id": "fb7fbcd8-cbb4-4073-a770-7881de5ba572",
 			"migrations_dir": "migrations"
 		}
 	]

@@ -166,10 +166,12 @@ async function loop() {
     mode: drone.mode, armed: drone.armed,
     batt_pct: Math.round(drone.batt), batt_min: 8,
     gps_fix: 3, sats: 18, home_lat: PADS.qfc.lat, home_lon: PADS.qfc.lon,
-    sa_on: true, pad: drone.pad,
-    pads: Object.fromEntries(Object.entries(PADS).map(([k, p]) => [k, { name: p.name, lat: p.lat, lon: p.lon }])),
-    can_goto: drone.pad ? ROUTES.filter((r) => r.from === drone.pad && r.approved).map((r) => r.to) : [],
-    mission: drone.mission,
+    autonomy: {
+      sa_on: true, pad: drone.pad,
+      pads: Object.fromEntries(Object.entries(PADS).map(([k, p]) => [k, { name: p.name, lat: p.lat, lon: p.lon }])),
+      can_goto: drone.pad ? ROUTES.filter((r) => r.from === drone.pad && r.approved).map((r) => r.to) : [],
+      mission: drone.mission,
+    },
     flyto: drone.flyto,
     acks: drone.acks,
   };

@@ -278,6 +278,21 @@ Command `status`:
 3. With SA on, the backend sends `goto`. The laptop checks the rules, uploads the route to the Pixhawk, and starts it.
 4. The pilot can take control at any time: turn SA off, or move the mode switch. If the laptop link is lost, the drone continues the trip and lands.
 
+### Mock drone (no hardware)
+
+`mock-drone.mjs` plays the drone + laptop uplink over the same HTTP contract: it uploads routes once, POSTs 1 Hz telemetry, and executes the trip command the ingest reply carries (`goto` with takeoff/cruise/land phases, plus `hold`/`resume`/`return`/`flyto`). Use it to demo the order loop with no hardware:
+
+```bash
+# terminal 1: the worker
+npm run dev
+# terminal 2: the mock (drone mock-v0 at pad qfc, SA on, 95% battery)
+node mock-drone.mjs
+# terminal 3: the demo (order -> accept -> load -> delivered)
+bash demo.sh
+```
+
+Env overrides: `API`, `DRONE_ID`, `INGEST_TOKEN` (mock), `API`, `READ_TOKEN`, `DRONE_ID` (demo). The flight model is flat-earth at ~5 m/s with fixed pads — protocol truth, not flyability proof.
+
 ### Errors
 
 `401` for a bad token, `400` for bad input, `404` for an unknown route. The body is `{"error": "..."}`.

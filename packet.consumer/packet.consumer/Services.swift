@@ -217,12 +217,25 @@ final class AppState: ObservableObject {
 
     var menuRepository: any MenuRepository = MockMenuRepository()
     var paymentService: any PaymentService = MockPaymentService()
-#if DEBUG
-    /// Demo builds replay the Tracking timeline with no backend (see MockOrderService).
-    var orderService: any OrderService = MockOrderService()
-#else
-    var orderService: any OrderService = APIOrderService()
-#endif
+
+    /// Live backend switch (Settings tab). Off = offline demo (see MockOrderService).
+    @Published var useLiveAPI: Bool = UserDefaults.standard.bool(forKey: "packet.useLiveAPI") {
+        didSet { UserDefaults.standard.set(useLiveAPI, forKey: "packet.useLiveAPI") }
+    }
+
+    /// Worker base URL (Settings tab). Defaults to local `wrangler dev`.
+    @Published var apiBaseURL: String = UserDefaults.standard.string(forKey: "packet.apiBaseURL")
+        ?? "http://127.0.0.1:8787" {
+        didSet { UserDefaults.standard.set(apiBaseURL, forKey: "packet.apiBaseURL") }
+    }
+
+    /// The Settings toggle decides at call time, so flipping it applies to the next order/watch.
+    var orderService: any OrderService {
+        guard useLiveAPI else { return MockOrderService() }
+        let base = URL(string: apiBaseURL.trimmingCharacters(in: .whitespacesAndNewlines))
+            ?? URL(string: "http://127.0.0.1:8787")!
+        return APIOrderService(config: ApiConfig(baseURL: base))
+    }
 
     var cartTotalCents: Int {
         cart.reduce(0) { $0 + $1.lineTotalCents }

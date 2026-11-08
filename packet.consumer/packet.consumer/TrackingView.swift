@@ -65,7 +65,7 @@ struct TrackingView: View {
         }
         .background(Color.appBackground)
         .navigationBarTitleDisplayMode(.inline)
-        .task(id: state.activeOrder?.id) {
+        .task(id: "\(state.useLiveAPI)-\(state.activeOrder?.id ?? "none")") {
             guard let id = state.activeOrder?.id else { return }
             for await updated in state.orderService.watchOrder(id: id) {
                 await MainActor.run { state.activeOrder = updated }

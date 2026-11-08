@@ -21,6 +21,11 @@ struct ContentView: View {
                 TrackingView(state: state)
             }
             .tabItem { Label("Tracking", systemImage: "map") }
+
+            NavigationStack {
+                SettingsView(state: state)
+            }
+            .tabItem { Label("Settings", systemImage: "gearshape") }
             }
             .tint(.packetRed)
             if showSplash {

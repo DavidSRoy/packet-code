@@ -53,6 +53,15 @@ final class packet_consumerTests: XCTestCase {
     }
 
     @MainActor
+    func testOrderServiceFollowsSettingsToggle() {
+        let state = AppState()
+        state.useLiveAPI = false
+        XCTAssertTrue(state.orderService is MockOrderService)
+        state.useLiveAPI = true
+        XCTAssertTrue(state.orderService is APIOrderService)
+    }
+
+    @MainActor
     func testMockOrderServiceProgresses() async throws {
         let svc = MockOrderService(stepDelay: 1_000_000)
         let line = CartLine(item: MenuItem(id: "b", name: "Bowl", description: "", priceCents: 100), quantity: 2)

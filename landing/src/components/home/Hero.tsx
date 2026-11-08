@@ -2,6 +2,7 @@
 
 import { AddressForm } from "./AddressForm";
 import { HeroGlobe } from "./HeroGlobe";
+import { ScrollCue } from "./ScrollCue";
 import { useSignupFlow } from "./useSignupFlow";
 
 export function Hero() {
@@ -10,7 +11,7 @@ export function Hero() {
 	return (
 		<header
 			id="top"
-			className="relative min-h-[clamp(520px,72vh,760px)] overflow-hidden max-[900px]:flex max-[900px]:min-h-0 max-[900px]:flex-col"
+			className="relative min-h-[max(560px,calc(100svh-56px))] overflow-hidden max-[900px]:flex max-[900px]:flex-col"
 		>
 			<HeroGlobe target={flow.target} />
 			<div
@@ -30,6 +31,7 @@ export function Hero() {
 					<AddressForm flow={flow} />
 				</div>
 			</div>
+			<ScrollCue />
 		</header>
 	);
 }

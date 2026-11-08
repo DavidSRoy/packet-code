@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { SignButton } from "@/components/site/SignButton";
+import { scrollPastHero } from "@/lib/scroll";
 import { TextField } from "./TextField";
 import type { SignupFlow } from "./useSignupFlow";
 
@@ -46,11 +47,7 @@ export function AddressForm(props: Props) {
 	}
 
 	function onLearnMoreClick(e: MouseEvent<HTMLAnchorElement>) {
-		const section = document.getElementById("get-h")?.closest("section");
-		if (!section) return;
-		e.preventDefault();
-		const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-		section.scrollIntoView({ behavior: isReduced ? "auto" : "smooth", block: "start" });
+		if (scrollPastHero()) e.preventDefault();
 	}
 
 	function onRestartClick() {

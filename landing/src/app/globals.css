@@ -588,9 +588,10 @@ nav a[aria-current="page"] {
 }
 
 /* The delivery: each benefit arrives at the moment on the route that proves it. */
+/* The first is there from the start, so the reader never waits on the drawing with nothing to read. */
 .pin [data-benefit="1"] {
-	--a: 0.12;
-	--b: 0.22;
+	--a: -1;
+	--b: 0;
 }
 
 .pin [data-benefit="2"] {

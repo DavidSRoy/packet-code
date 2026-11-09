@@ -2,9 +2,13 @@
  * For more details on how to configure Wrangler, refer to:
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  *
- * Deploys go through Cloudflare Workers Builds (the GitHub integration), not a
- * GitHub Actions workflow. Workers Builds ignores this file's build command.
- * Set these in the Worker settings, under Build:
+ * The Worker is "packet-landing", served at viapacket.com. Until Workers Builds is
+ * connected, deploy by hand from landing/ with `npm run deploy`, after applying any
+ * new migrations with `npx wrangler d1 migrations apply packet-landing --remote`.
+ *
+ * Once deploys go through Cloudflare Workers Builds (the GitHub integration), set
+ * these in the Worker settings, under Build. Workers Builds ignores this file's
+ * build command.
  *   Root directory: landing
  *   Production branch: master
  *   Build command: npx opennextjs-cloudflare build
@@ -12,10 +16,11 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "landing",
+	"name": "packet-landing",
 	"main": ".open-next/worker.js",
 	"compatibility_date": "2026-10-19",
 	"compatibility_flags": [
+		"nodejs_compat",
 		"global_fetch_strictly_public"
 	],
 	"assets": {
@@ -32,7 +37,7 @@
 			// Self-reference service binding, the service name must match the worker name
 			// see https://opennext.js.org/cloudflare/caching
 			"binding": "WORKER_SELF_REFERENCE",
-			"service": "landing"
+			"service": "packet-landing"
 		}
 	],
 	"observability": {

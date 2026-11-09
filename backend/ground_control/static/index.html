@@ -116,7 +116,10 @@
   #att svg { flex: none; }
 
   /* right: actions + log */
-  #actions { top: 64px; right: 12px; width: 252px; padding: 12px; max-height: calc(100vh - 84px - var(--air-h, 190px)); overflow-y: auto; }
+  #actions { top: 64px; right: 12px; width: 252px; padding: 12px 12px 0; max-height: calc(100vh - 84px - var(--air-h, 190px)); overflow-y: auto; }
+  /* scroll cue: the bottom padding is a strip that stays at the fold, so content fades out there instead of ending on a hard cut */
+  #actions::after { content: ""; display: block; position: sticky; bottom: 0; height: 12px;
+    background: linear-gradient(transparent, var(--glass)); pointer-events: none; }
   /* trips (backend pad-to-pad) */
   #trips, #lights, #flyto { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
   #lights .row2 { margin-bottom: 0; grid-template-columns: repeat(5, auto); }

@@ -39,8 +39,8 @@
  *
  * Orders are global (one Durable Object for all orders), not per-drone. Status:
  * placed -> accepted -> picked_up -> loaded -> in_flight -> delivered, plus
- * failed / cancelled. Dispatch (phase 2) files the flight plan and sends the
- * command when an order is accepted.
+ * failed / cancelled. Dispatch files the whole flight plan on accept and
+ * releases it as a goto command on loaded; reads mirror the trip progress.
  *
  * Commands reach the drone through the laptop: the reply to each telemetry
  * POST carries the next queued command. The laptop answers in a later POST
@@ -713,16 +713,37 @@ type OrderRow = {
   created_at: number; updated_at: number;
 };
 
-function orderOut(o: OrderRow) {
-  return { id: o.id, status: o.status, items: JSON.parse(o.items), pickup: o.pickup, dropoff: o.dropoff,
-           drone_id: o.drone_id, command_id: o.command_id, reason: o.reason,
-           created_at: new Date(o.created_at).toISOString(), updated_at: new Date(o.updated_at).toISOString() };
+/**
+ * Whole flight plan filed by dispatch. Concrete JSON shapes only: RPC stub
+ * methods reject `unknown` return types as unserializable, so the plan is
+ * validated at the dispatch boundary instead of passed through as JSON.
+ */
+export interface FlightPlan {
+  order_id: string;
+  drone_id: string | null;
+  from: string;
+  to: string;
+  route_path: number[][] | null;
+  length_m: number | null;
+  est_time_s: number | null;
+  issued_at: string;
 }
 
+function orderOut(o: OrderRow, plan: FlightPlan | null) {
+  return { id: o.id, status: o.status, items: JSON.parse(o.items) as OrderItem[], pickup: o.pickup, dropoff: o.dropoff,
+           drone_id: o.drone_id, command_id: o.command_id, reason: o.reason, flight_plan: plan,
+           created_at: new Date(o.created_at).toISOString(), updated_at: new Date(o.updated_at).toISOString() };
+}
+type OrderOut = ReturnType<typeof orderOut>;
+
 /** An order item: menu name and quantity. The menu itself lives in the customer app. */
-function cleanItems(v: unknown): { name: string; qty: number }[] | string {
+export interface OrderItem {
+  name: string;
+  qty: number;
+}
+function cleanItems(v: unknown): OrderItem[] | string {
   if (!Array.isArray(v) || !v.length || v.length > ITEMS_MAX) return `items must be 1..${ITEMS_MAX} entries`;
-  const out: { name: string; qty: number }[] = [];
+  const out: OrderItem[] = [];
   for (const it of v) {
     const o = it as Record<string, unknown>;
     const name = str(o?.name, 80);
@@ -756,12 +777,18 @@ export class Orders extends DurableObject<Env> {
     sql.exec("INSERT INTO orders (id, status, items, pickup, dropoff, drone_id, command_id, reason, " +
              "created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
       id, "placed", JSON.stringify(items), pickup, dropoff, null, null, null, now, now);
-    return orderOut(sql.exec<OrderRow>("SELECT * FROM orders WHERE id = ?", id).one());
+    return orderOut(sql.exec<OrderRow>("SELECT * FROM orders WHERE id = ?", id).one(), null);
+  }
+
+  private planOf(id: string): FlightPlan | null {
+    const r = this.ctx.storage.sql.exec<{ plan: string }>(
+      "SELECT plan FROM flight_plans WHERE order_id = ?", id).toArray()[0];
+    return r ? JSON.parse(r.plan) as FlightPlan : null;
   }
 
   async get(id: string) {
     const row = this.ctx.storage.sql.exec<OrderRow>("SELECT * FROM orders WHERE id = ?", id).toArray()[0];
-    return row ? orderOut(row) : null;
+    return row ? orderOut(row, this.planOf(id)) : null;
   }
 
   async list(status: string | null, limit: number) {
@@ -769,7 +796,34 @@ export class Orders extends DurableObject<Env> {
     const rows = (status
       ? sql.exec<OrderRow>("SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC LIMIT ?", status, limit)
       : sql.exec<OrderRow>("SELECT * FROM orders ORDER BY created_at DESC LIMIT ?", limit)).toArray();
-    return rows.map(orderOut);
+    return rows.map((r) => orderOut(r, this.planOf(r.id)));
+  }
+
+  /** File the whole flight plan dispatch validated. */
+  async putFlightPlan(orderId: string, plan: FlightPlan) {
+    this.ctx.storage.sql.exec("INSERT OR REPLACE INTO flight_plans (order_id, plan, created_at, updated_at) " +
+                             "VALUES (?,?,?,?)", orderId, JSON.stringify(plan), Date.now(), Date.now());
+  }
+
+  /** Release: attach the filed plan's trip command, clearing any deferral. Dispatch-owned. */
+  async linkCommand(id: string, commandId: string) {
+    this.ctx.storage.sql.exec("UPDATE orders SET command_id = ?, reason = NULL, updated_at = ? WHERE id = ?",
+      commandId, Date.now(), id);
+    return this.get(id);
+  }
+
+  /** Dispatch preconditions unmet: keep the order where it is, say why. */
+  async setReason(id: string, reason: string | null) {
+    this.ctx.storage.sql.exec("UPDATE orders SET reason = ?, updated_at = ? WHERE id = ?",
+      reason, Date.now(), id);
+    return this.get(id);
+  }
+
+  /** Command-mirror writes; the caller guarantees a legal move. */
+  async setStatus(id: string, status: OrderStatus, reason: string | null) {
+    this.ctx.storage.sql.exec("UPDATE orders SET status = ?, reason = ?, updated_at = ? WHERE id = ?",
+      status, reason, Date.now(), id);
+    return this.get(id);
   }
 
   /** Advance status (validated against ORDER_NEXT) and/or assign a drone. command_id is dispatch-owned. */
@@ -791,17 +845,19 @@ export class Orders extends DurableObject<Env> {
         return { error: "drone_id must be 1-32 chars of a-z, 0-9 or -", status: 400 };
       drone = b.drone_id;
     }
+    if (status === "accepted" && !drone)
+      return { error: "accept needs drone_id (dispatch assigns the trip to a drone)", status: 400 };
     if (b.reason !== undefined) {
       if (b.reason !== null && typeof b.reason !== "string") return { error: "reason must be a string", status: 400 };
       reason = b.reason == null ? null : b.reason.slice(0, 200);
     }
     if (status === row.status && drone === row.drone_id && reason === row.reason)
-      return { order: orderOut(row) };                                    // no-op patch: return as-is
+      return { order: orderOut(row, this.planOf(id)) };                    // no-op patch: return as-is
     if (terminal) return { error: `order is ${row.status}`, status: 400 };
     const now = Date.now();
     sql.exec("UPDATE orders SET status = ?, drone_id = ?, reason = ?, updated_at = ? WHERE id = ?",
       status, drone, reason, now, id);
-    return { order: orderOut(sql.exec<OrderRow>("SELECT * FROM orders WHERE id = ?", id).one()) };
+    return { order: orderOut(sql.exec<OrderRow>("SELECT * FROM orders WHERE id = ?", id).one(), this.planOf(id)) };
   }
 
   /** Delete terminal orders only. Cancel live ones instead (the ops queue needs the trail). */
@@ -814,6 +870,101 @@ export class Orders extends DurableObject<Env> {
     sql.exec("DELETE FROM orders WHERE id = ?", id);
     return { ok: true };
   }
+}
+
+/* ---------------- dispatch (rule-based, v1) ---------------- */
+// Two phases matching the operator workflow: on accept dispatch validates and
+// files the whole flight plan; on loaded it releases the plan as a goto
+// command. Precondition failures keep the order where it is with a reason, so
+// the operator can fix and re-drive it (re-PATCH the same status).
+
+const DISPATCH_MIN_BATT = 60;   // the laptop refuses trips under 60% (see README)
+
+/**
+ * The slice of drone state dispatch reads. Typed separately because the
+ * worker's public state carries opaque laptop blobs (ceiling, flyto, …),
+ * which makes the generated RPC stub type unserializable.
+ */
+type DroneDispatchState = {
+  online: boolean;
+  battery: { percent: number | null } | null;
+  autonomy: {
+    backend_control_allowed: boolean;
+    current_pad: string | null;
+    can_goto: string[];
+  } | null;
+};
+
+async function dispatch(env: Env, id: string): Promise<OrderOut | null> {
+  const orders = env.ORDERS.getByName("orders");
+  const cur = await orders.get(id);
+  if (!cur || cur.status === "placed" || ORDER_NEXT[cur.status as OrderStatus].length === 0) return cur;
+  const fail = async (why: string) => (await orders.setReason(id, `dispatch deferred: ${why}`)) ?? cur;
+  if (!cur.flight_plan && cur.drone_id) {
+    const drone = env.DRONE.getByName(cur.drone_id);
+    const st = (await drone.state(cur.drone_id)) as unknown as DroneDispatchState;
+    if (!st.online) return fail("drone offline");
+    const au = st.autonomy;
+    if (!au) return fail("no autonomy from laptop");
+    if (!au.backend_control_allowed) return fail("backend control off (SA switch)");
+    if ((st.battery?.percent ?? 0) < DISPATCH_MIN_BATT)
+      return fail(`battery ${st.battery?.percent ?? "?"}% below ${DISPATCH_MIN_BATT}%`);
+    if (au.current_pad !== cur.pickup)
+      return fail(`drone is at ${au.current_pad ?? "unknown pad"}, order picks up at ${cur.pickup}`);
+    if (!au.can_goto.includes(cur.dropoff))
+      return fail(`no approved route ${cur.pickup} -> ${cur.dropoff} from the current pad`);
+    const blob = await drone.getBlob("routes");
+    if (!blob) return fail("laptop has not uploaded routes yet");
+    let uploaded: { routes?: unknown };
+    try { uploaded = JSON.parse(new TextDecoder().decode(blob.data)); }
+    catch { return fail("laptop routes are not JSON"); }
+    const route = (Array.isArray(uploaded.routes) ? uploaded.routes : []).find((r) =>
+      r != null && typeof r === "object" && (r as Record<string, unknown>).from === cur.pickup &&
+      (r as Record<string, unknown>).to === cur.dropoff && (r as Record<string, unknown>).approved === true);
+    if (!route) return fail(`no approved route ${cur.pickup} -> ${cur.dropoff}`);
+    const rp = route as Record<string, unknown>;
+    await orders.putFlightPlan(id, { order_id: id, drone_id: cur.drone_id, from: cur.pickup, to: cur.dropoff,
+      route_path: Array.isArray(rp.path) ? rp.path as number[][] : null,
+      length_m: typeof rp.length_m === "number" ? rp.length_m : null,
+      est_time_s: typeof rp.est_time_s === "number" ? rp.est_time_s : null,
+      issued_at: new Date().toISOString() });
+    await orders.setReason(id, null);   // filed: any earlier deferral is stale
+  }
+  const planned = await orders.get(id);
+  if (!planned) return cur;
+  if (planned.status === "loaded" && planned.flight_plan && !planned.command_id && planned.drone_id) {
+    const r = await env.DRONE.getByName(planned.drone_id).command(planned.drone_id, "goto", planned.dropoff);
+    if ("error" in r) return fail(`drone refused the trip: ${r.error}`);
+    return (await orders.linkCommand(id, (r.command as { id: string }).id)) ?? planned;
+  }
+  return planned;
+}
+
+/** Map a trip command status onto the order machine. Null = still with dispatch/operator. */
+function mirrorTarget(cmdStatus: string): OrderStatus | null {
+  switch (cmdStatus) {
+    case "in_progress": case "holding": case "returning": return "in_flight";
+    case "done": return "delivered";
+    case "failed": case "rejected": case "expired": case "superseded": return "failed";
+    case "stopped_by_pilot": return "failed";
+    default: return null;   // queued, delivered, accepted: the trip has not started
+  }
+}
+
+/** Fold the trip command's progress into the order on read. Writes only legal moves. */
+async function mirrorOrder(env: Env, o: OrderOut): Promise<OrderOut> {
+  if (!o.command_id || !o.drone_id) return o;
+  if (ORDER_NEXT[o.status as OrderStatus].length === 0) return o;
+  let cmd: Awaited<ReturnType<DroneState["getCommand"]>>;
+  try {
+    cmd = await env.DRONE.getByName(o.drone_id).getCommand(o.command_id);
+  } catch { return o; }
+  if (!cmd) return o;
+  const target = mirrorTarget(cmd.status);
+  if (!target || target === o.status) return o;
+  if (!ORDER_NEXT[o.status as OrderStatus].includes(target)) return o;
+  const reason = target === "failed" ? (cmd.reason ?? o.reason ?? "trip failed") : o.reason;
+  return (await env.ORDERS.getByName("orders").setStatus(o.id, target, reason)) ?? o;
 }
 
 /* ---------------- router ---------------- */
@@ -888,19 +1039,26 @@ export default {
         if (st != null && !(ORDER_STATUS as readonly string[]).includes(st))
           return error(400, `status must be one of ${ORDER_STATUS.join(", ")}`);
         const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 100) || 100, 1), 500);
-        return json({ orders: await orders.list(st, limit) });
+        const found = await orders.list(st, limit);
+        return json({ orders: await Promise.all(found.map((o) => mirrorOrder(env, o))) });
       }
       if (parts.length === 3 && ORDER_ID.test(parts[2])) {
         const oid = parts[2];
         if (request.method === "GET") {
           const o = await orders.get(oid);
-          return o ? json(o) : error(404, "no such order");
+          return o ? json(await mirrorOrder(env, o)) : error(404, "no such order");
         }
         if (request.method === "PATCH") {
           let b: Record<string, unknown>;
           try { b = (await request.json()) as Record<string, unknown>; } catch { return error(400, "invalid JSON"); }
           const r = await orders.patch(oid, b);
-          return "error" in r ? error(r.status as number, r.error as string) : json(r.order);
+          if ("error" in r) return error(r.status as number, r.error as string);
+          let order = r.order;
+          // Accept files the flight plan; loaded releases it as a goto. Re-PATCH
+          // the same status to retry after fixing a dispatch-deferred reason.
+          if (b.status === "accepted" || order.status === "loaded")
+            order = (await dispatch(env, oid)) ?? order;
+          return json(await mirrorOrder(env, order));
         }
         if (request.method === "DELETE") {
           const r = await orders.remove(oid);

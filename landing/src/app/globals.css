@@ -422,12 +422,13 @@ nav a[aria-current="page"] {
 /* The scroll cue: bottom of the hero, in the copy's column. Arrives after the intro, leaves once the reader scrolls. */
 .scroll-cue {
 	position: absolute;
+	flex-direction: column;
+	align-items: center;
 	left: max(var(--spacing-margin), env(safe-area-inset-left, 0px));
 	bottom: 28px;
 	z-index: 1;
 	display: flex;
-	align-items: center;
-	gap: 12px;
+	gap: 6px;
 	color: var(--color-ink);
 	text-decoration: none;
 	opacity: 0;
@@ -446,41 +447,35 @@ nav a[aria-current="page"] {
 	text-underline-offset: 4px;
 }
 
-/* A short dotted route pointing down, the same mustard dots as the plan's routes. */
-.scroll-cue-route {
-	position: relative;
+/* Two down arrows that light one after the other, pointing the way. */
+.scroll-cue-arrows {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0;
+}
+
+.scroll-cue-arrows svg {
 	display: block;
-	width: 10px;
-	height: 44px;
-	background: radial-gradient(circle, var(--color-mustard) 1.8px, transparent 2.3px) 50% 0 / 10px 7px repeat-y;
+	width: 18px;
+	height: 11px;
+	margin-top: -2px;
+	animation: cue-arrow 1.8s ease-in-out 3.2s infinite both;
 }
 
-/* The red block travels the route, as the package does on every drawing. */
-.scroll-cue-route i {
-	position: absolute;
-	left: 1px;
-	top: 0;
-	width: 8px;
-	height: 8px;
-	background: var(--color-red);
-	animation: cue-travel 2.2s cubic-bezier(0.45, 0, 0.55, 1) 3.2s infinite;
+.scroll-cue-arrows svg + svg {
+	animation-delay: 3.5s;
 }
 
-@keyframes cue-travel {
-	0% {
-		transform: translateY(0);
-		opacity: 0;
-	}
-	15% {
-		opacity: 1;
-	}
-	70% {
-		transform: translateY(36px);
-		opacity: 1;
-	}
+@keyframes cue-arrow {
+	0%,
 	100% {
-		transform: translateY(36px);
-		opacity: 0;
+		opacity: 0.25;
+		transform: translateY(0);
+	}
+	45% {
+		opacity: 1;
+		transform: translateY(3px);
 	}
 }
 

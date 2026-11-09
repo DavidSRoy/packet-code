@@ -4,8 +4,8 @@ import { useEffect, useState, type MouseEvent } from "react";
 import { scrollPastHero } from "@/lib/scroll";
 
 /**
- * The hint that the page goes on: a short dotted route pointing down, with the red block travelling it, and a
- * "Scroll" label. It fades once the reader has scrolled, and takes them on if they click it.
+ * The hint that the page goes on: "See more" over two down arrows that light in turn. It fades once the reader
+ * has scrolled, and takes them on if they click it.
  */
 export function ScrollCue() {
 	const [isGone, setIsGone] = useState(false);
@@ -28,14 +28,15 @@ export function ScrollCue() {
 			href="#get-h"
 			className="scroll-cue"
 			data-gone={isGone || undefined}
-			aria-label="Scroll to see more"
 			onClick={onCueClick}
 		>
-			<span className="lbl text-[12px]" aria-hidden="true">
-				Scroll
-			</span>
-			<span className="scroll-cue-route" aria-hidden="true">
-				<i />
+			<span className="lbl text-[13px]">See more</span>
+			<span className="scroll-cue-arrows" aria-hidden="true">
+				{[0, 1].map((i) => (
+					<svg key={i} viewBox="0 0 20 12" fill="none" stroke="currentColor" strokeWidth="2.25">
+						<path d="M2 2l8 8 8-8" />
+					</svg>
+				))}
 			</span>
 		</a>
 	);

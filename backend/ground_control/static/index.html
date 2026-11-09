@@ -75,7 +75,8 @@
     max-height: calc(100vh - 76px); }
   #asset { flex: none; }
   #left > .panel { position: relative; }
-  #pos { padding: 9px 14px; color: var(--muted); font-size: 11px; }
+  #pos, #radio { padding: 9px 14px; color: var(--muted); font-size: 11px; }
+  #radio { padding-top: 0; }
 
   /* vehicle attitude view (SpaceX style) */
   #att3d { flex: 0 1 300px; min-height: 120px; display: flex; flex-direction: column; overflow: hidden;
@@ -341,11 +342,11 @@
     <div><span class="lbl">Current</span><b id="v-amp">—<small>A</small></b></div>
     <div><span class="lbl">Sats</span><b id="v-sats">—</b></div>
     <div><span class="lbl">Battery</span><b id="v-pct">—<small>%</small></b></div>
-    <div><span class="lbl">Time left</span><b id="v-tleft">—<small>min</small></b></div>
-  </div>
+    <div><span class="lbl">Time left</span><b id="v-tleft">—<small>min</small></b></div>  </div>
   <div class="battbar"><div class="track"><div class="fill" id="b-fill"></div></div>
     <div class="sub"><span id="b-used">— mAh used</span><span id="b-basis">to 20% reserve</span></div></div>
   <div id="pos" class="num">—</div>
+  <div id="radio" class="num" title="Telemetry radio: signal above noise in the weaker direction, and the noise the drone's radio hears (dBm is approximate)">—</div>
 </div>
 <div id="att3d" class="panel">
   <div class="att-h"><span class="lbl">Attitude · EKF</span>
@@ -1074,10 +1075,24 @@ function renderAir(c, down) {
     + `FAA airspace <b>${fmtAge(m.class_age_s)}</b> · buildings <b>${fmtAge(m.bld_age_s)}</b> (${m.buildings ?? 0})<br>`
     + `home ${c.home_amsl == null ? "—" : c.home_amsl + " m"} (${esc2(c.home_src || "—")}) · fallback ${c.fallback_m == null ? "—" : c.fallback_m + " m"}`;
 }
+// The Link cell turns amber and reads WEAK when the telemetry radio signal is this close to the noise (dB).
+// A starting value: the 2026-10-29 flights had medians of 16 to 19 dB at close range. Tune it after more flights.
+const RADIO_WARN_DB = 10, RADIO_STALE_S = 3;
 function render(down) {
   const s = state;
-  dot("d-link", down ? "bad" : s.link ? "ok" : "bad");
-  $("t-link").textContent = down ? "SERVER DOWN" : s.link ? "UP" : "LOST";
+  // Telemetry radio (server.py radio_levels): signal above noise, the weaker of the two directions.
+  // The laptop radio reports by itself, so this stays live while the drone link is LOST.
+  const rad = !down && s.radio && s.radio.age < RADIO_STALE_S ? s.radio : null;
+  const radDb = rad ? Math.round(Math.min(rad.gnd_db, rad.air_db ?? rad.gnd_db)) : null;   // rounded once: the number and WEAK agree
+  const weak = rad && radDb < RADIO_WARN_DB;
+  dot("d-link", down || !s.link ? "bad" : weak ? "warn" : "ok");
+  $("t-link").textContent = down ? "SERVER DOWN" : !s.link ? "LOST" : weak ? "WEAK" : "UP";
+  $("radio").textContent = !rad ? "NO RADIO DATA"
+    : `LINK ${radDb} dB` + (rad.air_noise != null ? ` · DRONE NOISE ${rad.air_noise} dBm` : "");
+  $("t-link").parentElement.title = !rad ? ""
+    : `Signal above noise: at the laptop ${rad.gnd_db} dB` + (rad.air_db != null ? `, at the drone ${rad.air_db} dB` : "")
+      + `. Noise (approximate): laptop ${rad.gnd_noise} dBm` + (rad.air_noise != null ? `, drone ${rad.air_noise} dBm` : "")
+      + `. Receive errors: ${rad.rxerrors}.`;
   dot("d-rc", s.rc_ok ? (s.sd_stop ? "bad" : "ok") : "bad");
   // RSSI 0..254; 0 and 255 mean "not measured" (the FC has no RSSI source set up)
   const rssi = s.rssi > 0 && s.rssi < 255 ? `${Math.round(s.rssi * 100 / 254)}%` : "OK";

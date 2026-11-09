@@ -26,16 +26,24 @@ export function Nav() {
 					Packet
 				</Link>
 			)}
-			{ITEMS.map((item) => (
-				<Link
-					key={item.href}
-					className="navlink"
-					href={item.href}
-					aria-current={pathname === item.href ? "page" : undefined}
-				>
-					{item.label}
-				</Link>
-			))}
+			{ITEMS.map((item) =>
+				// A hash link has to be a plain anchor: Next's Link changes the URL on the same page without firing
+				// hashchange, so the sign-up form never scrolled into view or took focus.
+				item.href.includes("#") ? (
+					<a key={item.href} className="navlink" href={item.href}>
+						{item.label}
+					</a>
+				) : (
+					<Link
+						key={item.href}
+						className="navlink"
+						href={item.href}
+						aria-current={pathname === item.href ? "page" : undefined}
+					>
+						{item.label}
+					</Link>
+				),
+			)}
 		</nav>
 	);
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Footer } from "@/components/site/Footer";
 import { ManualSection } from "@/components/press/ManualSection";
 import { SpecList, type SpecRow } from "@/components/press/SpecList";
@@ -12,20 +13,12 @@ export const metadata: Metadata = {
 
 const FACTS: readonly SpecRow[] = [
   { key: "Company", value: "Packet" },
-  { key: "Founded", value: "[YEAR]" },
   { key: "Based in", value: "Seattle, Washington" },
   {
     key: "Service area",
     value: "University Village, Seattle, and the streets around it",
   },
   { key: "First product", value: "Vehicle 01, a four-rotor delivery aircraft" },
-  { key: "Deliveries begin", value: "[LAUNCH DATE]" },
-  { key: "Leadership", value: "[NAME], [TITLE] · [NAME], [TITLE]" },
-];
-
-const CONTACTS: readonly SpecRow[] = [
-  { key: "Press", value: "[NAME], [EMAIL]" },
-  { key: "Photos and interviews", value: "[EMAIL]" },
 ];
 
 interface Ink {
@@ -90,7 +83,7 @@ export default function PressPage() {
                 key={entry.headline}
                 className="grid grid-cols-[minmax(0,160px)_minmax(0,1fr)] gap-4 border-b border-ink py-4 max-[760px]:grid-cols-[minmax(0,1fr)] max-[760px]:gap-1"
               >
-                <span className="lbl pt-[3px] text-[13px]">{entry.date}</span>
+                <span className="lbl pt-[3px] text-[13px]">{entry.date ?? ""}</span>
                 <div>
                   <b className="text-[19px] leading-[1.3]">{entry.headline}</b>
                   <p className="m-0 mt-1.5 text-[15px]">{entry.summary}</p>
@@ -152,12 +145,26 @@ export default function PressPage() {
             ))}
           </ul>
           <p className={`m-0 ${SMALL}`}>
-            Emblem and drawings as SVG and PNG: [DOWNLOAD LINK]
+            Emblem as PNG and drawings as SVG:{" "}
+            <a href="/press/packet-brand-files.zip" download>
+              Download brand files (ZIP)
+            </a>
           </p>
         </ManualSection>
 
         <ManualSection no="4.0" title="Contact">
-          <SpecList rows={CONTACTS} />
+          <p className="m-0 mt-2 max-w-[60ch] border-t border-ink pt-4">
+            For interviews, photos or anything else for a story, write to us
+            through the contact form and choose Press. We reply by email.
+          </p>
+          <Link className="sign self-start" href="/?topic=press#contact">
+            <span className="arrow" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M2 10h15M11 4l6 6-6 6" />
+              </svg>
+            </span>
+            <span className="txt">Contact press</span>
+          </Link>
         </ManualSection>
       </main>
       <Footer />

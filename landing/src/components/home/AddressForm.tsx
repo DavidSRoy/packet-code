@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { SignButton } from "@/components/site/SignButton";
+import { scrollPastHero } from "@/lib/scroll";
 import { TextField } from "./TextField";
 import type { SignupFlow } from "./useSignupFlow";
 
@@ -43,6 +44,10 @@ export function AddressForm(props: Props) {
 		e.preventDefault();
 		if (flow.step === "address") flow.onCheck(address);
 		else if (flow.step === "email") flow.onSubmit(email);
+	}
+
+	function onLearnMoreClick(e: MouseEvent<HTMLAnchorElement>) {
+		if (scrollPastHero()) e.preventDefault();
 	}
 
 	function onRestartClick() {
@@ -111,9 +116,18 @@ export function AddressForm(props: Props) {
 				</>
 			)}
 			{flow.step === "done" && (
-				<button type="button" className="textbtn" onClick={onRestartClick}>
-					Check another address
-				</button>
+				<>
+					{/* Signed up: point the way down the page, so the hero is not a dead end. */}
+					<a className="textlink self-start" href="#get-h" onClick={onLearnMoreClick}>
+						<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+							<path d="M10 2v15M4 11l6 6 6-6" />
+						</svg>
+						See what Packet brings
+					</a>
+					<button type="button" className="textbtn" onClick={onRestartClick}>
+						Check another address
+					</button>
+				</>
 			)}
 		</form>
 	);

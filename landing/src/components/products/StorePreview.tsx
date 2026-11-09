@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ItemBox } from "@/components/drawings/ItemBox";
 import { STORE_ITEMS } from "@/data/store-items";
 
 export function StorePreview() {
@@ -13,7 +14,7 @@ export function StorePreview() {
 					From U Village shops
 				</h2>
 				<p className="m-0 max-w-[60ch]">
-					Some of what Packet will deliver at launch. Shops, items and prices to follow. Orders open in the app.
+					Some of what Packet will deliver at launch. Orders open in the app.
 				</p>
 			</div>
 			<ul className="m-0 grid list-none grid-cols-4 gap-8 p-0 max-[760px]:grid-cols-2 max-[760px]:gap-x-4 max-[760px]:gap-y-6">
@@ -24,10 +25,16 @@ export function StorePreview() {
 					>
 						<item.Drawing />
 						<b className="text-[17px]">{item.name}</b>
-						<span className="text-[14px] leading-5">{item.shop}</span>
-						<span className="mt-1 text-[15px] font-bold">{item.price}</span>
+						<span className="text-[14px] leading-5">{item.kind}</span>
 					</li>
 				))}
+				<li className="flex min-w-0 flex-col gap-1 border-t-[1.5px] border-ink pt-3 [&_svg]:mb-2 [&_svg]:h-auto [&_svg]:w-full">
+					<ItemBox />
+					<b className="text-[17px]">Your shop could be here</b>
+					<span className="text-[14px] leading-5">
+						Run a shop near U Village? <Link href="/?topic=shop#contact">Get in touch</Link>
+					</span>
+				</li>
 			</ul>
 			<Link
 				href="/#updates"

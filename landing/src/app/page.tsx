@@ -1,5 +1,6 @@
 import { ClosingPiece } from "@/components/home/ClosingPiece";
 import { Delivery } from "@/components/home/Delivery";
+import { Contact } from "@/components/home/Contact";
 import { FirstArea } from "@/components/home/FirstArea";
 import { FirstProduct } from "@/components/home/FirstProduct";
 import { Hero } from "@/components/home/Hero";
@@ -19,6 +20,7 @@ export default function Home() {
 			<FirstProduct />
 			<WhatsNext />
 			<Questions />
+			<Contact />
 			<ClosingPiece />
 		</main>
 	);

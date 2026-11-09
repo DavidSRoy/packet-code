@@ -22,16 +22,13 @@ export function Footer(props: Props) {
 				<span className="text-sm leading-5">
 					&copy; {year} Packet. Seattle, Washington.
 				</span>
-				{isPiece ? (
-					<span className="text-sm leading-5">
-						<span className="lbl text-[12px]">For shops</span>&nbsp;&nbsp;Run a shop near U Village?{" "}
-						<Link href="/press#manual-4-0-h">Get in touch.</Link>
-					</span>
-				) : null}
 			</div>
 			<div className="flex gap-6">
 				<Link className="navlink" href="/products">Products</Link>
 				<Link className="navlink" href="/press">Press</Link>
+				{/* A plain anchor: on the home page, Link would change the URL without scrolling to the form. */}
+				{/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+				<a className="navlink" href="/#contact">Contact</a>
 				<Link className="navlink" href="/privacy">Privacy</Link>
 			</div>
 		</footer>

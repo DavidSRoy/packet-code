@@ -419,6 +419,80 @@ nav a[aria-current="page"] {
 	animation-delay: 1.6s;
 }
 
+/* The scroll cue: bottom of the hero, in the copy's column. Arrives after the intro, leaves once the reader scrolls. */
+.scroll-cue {
+	position: absolute;
+	flex-direction: column;
+	align-items: center;
+	left: max(var(--spacing-margin), env(safe-area-inset-left, 0px));
+	bottom: 28px;
+	z-index: 1;
+	display: flex;
+	gap: 6px;
+	/* Softer than the type around it: a hint, not a heading. Full ink on hover. */
+	color: color-mix(in srgb, var(--color-ink) 50%, var(--color-white));
+	text-decoration: none;
+	opacity: 0;
+	animation: intro-fade 0.8s ease-out 2.6s forwards;
+	transition:
+		opacity 0.4s ease,
+		color 0.2s ease;
+}
+
+.scroll-cue[data-gone] {
+	animation: none;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.scroll-cue:hover,
+.scroll-cue:focus-visible {
+	color: var(--color-ink);
+}
+
+.scroll-cue:hover .lbl {
+	text-decoration: underline;
+	text-underline-offset: 4px;
+}
+
+/* Two down arrows that light one after the other, pointing the way. */
+.scroll-cue-arrows {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0;
+}
+
+.scroll-cue-arrows svg {
+	display: block;
+	width: 18px;
+	height: 11px;
+	margin-top: -2px;
+	animation: cue-arrow 2.4s ease-in-out 3.2s infinite both;
+}
+
+.scroll-cue-arrows svg + svg {
+	animation-delay: 3.5s;
+}
+
+@keyframes cue-arrow {
+	0%,
+	100% {
+		opacity: 0.35;
+		transform: translateY(0);
+	}
+	45% {
+		opacity: 0.9;
+		transform: translateY(2px);
+	}
+}
+
+@media (max-width: 900px) {
+	.scroll-cue {
+		bottom: 20px;
+	}
+}
+
 /*
  * Pinned sections (PinnedSection, usePinProgress): a tall section with a stage that stays on screen
  * while scroll drives it. The media query must match PIN_QUERY in usePinProgress.ts. The section's
@@ -588,9 +662,10 @@ nav a[aria-current="page"] {
 }
 
 /* The delivery: each benefit arrives at the moment on the route that proves it. */
+/* The first is there from the start, so the reader never waits on the drawing with nothing to read. */
 .pin [data-benefit="1"] {
-	--a: 0.12;
-	--b: 0.22;
+	--a: -1;
+	--b: 0;
 }
 
 .pin [data-benefit="2"] {

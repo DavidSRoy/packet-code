@@ -77,3 +77,34 @@ export async function submitSignup(email: string, q: string | null): Promise<"ok
 		return "error";
 	}
 }
+
+export type ContactResult = "ok" | "invalid_name" | "invalid_email" | "invalid_message" | "error";
+
+/** Sends the contact form with this visit's attribution. `website` is the hidden field only bots fill. */
+export async function submitContact(fields: {
+	topic: string;
+	name: string;
+	email: string;
+	org: string;
+	message: string;
+	website: string;
+}): Promise<ContactResult> {
+	try {
+		const res = await fetch("/api/contact", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ ...fields, ...readAttribution() }),
+		});
+		if (res.ok) return "ok";
+		if (res.status === 400) {
+			const json: unknown = await res.json().catch(() => null);
+			if (isStringRecord(json) && (json.error === "invalid_name" || json.error === "invalid_email" || json.error === "invalid_message")) {
+				return json.error;
+			}
+		}
+		return "error";
+	} catch (err) {
+		console.error("[Attribution:submitContact] Request failed —", { name: err instanceof Error ? err.name : "unknown" });
+		return "error";
+	}
+}

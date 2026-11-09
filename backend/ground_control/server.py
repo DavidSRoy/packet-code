@@ -68,6 +68,20 @@ def lights_mode(pwm):
     return "off"
 
 
+def radio_levels(msg):
+    """Signal and noise from the laptop's SiK radio (RADIO_STATUS, about once a second).
+
+    The radio counts in steps of 1/1.9 dB, with 0 at about -127 dBm (the usual SiK conversion: the
+    dBm values are approximate, the dB above noise is not). gnd = as the laptop radio hears the
+    drone, air = as the drone radio hears the laptop. remrssi 0: no report from the drone radio."""
+    air = msg.remrssi > 0
+    return {"rx": time.time(),
+            "gnd_db": round((msg.rssi - msg.noise) / 1.9, 1), "gnd_noise": round(msg.noise / 1.9 - 127),
+            "air_db": round((msg.remrssi - msg.remnoise) / 1.9, 1) if air else None,
+            "air_noise": round(msg.remnoise / 1.9 - 127) if air else None,
+            "rxerrors": msg.rxerrors}
+
+
 def camera_in_lid(rvec, tvec):
     """Camera position in the lid frame (m) from the lid -> camera pose (Rodrigues rvec, tvec): -R^T t.
 
@@ -104,6 +118,7 @@ class Link:
             "batt_v": None, "batt_a": None, "gps_fix": 0, "sats": 0,
             "batt_pct": None, "batt_mah": None, "batt_cap": None, "batt_min": None, "batt_min_basis": None,
             "rc_ok": False, "rssi": 0, "sd_stop": False, "lights_raw": None,
+            "radio": None,  # telemetry radio signal and noise (radio_levels); None on USB or SITL
             "lights_show": None,   # LIT_SHOW from the FC; None = lights.lua not loaded (no such param)
             "lat": None, "lon": None, "log_file": None,
             "home_lat": None, "home_lon": None, "fence_on": None, "fence_r": None,
@@ -270,6 +285,8 @@ class Link:
                 raw = getattr(msg, f"chan{self.sa_ch}_raw", 0)
                 s["sa_raw"] = raw
                 s["sa_on"] = 1700 < raw < 2200  # SA down/on = backend may fly
+        elif t == "RADIO_STATUS":
+            s["radio"] = radio_levels(msg)
         elif t == "DEBUG_VECT" and msg.name.startswith("LID"):
             self.lid_update(msg)
         elif t == "DEBUG_VECT" and msg.name == "PIIP":
@@ -895,6 +912,8 @@ def build_app(link, pilot, auto, air, ceil):
                 s["ceil"] = ceil.state
                 if s["lid"]:
                     s["lid"] = dict(s["lid"], age=time.time() - s["lid"]["rx"])
+                if s["radio"]:
+                    s["radio"] = dict(s["radio"], age=time.time() - s["radio"]["rx"])
                 await ws.send_str(json.dumps(s))
                 await asyncio.sleep(0.1)  # 10 Hz, same as the ATTITUDE stream
 

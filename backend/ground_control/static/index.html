@@ -65,10 +65,6 @@
   #clock { font-family: var(--mono); color: var(--muted); font-size: 11px; white-space: nowrap; }
   .stat-row.tight .opt { display: none; }
   #top.tight #brand i { display: none; }
-  @media (max-height: 780px) {
-    .tele div { padding: 6px 14px; } .tele b { font-size: 15px; } .card-h { padding: 9px 14px 8px; }
-    #mode { font-size: 17px; } .mode-row { margin-top: 6px; }
-  }
 
   /* left: asset card */
   #left { position: fixed; z-index: 500; top: 64px; left: 12px; width: 300px; display: flex; flex-direction: column; gap: 8px;
@@ -289,6 +285,11 @@
   .leaflet-popup-content { margin: 10px 12px; font: 12px/1.45 var(--sans); }
   .leaflet-tooltip { background: var(--glass-2); color: var(--text); border: 1px solid var(--line-2); box-shadow: none; }
   .leaflet-tooltip-top:before { border-top-color: var(--line-2); }
+  /* short windows. Media blocks stay below the base rules: same specificity, so the later rule wins. */
+  @media (max-height: 780px) {
+    .tele div { padding: 6px 14px; } .tele b { font-size: 15px; } .card-h { padding: 9px 14px 8px; }
+    #mode { font-size: 17px; } .mode-row { margin-top: 6px; }
+  }
   @media (max-width: 1100px) {
     :root { --rcol: 244px; }
     #cam.big { inset: 64px 292px 112px 324px; width: auto; }

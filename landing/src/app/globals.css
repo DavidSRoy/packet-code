@@ -429,17 +429,25 @@ nav a[aria-current="page"] {
 	z-index: 1;
 	display: flex;
 	gap: 6px;
-	color: var(--color-ink);
+	/* Softer than the type around it: a hint, not a heading. Full ink on hover. */
+	color: color-mix(in srgb, var(--color-ink) 50%, var(--color-white));
 	text-decoration: none;
 	opacity: 0;
 	animation: intro-fade 0.8s ease-out 2.6s forwards;
-	transition: opacity 0.4s ease;
+	transition:
+		opacity 0.4s ease,
+		color 0.2s ease;
 }
 
 .scroll-cue[data-gone] {
 	animation: none;
 	opacity: 0;
 	pointer-events: none;
+}
+
+.scroll-cue:hover,
+.scroll-cue:focus-visible {
+	color: var(--color-ink);
 }
 
 .scroll-cue:hover .lbl {
@@ -460,7 +468,7 @@ nav a[aria-current="page"] {
 	width: 18px;
 	height: 11px;
 	margin-top: -2px;
-	animation: cue-arrow 1.8s ease-in-out 3.2s infinite both;
+	animation: cue-arrow 2.4s ease-in-out 3.2s infinite both;
 }
 
 .scroll-cue-arrows svg + svg {
@@ -470,12 +478,12 @@ nav a[aria-current="page"] {
 @keyframes cue-arrow {
 	0%,
 	100% {
-		opacity: 0.25;
+		opacity: 0.35;
 		transform: translateY(0);
 	}
 	45% {
-		opacity: 1;
-		transform: translateY(3px);
+		opacity: 0.9;
+		transform: translateY(2px);
 	}
 }
 

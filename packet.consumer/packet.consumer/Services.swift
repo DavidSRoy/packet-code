@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import CoreLocation
 
 // MARK: - Backend seams (intentionally open)
 // The app talks only to these protocols. Swap Mock* for
@@ -20,7 +21,7 @@ protocol PaymentService {
 
 protocol DroneLocationService {
     // Customer app receives drone location only, never the flight plan.
-    func watchDroneLocation(orderId: String) -> AsyncStream<DronePing>
+    func watchDronePosition(droneId: String) -> AsyncStream<DronePing>
 }
 
 struct DronePing: Equatable {
@@ -102,6 +103,27 @@ struct ApiConfig {
         if let readToken { self.readToken = readToken }
         if let pickupPad { self.pickupPad = pickupPad }
     }
+
+    func request(_ path: String, method: String, body: [String: Any]? = nil) throws -> URLRequest {
+        var req = URLRequest(url: baseURL.appendingPathComponent(path))
+        req.httpMethod = method
+        req.timeoutInterval = 15
+        req.setValue("Bearer \(readToken)", forHTTPHeaderField: "Authorization")
+        if let body {
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        }
+        return req
+    }
+}
+
+/// POC pad coordinates (match the mock route upload). A real pad picker
+/// (from the routes API) replaces this.
+enum KnownPads {
+    static let coords: [String: CLLocationCoordinate2D] = [
+        "qfc": CLLocationCoordinate2D(latitude: 47.6625, longitude: -122.295),
+        "uplace": CLLocationCoordinate2D(latitude: 47.664, longitude: -122.299),
+    ]
 }
 
 /// Free checkout text ("UW / U Village") → API pad id. POC slug; a real pad
@@ -148,15 +170,7 @@ final class APIOrderService: OrderService {
     }
 
     private func request(_ path: String, method: String, body: [String: Any]? = nil) throws -> URLRequest {
-        var req = URLRequest(url: config.baseURL.appendingPathComponent(path))
-        req.httpMethod = method
-        req.timeoutInterval = 15
-        req.setValue("Bearer \(config.readToken)", forHTTPHeaderField: "Authorization")
-        if let body {
-            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        }
-        return req
+        try config.request(path, method: method, body: body)
     }
 
     private func decodeError(_ data: Data) -> String? {
@@ -209,6 +223,65 @@ final class APIOrderService: OrderService {
     }
 }
 
+// MARK: - Live drone position (telemetry worker /v1/drones/:id/position)
+
+private struct PositionResponse: Decodable {
+    var online: Bool
+    var position: Coord?
+    struct Coord: Decodable {
+        var lat: Double
+        var lon: Double
+    }
+}
+
+/// Polls the worker for one drone's position (~1Hz). Yields only on change.
+final class APIDronePositionService: DroneLocationService {
+    private let config: ApiConfig
+    private let session: URLSession
+    private let interval: UInt64
+
+    init(config: ApiConfig = ApiConfig(), session: URLSession = .shared,
+         intervalNanoseconds: UInt64 = 1_000_000_000) {
+        self.config = config
+        self.session = session
+        self.interval = intervalNanoseconds
+    }
+
+    func fetchPing(droneId: String) async -> DronePing? {
+        guard let req = try? config.request("/v1/drones/\(droneId)/position", method: "GET"),
+              let (data, resp) = try? await session.data(for: req),
+              (resp as? HTTPURLResponse)?.statusCode == 200,
+              let decoded = try? JSONDecoder().decode(PositionResponse.self, from: data),
+              decoded.online, let p = decoded.position
+        else { return nil }
+        return DronePing(latitude: p.lat, longitude: p.lon)
+    }
+
+    func watchDronePosition(droneId: String) -> AsyncStream<DronePing> {
+        AsyncStream { continuation in
+            let task = Task {
+                var last: DronePing?
+                while !Task.isCancelled {
+                    if let ping = await self.fetchPing(droneId: droneId), ping != last {
+                        continuation.yield(ping)
+                        last = ping
+                    }
+                    try? await Task.sleep(nanoseconds: self.interval)
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}
+
+/// Offline stand-in: completes immediately, no pings.
+struct EmptyDroneLocationService: DroneLocationService {
+    func watchDronePosition(droneId: String) -> AsyncStream<DronePing> {
+        AsyncStream { $0.finish() }
+    }
+}
+
 final class AppState: ObservableObject {
     @Published var cart: [CartLine] = []
     @Published var activeOrder: CustomerOrder?
@@ -235,6 +308,14 @@ final class AppState: ObservableObject {
         let base = URL(string: apiBaseURL.trimmingCharacters(in: .whitespacesAndNewlines))
             ?? URL(string: "http://127.0.0.1:8787")!
         return APIOrderService(config: ApiConfig(baseURL: base))
+    }
+
+    /// Same switch for the drone marker. Off = no pings (offline demo).
+    var droneLocationService: any DroneLocationService {
+        guard useLiveAPI else { return EmptyDroneLocationService() }
+        let base = URL(string: apiBaseURL.trimmingCharacters(in: .whitespacesAndNewlines))
+            ?? URL(string: "http://127.0.0.1:8787")!
+        return APIDronePositionService(config: ApiConfig(baseURL: base))
     }
 
     var cartTotalCents: Int {

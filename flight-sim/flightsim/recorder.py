@@ -44,7 +44,7 @@ class Recorder:
         writer = self._writers.get(name)
         if writer is None:
             height, width = image.shape[:2]
-            writer = cv2.VideoWriter(str(self._dir / name), cv2.VideoWriter_fourcc(*"mp4v"), self._fps,
+            writer = cv2.VideoWriter(str(self._dir / name), cv2.VideoWriter.fourcc("m", "p", "4", "v"), self._fps,
                                      (width, height))
             if not writer.isOpened():
                 raise OSError(f"[recorder:write] Cannot open video writer — {{path: {str(self._dir / name)!r}}}")
@@ -52,9 +52,9 @@ class Recorder:
         writer.write(image)
 
     def add(self, frame: NDArray[np.uint8], row: FrameRow) -> None:
-        colour = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        colour = np.asarray(cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR), dtype=np.uint8)
         self._write("camera.mp4", colour)
-        overlay = colour.copy()
+        overlay: NDArray[np.uint8] = colour.copy()
         for outline in row.outlines:
             cv2.polylines(overlay, [np.round(np.array(outline)).astype(np.int32)], True, (0, 255, 0), 2)
         est = "no detection" if row.est is None else "est %.3f %.3f %.3f" % row.est

@@ -3,7 +3,7 @@ import math
 import numpy as np
 import pytest
 
-from conftest import MOUNT
+from oracle_setup import MOUNT
 from imu_pose import ImuPose
 from lid_pose import imu_fix, lid_pose
 from lid_tags import camera_matrix

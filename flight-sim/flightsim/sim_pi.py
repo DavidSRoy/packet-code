@@ -10,6 +10,19 @@ Runnable like e2e/fake_pi.py; the arguments it does not know go to physics.main(
 
   python sim_pi.py --render-ready-file R --camera cam.json --compute pc.json --layout lid_layout.json \\
       [--record-dir D] <physics.py arguments>
+
+rate_hz in the ComputeProfile must be the effective detected rate: frames are exposed at that rate
+and never dropped because detection is slow.
+
+The estimate (and the sent position) is the point the Pi believes it is reporting: the drone centre
+as seen through the Pi's mount belief (model.json cam_pos + pi_cam_pos_err). frames.csv truth is the
+CG. So est_z - true_z carries the known mount-belief offset, and err_xy_mm picks up a term that grows
+with tilt.
+
+As in cam_stream.py: zeroing the IMU pose (imu_fix zero=True) is allowed only until the first
+non-zero motor command, then latched off; a frame whose imu_fix/lid_pose raises is dropped and
+printed to stderr; VISION_SPEED goes out only when this frame and the previous sent frame both have
+pose "imu" (a tag-only frame resets the previous sample).
 """
 import argparse
 import math
@@ -28,10 +41,10 @@ for _dir in (_BACKEND / "companion", _BACKEND / "tools" / "sim" / "hover"):
     if str(_dir) not in sys.path:
         sys.path.append(str(_dir))
 
-import physics  # noqa: E402
-from imu_pose import ImuPose  # noqa: E402
-from lid_pose import Mount, imu_fix, lid_pose  # noqa: E402
-from lid_tags import LidFinder, camera_matrix  # noqa: E402
+import physics  # type: ignore[import-not-found]  # noqa: E402
+from imu_pose import ImuPose  # type: ignore[import-not-found]  # noqa: E402
+from lid_pose import Mount, imu_fix, lid_pose  # type: ignore[import-not-found]  # noqa: E402
+from lid_tags import LidFinder, camera_matrix  # type: ignore[import-not-found]  # noqa: E402
 
 from flightsim.frames import Quat, Vec3, camera_pose_world  # noqa: E402
 from flightsim.profiles import CameraProfile, ComputeProfile, load_camera, load_compute  # noqa: E402
@@ -69,16 +82,25 @@ class RenderedCamera(physics.Camera):
         self.mount = Mount(*(cam_pos + np.array(self.C["pi_cam_pos_err"])).tolist(), 0.0)   # the Pi's belief
         self.imu = ImuPose(self.mount.rot_deg)
         self.last: dict[int, tuple[float, float, float]] = {}   # imu_fix's stillness state, as in cam_stream.py
-        self.rest_z = float(drone.p[2])                          # NED z of the drone resting on the box
+        self.armed = False                                       # latched at the first non-zero motor command
+        self.prev_imu = False                                    # the previous sent frame had pose "imu"
         self.frame = 0
+
+    def step(self, t: float) -> None:
+        if not self.armed:
+            self.armed = any(bool(np.any(act > 0.0)) for _, act in self.d.cmd_hist)
+        super().step(t)
 
     def measure(
         self, t_exp: float, t_cap: float, p_true: NDArray[np.float64], q_true: NDArray[np.float64]
     ) -> tuple[NDArray[np.float64], float] | None:
         lid = np.array([0.0, 0.0, -self.C["lid_height_above_ground"]])
+        rel = p_true - lid
+        cam_pos = self.C["cam_pos"]
         pos, quat = camera_pose_world(
-            tuple(float(v) for v in p_true - lid), tuple(float(v) for v in q_true),
-            tuple(float(v) for v in self.C["cam_pos"]),
+            (float(rel[0]), float(rel[1]), float(rel[2])),
+            (float(q_true[0]), float(q_true[1]), float(q_true[2]), float(q_true[3])),
+            (float(cam_pos[0]), float(cam_pos[1]), float(cam_pos[2])),
         )
         frame = self.renderer.render(pos, quat, t_exp)
         if frame.shape != (self.camera.height, self.camera.width):
@@ -95,23 +117,35 @@ class RenderedCamera(physics.Camera):
         yaw = 0.0
         outlines: tuple[tuple[tuple[float, float], ...], ...] = ()
         tags = 0
+        is_imu = False
         if found:
             # ponytail: true attitude with lag, not the FC's estimate; switch to ATTITUDE from the MAVLink link if estimator error matters
             roll, pitch, att_yaw = physics.quat_to_euler(self.q_at(t_cap - self.C["tilt_attitude_lag_s"]))
-            on_box = bool(self.rest_z - p_true[2] <= physics.LIFTOFF_H)    # still and disarmed
-            fix = imu_fix(found[0], (roll, pitch, att_yaw), K, self.imu, self.mount, zero=on_box, last=self.last)
-            drone_m = lid_pose(fix, self.mount)
-            x, y, z = drone_m["drone_m"]
-            estimate = lid + np.array([x, -y, -z])             # cam_stream.vision() sends x, -y, -z of drone_m
-            yaw = -math.radians(drone_m["yaw_deg"])            # and the nose direction clockwise
-            tags = len(drone_m["tags"])
-            outlines = tuple(tuple((px / scale, py / scale) for px, py in o["px"]) for o in drone_m["outlines"])
+            try:
+                fix = imu_fix(found[0], (roll, pitch, att_yaw), K, self.imu, self.mount, zero=not self.armed,
+                              last=self.last)
+                drone_m = lid_pose(fix, self.mount)
+            except (np.linalg.LinAlgError, cv2.error, ValueError) as exc:
+                print(f"[sim_pi:measure] Frame dropped — {{frame: {self.frame}, t_exp: {t_exp:.3f}, "
+                      f"error: {type(exc).__name__}: {exc}}}", file=sys.stderr)
+            else:
+                x, y, z = drone_m["drone_m"]
+                estimate = lid + np.array([x, -y, -z])         # cam_stream.vision() sends x, -y, -z of drone_m
+                yaw = -math.radians(drone_m["yaw_deg"])        # and the nose direction clockwise
+                tags = len(drone_m["tags"])
+                is_imu = drone_m["pose"] == "imu"
+                outlines = tuple(tuple((px / scale, py / scale) for px, py in o["px"]) for o in drone_m["outlines"])
         if self.recorder is not None:
             est = None if estimate is None else (float(estimate[0]), float(estimate[1]), float(estimate[2]))
             truth = (float(p_true[0]), float(p_true[1]), float(p_true[2]))
             self.recorder.add(frame, FrameRow(self.frame, t_exp, int(estimate is not None), tags, est, truth, outlines))
         self.frame += 1
-        return None if estimate is None else (estimate, yaw)
+        if estimate is None:
+            return None
+        if not (is_imu and self.prev_imu):
+            self.prev = None                 # physics.Camera then sends no VISION_SPEED for this frame
+        self.prev_imu = is_imu
+        return estimate, yaw
 
 
 def _wait_for_port(ready_file: Path, timeout_s: float = 600.0) -> int:
@@ -135,16 +169,17 @@ def main() -> None:
 
     compute = load_compute(args.compute)
     client = RenderClient("127.0.0.1", _wait_for_port(args.render_ready_file))
-    recorder = Recorder(args.record_dir, compute.rate_hz) if args.record_dir else None
-    finder = LidFinder(str(args.layout))
-    camera = load_camera(args.camera)
-
-    def make(C: Mapping[str, object], rng: np.random.Generator, drone: physics.Drone) -> RenderedCamera:
-        return RenderedCamera(C, rng, drone, renderer=client, finder=finder, camera=camera, compute=compute,
-                              recorder=recorder)
-
-    physics.Camera = make
+    recorder: Recorder | None = None
     try:
+        recorder = Recorder(args.record_dir, compute.rate_hz) if args.record_dir else None
+        finder = LidFinder(str(args.layout))
+        camera = load_camera(args.camera)
+
+        def make(C: Mapping[str, object], rng: np.random.Generator, drone: physics.Drone) -> RenderedCamera:
+            return RenderedCamera(C, rng, drone, renderer=client, finder=finder, camera=camera, compute=compute,
+                                  recorder=recorder)
+
+        physics.Camera = make
         physics.main()
     finally:
         if recorder is not None:

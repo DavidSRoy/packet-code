@@ -1,4 +1,5 @@
 import csv
+from collections import deque
 import dataclasses
 import json
 import math
@@ -10,12 +11,12 @@ import pytest
 from numpy.typing import NDArray
 
 import physics
-from conftest import CAM_MOUNT_MM
 from flightsim import sim_pi
 from flightsim.frames import Quat, Vec3
 from flightsim.profiles import CameraProfile, ComputeProfile, load_compute
 from flightsim.recorder import Recorder
 from lid_camera_sim import CAM_IN_DRONE
+from oracle_setup import CAM_MOUNT_MM
 
 ROOT = Path(__file__).resolve().parents[2]
 MODEL = json.loads((ROOT / "backend" / "tools" / "sim" / "hover" / "model.json").read_text())
@@ -31,6 +32,7 @@ class FakeDrone:
     p: NDArray[np.float64]
     q: NDArray[np.float64] = field(default_factory=lambda: np.array(LEVEL))
     t_lift: float | None = None
+    cmd_hist: deque[tuple[float, NDArray[np.float64]]] = field(default_factory=lambda: deque([(0.0, np.zeros(4))]))
 
 
 class StubRenderer:
@@ -54,10 +56,10 @@ class StubRenderer:
 
 
 def make_camera(scene, drone: FakeDrone, *, lag_s: float = 0.0, recorder: Recorder | None = None,
-                compute: ComputeProfile = COMPUTE):
+                compute: ComputeProfile = COMPUTE, send_speed: bool = False):
     fwd, left, up = (v / 1000.0 for v in CAM_MOUNT_MM)
     C = dict(MODEL["camera"], cam_pos=[fwd, -left, -up], pi_cam_pos_err=[0.0, 0.0, 0.0],
-             rate_jitter_s=0.0, drop_frac=0.0, send_speed=False, tilt_attitude_lag_s=lag_s,
+             rate_jitter_s=0.0, drop_frac=0.0, send_speed=send_speed, tilt_attitude_lag_s=lag_s,
              noise_tail_frac=0.0)
     cam_profile = CameraProfile("stub", scene.w, scene.h, scene.hfov, True, "global", {})
     renderer = StubRenderer(scene)
@@ -99,18 +101,27 @@ def test_no_tags_sends_nothing_and_records_row(scene, tmp_path: Path):
 
 
 def test_compute_profile_delay_is_applied(scene):
+    # distinct from model.json's camera block, so the override is what is measured
+    compute = dataclasses.replace(COMPUTE, rate_hz=7.0, exposure_to_readout_s=0.03, detect_s=0.2,
+                                  link_s=0.01, detect_jitter_s=0.0)
     drone = FakeDrone(np.array([0.030, 0.0, -0.500]))
-    cam, _ = make_camera(scene, drone)
-    t_sent: list[float] = []
-    for k in range(700):
+    cam, renderer = make_camera(scene, drone, compute=compute)
+    t_first_send = None
+    for k in range(1000):
         t = k * 0.001
         cam.step(t)
-        if cam.sent and not t_sent:
-            t_sent.append(t)
-    assert t_sent[0] - 0.5 == pytest.approx(0.06 + 0.05 + 0.005, abs=0.0015)
+        if cam.sent and t_first_send is None:
+            t_first_send = t
+    assert len(renderer.calls) >= 2
+    t_exp0, t_exp1 = renderer.calls[0][2], renderer.calls[1][2]
+    assert t_first_send is not None
+    assert t_first_send - t_exp0 == pytest.approx(compute.exposure_to_readout_s + compute.detect_s + compute.link_s,
+                                                   abs=0.0015)
+    assert t_exp1 - t_exp0 == pytest.approx(1.0 / 7.0)
 
 
-def test_attitude_comes_from_parent_lagged_truth(scene, monkeypatch: pytest.MonkeyPatch):
+@pytest.mark.parametrize("rolled_at_exposure", [True, False])
+def test_attitude_comes_from_parent_lagged_truth(scene, monkeypatch: pytest.MonkeyPatch, rolled_at_exposure: bool):
     seen: list[tuple[float, float, float] | None] = []
     real = sim_pi.imu_fix
 
@@ -121,15 +132,93 @@ def test_attitude_comes_from_parent_lagged_truth(scene, monkeypatch: pytest.Monk
     monkeypatch.setattr(sim_pi, "imu_fix", spy)
     drone = FakeDrone(np.array([0.030, 0.0, -0.500]))
     cam, _ = make_camera(scene, drone, lag_s=0.02)
+    t_exp = cam.next_exp
+    t_cap = t_exp + cam.C["exposure_to_readout_s"]
+    t_lag = t_cap - cam.C["tilt_attitude_lag_s"]
+    t_mid = (t_exp + t_lag) / 2                                  # between the exposure and the lagged sample
+    assert t_exp < t_mid < t_lag < t_cap
     roll = math.radians(5.0)
     rolled = np.array([math.cos(roll / 2), math.sin(roll / 2), 0.0, 0.0])
+    level = np.array(LEVEL)
 
     def on_step(t: float) -> None:
-        if t >= 0.55:                  # after the exposure; t_cap - lag = 0.54 still sees the level drone
-            drone.q = rolled
+        # rolled only in the window that holds the exposure (or only the one that holds the lagged sample);
+        # level again before the send, so the attitude at send time is level either way
+        in_window = t < t_mid if rolled_at_exposure else t_mid <= t < t_cap
+        drone.q = rolled if in_window else level
 
     run(cam, drone, 0.7, on_step)
     assert len(seen) == 1 and seen[0] is not None
-    assert seen[0] == pytest.approx(physics.quat_to_euler(cam.q_at(0.56 - 0.02)))
-    assert seen[0] == pytest.approx((0.0, 0.0, 0.0))
-    assert physics.quat_to_euler(drone.q)[0] == pytest.approx(roll)   # the current truth is different
+    lagged_roll = 0.0 if rolled_at_exposure else roll
+    assert seen[0] == pytest.approx((lagged_roll, 0.0, 0.0))
+    assert seen[0] == pytest.approx(physics.quat_to_euler(cam.q_at(t_lag)))
+
+
+def test_zeroing_stops_at_the_first_motor_command_and_stays_off(scene, monkeypatch: pytest.MonkeyPatch):
+    zeros: list[bool] = []
+    real = sim_pi.imu_fix
+
+    def spy(r, att, K, imu, mount, *, zero, last):
+        zeros.append(zero)
+        return real(r, att, K, imu, mount, zero=zero, last=last)
+
+    monkeypatch.setattr(sim_pi, "imu_fix", spy)
+    drone = FakeDrone(np.array([0.030, 0.0, -0.500]))               # at rest height or not, only commands count
+    cam, _ = make_camera(scene, drone)
+
+    def on_step(t: float) -> None:
+        if abs(t - 0.75) < 5e-4:
+            drone.cmd_hist.append((t, np.full(4, 0.2)))             # first non-zero command
+        if abs(t - 0.95) < 5e-4:
+            drone.cmd_hist.clear()
+            drone.cmd_hist.append((t, np.zeros(4)))                 # motors back to zero: still latched
+
+    run(cam, drone, 1.2, on_step)
+    assert zeros[0] is True and zeros[-1] is False and len(zeros) >= 3
+    assert zeros == sorted(zeros, reverse=True)                     # True... then False..., never back
+
+
+def test_a_failing_frame_is_dropped_and_the_run_goes_on(scene, monkeypatch: pytest.MonkeyPatch, capsys, tmp_path: Path):
+    real = sim_pi.imu_fix
+    calls: list[int] = []
+
+    def flaky(r, att, K, imu, mount, *, zero, last):
+        calls.append(1)
+        if len(calls) == 1:
+            raise np.linalg.LinAlgError("SVD did not converge")
+        return real(r, att, K, imu, mount, zero=zero, last=last)
+
+    monkeypatch.setattr(sim_pi, "imu_fix", flaky)
+    drone = FakeDrone(np.array([0.030, 0.0, -0.500]))
+    rec = Recorder(tmp_path, fps=10.0)
+    cam, _ = make_camera(scene, drone, recorder=rec)
+    sent = run(cam, drone, 0.9, None)
+    rec.close()
+    assert [s[2] for s in sent] == pytest.approx([0.66, 0.76])    # exposure 0.5 dropped; 0.6 and 0.7 sent
+    assert "[sim_pi:measure] Frame dropped" in capsys.readouterr().err
+    rows = list(csv.DictReader((tmp_path / "frames.csv").read_text().splitlines()))
+    assert [r["detected"] for r in rows][:2] == ["0", "1"]
+
+
+def test_speed_needs_two_imu_frames_in_a_row(scene, monkeypatch: pytest.MonkeyPatch):
+    poses = iter(["imu", "imu", "tags", "imu", "imu"])
+    real = sim_pi.imu_fix
+
+    def relabel(r, att, K, imu, mount, *, zero, last):
+        return dict(real(r, att, K, imu, mount, zero=zero, last=last), pose=next(poses))
+
+    monkeypatch.setattr(sim_pi, "imu_fix", relabel)
+    drone = FakeDrone(np.array([0.030, 0.0, -0.500]))
+    cam, _ = make_camera(scene, drone, send_speed=True)
+    sent = run(cam, drone, 1.05)                                   # five frames sent, the sixth still in flight
+    kinds = [s[1] for s in sent]
+    assert kinds.count("pos") == 5 and kinds.count("vel") == 2
+    # vel follows frame 2 and frame 5 only (pos index 1 and 4)
+    pos_seen = 0
+    after = []
+    for k in kinds:
+        if k == "pos":
+            pos_seen += 1
+        else:
+            after.append(pos_seen)
+    assert after == [2, 5]

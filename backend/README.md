@@ -44,6 +44,8 @@ Box camera video in the field: the Mac makes a Wi-Fi network with Internet Shari
 
 The page shows a satellite map with the drone, its heading, home, the geofence ring, the flown track and a 5 s lead line. The map tiles need internet. The rest of the page works offline.
 
+Telemetry radio: the line under the position shows how far the signal is above the noise (the weaker direction) and the noise the drone's radio hears. **Link** reads WEAK under 10 dB. Hover on **Link** for both directions and the receive errors. The values come from the laptop's SiK radio, so the line reads NO RADIO DATA on USB or SITL. The dBm values are approximate.
+
 ## Cloud telemetry API (`cloud/telemetry-api/`)
 
 This is a Cloudflare Worker that the app team reads for the drone position, state, track and live stream. The laptop server pushes to it once each second when it starts with `--cloud-url` and the env `PACKET_INGEST_TOKEN`. See [cloud/telemetry-api/README.md](cloud/telemetry-api/README.md).

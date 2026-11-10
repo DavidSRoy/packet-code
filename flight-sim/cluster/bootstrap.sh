@@ -11,7 +11,10 @@ sif_name="$(printf '%s' "${ISAAC_IMAGE#*/*/}" | tr ':/' '__').sif"
 sif="$SCRATCH/containers/$sif_name"
 
 export APPTAINER_CACHEDIR="$SCRATCH/.apptainer/cache"
-export APPTAINER_TMPDIR="$SCRATCH/.apptainer/tmp"
+# The SIF is assembled in APPTAINER_TMPDIR. On scratch (a network filesystem) unpacking the
+# ~100k small files did not finish inside the 30 minute limit, so build on node-local /tmp.
+export APPTAINER_TMPDIR="/tmp/apptainer-${SLURM_JOB_ID:-$$}"
+trap 'rm -rf "$APPTAINER_TMPDIR"' EXIT
 mkdir -p "$SCRATCH/containers" "$APPTAINER_CACHEDIR" "$APPTAINER_TMPDIR"
 
 if [[ -s "$sif" ]]; then

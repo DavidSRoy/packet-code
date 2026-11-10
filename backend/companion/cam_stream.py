@@ -170,6 +170,8 @@ def att_at(t):
 def imu_fix(r, t_cap, K):
     """The IMU pose of one LidFinder result (lid_pose.py), with the stillness state and lock kept here."""
     att = att_at(t_cap - a.imu_lag)
+    if att is None:
+        return _imu_fix(r, att, K, imu, MOUNT, zero=False, last=imu_last)   # tag-only pose, no lock, as before
     with imu_lock:
         return _imu_fix(r, att, K, imu, MOUNT, zero=not fc["armed"] and time.time() - fc["t"] < 3.0, last=imu_last)
 

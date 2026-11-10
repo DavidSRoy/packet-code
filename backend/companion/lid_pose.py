@@ -58,7 +58,8 @@ def lid_pose(r: dict, mount: Mount) -> dict:
 
 
 def imu_fix(r: dict, att: tuple[float, float, float] | None, K: np.ndarray, imu: ImuPose, mount: Mount,
-            *, zero: bool = False, last: dict | None = None) -> dict:
+            *, zero: bool, last: dict) -> dict:
+    # mount is unused: ImuPose already carries the mount rotation.
     """While still and disarmed (zero): add the frame to the zero. Then (armed or not): the rotation
     from the IMU tilt and the tag heading, the position from the corners (imu_pose.py).
     Without a zero or an attitude: the tag-only pose, marked so.
@@ -68,8 +69,6 @@ def imu_fix(r: dict, att: tuple[float, float, float] | None, K: np.ndarray, imu:
     r = dict(r, pose="tags", tag_tilt=None)
     if att is None:
         return r
-    if last is None:
-        last = {}
     if zero:
         prev = last.get(r["box"])
         if prev is not None and max(abs(att[0] - prev[0]), abs(att[1] - prev[1]), abs(wrap(att[2] - prev[2]))) > STILL_RAD:

@@ -16,7 +16,7 @@ import numpy as np  # noqa: E402
 import omni.replicator.core as rep  # noqa: E402
 import omni.usd  # noqa: E402
 from PIL import Image  # noqa: E402
-from pxr import Gf, UsdGeom, UsdLux  # noqa: E402
+from pxr import Gf, Usd, UsdGeom, UsdLux  # noqa: E402
 
 
 def _isaac_version() -> str:
@@ -33,7 +33,7 @@ def _gpu_name() -> str:
     return out.stdout.strip()
 
 
-def _box(stage, path: str, center: Gf.Vec3d, size: Gf.Vec3d, color: Gf.Vec3f) -> None:
+def _box(stage: Usd.Stage, path: str, center: Gf.Vec3d, size: Gf.Vec3d, color: Gf.Vec3f) -> None:
     cube = UsdGeom.Cube.Define(stage, path)
     cube.GetSizeAttr().Set(1.0)
     cube.AddTranslateOp().Set(center)
@@ -80,7 +80,13 @@ def main() -> None:
         raise RuntimeError(f"[smoke:main] Unexpected frame shape — {{shape: {frame.shape}}}")
     OUT.parent.mkdir(parents=True, exist_ok=True)
     Image.fromarray(frame).save(OUT)
-    print(f"[smoke] wrote {OUT} mean={frame.mean():.1f} std={frame.std():.1f}", flush=True)
+    mean, std = float(frame.mean()), float(frame.std())
+    print(f"[smoke] wrote {OUT} mean={mean:.1f} std={std:.1f}", flush=True)
+    if not 20.0 <= mean <= 235.0 or std <= 10.0:
+        raise RuntimeError(
+            f"[smoke:main] Frame looks blank or saturated — {{mean: {mean:.1f}, std: {std:.1f}, "
+            "expected_mean: 20..235, expected_std: >10}"
+        )
 
 
 try:

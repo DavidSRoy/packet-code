@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=flightsim-smoke
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=48G
 # Account, partition, GPU count, time limit and log path come from flightsim.jobs.submit.
@@ -35,7 +33,6 @@ for d in "${dirs[@]}"; do
 done
 
 export APPTAINER_CACHEDIR="$SCRATCH/.apptainer/cache"
-export APPTAINER_TMPDIR="$SCRATCH/.apptainer/tmp"
 
 nvidia-smi --query-gpu=name,driver_version --format=csv,noheader
 apptainer exec --nv --env ACCEPT_EULA=Y --env OMNI_KIT_ACCEPT_EULA=YES \

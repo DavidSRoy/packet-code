@@ -10,11 +10,23 @@ from flightsim.remote import RemoteError, ssh
 
 _RUN_NAME = re.compile(r"[A-Za-z0-9_.-]+")
 _ENV_KEY = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
-_TERMINAL_FAILURES = frozenset(
-    {"FAILED", "TIMEOUT", "CANCELLED", "PREEMPTED", "OUT_OF_MEMORY", "NODE_FAIL", "BOOT_FAIL", "DEADLINE"}
+_ACTIVE_STATES = frozenset(
+    {"PENDING", "RUNNING", "COMPLETING", "REQUEUED", "SUSPENDED", "CONFIGURING", "RESIZING"}
 )
+_MAX_POLL_FAILURES = 3
 _SOURCE_ROOT = Path(__file__).resolve().parents[1]
 _STDERR_TAIL = 500
+
+
+def _run_local(
+    caller: str, step: str, argv: list[str], run_name: str, *, input: bytes | None = None, timeout_s: float = 60.0
+) -> subprocess.CompletedProcess[bytes]:
+    try:
+        return subprocess.run(argv, input=input, capture_output=True, cwd=_SOURCE_ROOT, timeout=timeout_s)
+    except subprocess.TimeoutExpired as exc:
+        raise RemoteError(
+            f"[jobs:{caller}] Timed out — {{step: {step}, timeout_s: {timeout_s}, run_name: {run_name}}}"
+        ) from exc
 
 
 def _validate_run_name(caller: str, run_name: str) -> None:
@@ -43,9 +55,18 @@ def push_source(cluster: Cluster, run_name: str) -> str:
     """Copy the committed tree (git archive HEAD) to the run's remote src dir."""
     _validate_run_name("push_source", run_name)
     remote = f"{_run_dir(cluster, run_name)}/src"
-    archive = subprocess.run(
-        ["git", "archive", "HEAD"], cwd=_SOURCE_ROOT, capture_output=True, timeout=60.0
-    )
+    status = _run_local("push_source", "git status", ["git", "status", "--porcelain", "--", str(_SOURCE_ROOT)], run_name)
+    if status.returncode != 0:
+        raise RemoteError(
+            f"[jobs:push_source] git status failed — {{exit: {status.returncode}, "
+            f"stderr: {status.stderr[-_STDERR_TAIL:]!r}}}"
+        )
+    dirty = status.stdout.decode(errors="replace").strip()
+    if dirty:
+        raise RemoteError(
+            f"[jobs:push_source] Uncommitted changes would not ship; commit first — {{paths: {dirty.splitlines()!r}}}"
+        )
+    archive = _run_local("push_source", "git archive", ["git", "archive", "HEAD"], run_name)
     if archive.returncode != 0:
         raise RemoteError(
             f"[jobs:push_source] git archive failed — {{exit: {archive.returncode}, "
@@ -53,7 +74,7 @@ def push_source(cluster: Cluster, run_name: str) -> str:
         )
     command = f"rm -rf {shlex.quote(remote)} && mkdir -p {shlex.quote(remote)} && tar x -C {shlex.quote(remote)}"
     argv = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", cluster.ssh_alias, command]
-    pushed = subprocess.run(argv, input=archive.stdout, capture_output=True, timeout=300.0)
+    pushed = _run_local("push_source", "ssh untar", argv, run_name, input=archive.stdout, timeout_s=300.0)
     if pushed.returncode != 0:
         raise RemoteError(
             f"[jobs:push_source] Remote untar failed — {{exit: {pushed.returncode}, "
@@ -84,19 +105,34 @@ def submit(
 
 
 def wait(cluster: Cluster, job_id: int, *, poll_s: float = 15.0, timeout_s: float = 2400.0) -> str:
-    """Poll sacct until the job ends. Returns COMPLETED, raises RemoteError for any other end state."""
+    """Poll sacct until the job ends. Returns COMPLETED, raises RemoteError for any other end state.
+
+    Tolerates up to 2 consecutive ssh failures; the third raises so the caller can resume waiting.
+    """
     deadline = time.monotonic() + timeout_s
+    failures = 0
     while True:
-        out = ssh(cluster, f"sacct -j {job_id} -X -n -P -o State")
+        try:
+            out = ssh(cluster, f"sacct -j {job_id} -X -n -P -o State")
+        except RemoteError as exc:
+            failures += 1
+            if failures >= _MAX_POLL_FAILURES:
+                raise RemoteError(
+                    f"[jobs:wait] Lost connection — {{job_id: {job_id}, failures: {failures}, last: {exc}}}"
+                ) from exc
+            time.sleep(poll_s)
+            continue
+        failures = 0
         lines = out.strip().splitlines()
         state = lines[0].split()[0] if lines else ""
         if state == "COMPLETED":
             return state
-        if state in _TERMINAL_FAILURES:
+        if state and state not in _ACTIVE_STATES:
             raise RemoteError(f"[jobs:wait] Job did not complete — {{job_id: {job_id}, state: {state}}}")
         if time.monotonic() > deadline:
             raise RemoteError(
-                f"[jobs:wait] Timed out — {{job_id: {job_id}, timeout_s: {timeout_s}, last_state: {state or 'unknown'}}}"
+                f"[jobs:wait] Timed out, job left running — {{job_id: {job_id}, "
+                f"timeout_s: {timeout_s}, last_state: {state or 'unknown'}}}"
             )
         time.sleep(poll_s)
 
@@ -109,7 +145,10 @@ def fetch(cluster: Cluster, run_name: str, dest: Path) -> Path:
         "rsync", "-az", "-e", "ssh -o BatchMode=yes",
         f"{cluster.ssh_alias}:{_run_dir(cluster, run_name)}/out/", f"{dest}/",
     ]
-    result = subprocess.run(argv, capture_output=True, text=True, timeout=300.0)
+    try:
+        result = subprocess.run(argv, capture_output=True, text=True, timeout=300.0)
+    except subprocess.TimeoutExpired as exc:
+        raise RemoteError(f"[jobs:fetch] Timed out — {{timeout_s: 300.0, run_name: {run_name}}}") from exc
     if result.returncode != 0:
         raise RemoteError(
             f"[jobs:fetch] rsync failed — {{exit: {result.returncode}, stderr: {result.stderr[-_STDERR_TAIL:]!r}}}"

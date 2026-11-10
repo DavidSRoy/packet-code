@@ -16,7 +16,7 @@ from flightsim.frames import Quat, Vec3  # noqa: E402
 from flightsim.profiles import load_camera  # noqa: E402
 from flightsim.render_link import serve  # noqa: E402
 
-_RT_SUBFRAMES = 16  # fewer left visible ray-tracing noise (4 subframes)
+_RT_SUBFRAMES = 64  # path-tracing samples per frame; 4 and 16 real-time subframes were still speckled
 _MAX_STEPS = 40  # steps before the first annotator data shows up
 
 
@@ -42,7 +42,7 @@ def main() -> None:
 
     from isaacsim import SimulationApp
 
-    app = SimulationApp({"headless": True, "width": camera.width, "height": camera.height})
+    app = SimulationApp({"headless": True, "renderer": "PathTracing", "width": camera.width, "height": camera.height})
     try:
         # Imports that need the Kit runtime must come after SimulationApp starts.
         import omni.replicator.core as rep

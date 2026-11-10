@@ -30,13 +30,29 @@ class CameraRig:
         self.orient.Set(Gf.Quatd(w, Gf.Vec3d(x, y, z)))
 
 
+def _matte(stage: Usd.Stage, grey: float) -> UsdShade.Material:
+    """Fully rough grey surface: the default material has a specular highlight (a bright blob in the frame)."""
+    name = f"/World/Looks/Matte{round(grey * 100):03d}"
+    existing = stage.GetPrimAtPath(name)
+    if existing.IsValid():
+        return UsdShade.Material(existing)
+    material = UsdShade.Material.Define(stage, name)
+    surface = UsdShade.Shader.Define(stage, f"{name}/Surface")
+    surface.CreateIdAttr("UsdPreviewSurface")
+    surface.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(grey, grey, grey))
+    surface.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(1.0)
+    surface.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
+    material.CreateSurfaceOutput().ConnectToSource(surface.ConnectableAPI(), "surface")
+    return material
+
+
 def _cuboid(stage: Usd.Stage, path: str, centre: tuple[float, float, float],
             size: tuple[float, float, float], grey: float) -> None:
     cube = UsdGeom.Cube.Define(stage, path)
     cube.GetSizeAttr().Set(1.0)
     cube.AddTranslateOp().Set(Gf.Vec3d(*centre))
     cube.AddScaleOp().Set(Gf.Vec3d(*size))
-    cube.GetDisplayColorAttr().Set([Gf.Vec3f(grey, grey, grey)])
+    UsdShade.MaterialBindingAPI.Apply(cube.GetPrim()).Bind(_matte(stage, grey))
 
 
 def _sticker(stage: Usd.Stage, png: Path, size_m: tuple[float, float]) -> None:
@@ -67,7 +83,7 @@ def _sticker(stage: Usd.Stage, png: Path, size_m: tuple[float, float]) -> None:
     texture.CreateInput("st", Sdf.ValueTypeNames.Float2).ConnectToSource(reader.ConnectableAPI(), "result")
     texture.CreateOutput("rgb", Sdf.ValueTypeNames.Float3)
     surface.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).ConnectToSource(texture.ConnectableAPI(), "rgb")
-    surface.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.9)
+    surface.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(1.0)
     surface.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
     material.CreateSurfaceOutput().ConnectToSource(surface.ConnectableAPI(), "surface")
     UsdShade.MaterialBindingAPI.Apply(mesh.GetPrim()).Bind(material)

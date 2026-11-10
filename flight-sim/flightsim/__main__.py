@@ -4,7 +4,7 @@ import time
 from collections.abc import Sequence
 from pathlib import Path
 
-from flightsim.compare import compare, summarize
+from flightsim.compare import compare, describe, summarize
 from flightsim.config import load_cluster
 from flightsim.hover import HoverRun, run_hover
 from flightsim.remote import RemoteError
@@ -30,6 +30,9 @@ def main(argv: Sequence[str]) -> int:
         except (FileNotFoundError, ValueError) as exc:
             print(exc, file=sys.stderr)
             return 1
+        for label, folder in (("A", args.a), ("B", args.b)):
+            status, in_hold = describe(folder)
+            print(f"{label}: {status}; detection over {'the hold window' if in_hold else 'all frames (no hold)'}")
         for key in diff:
             print(f"{key:15s} A {sa[key]:9.3f}  B {sb[key]:9.3f}  B-A {diff[key]:9.3f}")
         return 0

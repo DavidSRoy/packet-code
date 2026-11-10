@@ -5,7 +5,7 @@
 # mksquashfs is the slow step and scales with cores; a 1-CPU job was still squashing after 16 minutes.
 # Idempotent: pull the Isaac Sim image into $SCRATCH/containers, build ArduPilot SITL into
 # $SCRATCH/ardupilot and create the Python venv in $SCRATCH/venv, each only if absent.
-# Run it inside a CPU job, never on the login node.
+# Run it inside a CPU job, never on the login node: `python -m flightsim bootstrap` pushes the source and submits it.
 # Required env: SCRATCH (remote scratch dir), ISAAC_IMAGE (e.g. nvcr.io/nvidia/isaac-sim:6.2.0),
 # ARDUPILOT_TAG, ARDUPILOT_DEV_IMAGE, UV_VERSION, OPENCV_REQUIREMENT (all from versions.toml),
 # REPO_DIR (pushed repo holding backend/, see jobs.push_backend)

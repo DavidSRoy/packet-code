@@ -130,10 +130,14 @@ setsid apptainer exec --bind "$SCRATCH" --bind /dev/shm --env ARDUPILOT="$SCRATC
      --physics-arg=--record-dir --physics-arg '$shm/rec'" &
 runner=$!
 
-# Watch the render server while the run lives: with it gone the physics process dies, SITL waits for it
-# forever and run.py waits in FC time, so nothing would ever end by itself.
+# Watch the render server while the run lives. A normal run ends with the client telling the server to quit, so
+# the server exits a moment before run.py finishes scoring: give the run time to end by itself. If the server
+# died for another reason the physics process dies, SITL waits for it forever and run.py waits in FC time, so
+# nothing would ever end by itself.
+grace_s=25
 started=$SECONDS
 killed=0
+gone_at=""
 while kill -0 "$runner" 2>/dev/null; do
   if [[ -n "${DEBUG_KILL_RENDER_AFTER_S:-}" && "$killed" -eq 0 && $((SECONDS - started)) -ge "$DEBUG_KILL_RENDER_AFTER_S" ]]; then
     echo "[hover] debug: killing the render server" >&2
@@ -141,11 +145,14 @@ while kill -0 "$runner" 2>/dev/null; do
     killed=1
   fi
   if ! kill -0 "$server" 2>/dev/null; then
-    echo "[hover] render server exited during the run; ending it" >&2
-    kill_group "$runner"
-    pkill -KILL -f "$shm" 2>/dev/null || true
-    status=1
-    break
+    [[ -n "$gone_at" ]] || { gone_at=$SECONDS; echo "[hover] render server exited during the run" >&2; }
+    if (( SECONDS - gone_at >= grace_s )); then
+      echo "[hover] run still going $grace_s s after the render server exited; ending it" >&2
+      kill_group "$runner"
+      pkill -KILL -f "$shm" 2>/dev/null || true
+      status=1
+      break
+    fi
   fi
   sleep 2
 done

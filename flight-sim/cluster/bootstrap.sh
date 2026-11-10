@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+#SBATCH --job-name=flightsim-bootstrap
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=48G
+# mksquashfs is the slow step and scales with cores; 1 CPU did not finish in 30 minutes.
 # Idempotent: pull the Isaac Sim image into $SCRATCH/containers if absent.
 # Run it inside a CPU job, never on the login node.
 # Required env: SCRATCH (remote scratch dir), ISAAC_IMAGE (e.g. nvcr.io/nvidia/isaac-sim:6.2.0)

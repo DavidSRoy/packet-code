@@ -123,6 +123,8 @@ def submit(
 def wait(cluster: Cluster, job_id: int, *, poll_s: float = 15.0, timeout_s: float = 2400.0) -> str:
     """Poll sacct until the job ends. Returns COMPLETED, raises RemoteError for any other end state.
 
+    timeout_s counts from the job leaving the queue: the deadline restarts at every poll that finds it PENDING.
+
     Tolerates up to 2 consecutive ssh failures; the third raises so the caller can resume waiting.
     """
     deadline = time.monotonic() + timeout_s
@@ -145,7 +147,9 @@ def wait(cluster: Cluster, job_id: int, *, poll_s: float = 15.0, timeout_s: floa
             return state
         if state and state not in _ACTIVE_STATES:
             raise RemoteError(f"[jobs:wait] Job did not complete — {{job_id: {job_id}, state: {state}}}")
-        if time.monotonic() > deadline:
+        if state == "PENDING":
+            deadline = time.monotonic() + timeout_s
+        elif time.monotonic() > deadline:
             raise RemoteError(
                 f"[jobs:wait] Timed out, job left running — {{job_id: {job_id}, "
                 f"timeout_s: {timeout_s}, last_state: {state or 'unknown'}}}"

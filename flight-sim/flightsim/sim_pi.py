@@ -4,12 +4,12 @@ RenderedCamera replaces physics.Camera.measure: at each exposure it renders the 
 camera pose, runs the drone's own detector (LidFinder, then imu_fix and lid_pose from
 backend/companion) on the frame, and hands the pose it found to physics.Camera's send path. A frame
 with no detection sends nothing. The frame timing comes from the ComputeProfile instead of
-model.json's camera block, so a slower computer or a worse camera gives a worse hover.
+model.json's camera block (its drop_frac, rate_jitter_s, send_speed and speed_max_gap_s still apply), so a slower computer or a worse camera gives a worse hover.
 
 Runnable like e2e/fake_pi.py; the arguments it does not know go to physics.main():
 
   python sim_pi.py --render-ready-file R --camera cam.json --compute pc.json --layout lid_layout.json \\
-      [--record-dir D] <physics.py arguments>
+      --mount-mm X,Y,Z [--record-dir D] <physics.py arguments>
 
 rate_hz in the ComputeProfile must be the effective detected rate: frames are exposed at that rate
 and never dropped because detection is slow.
@@ -50,10 +50,15 @@ from imu_pose import ImuPose  # type: ignore[import-not-found]  # noqa: E402
 from lid_pose import Mount, imu_fix, lid_pose  # type: ignore[import-not-found]  # noqa: E402
 from lid_tags import LidFinder, camera_matrix  # type: ignore[import-not-found]  # noqa: E402
 
+from flightsim.drone_geometry import mount_mm_from_cam_pos  # noqa: E402
 from flightsim.frames import Quat, Vec3, camera_pose_world  # noqa: E402
 from flightsim.profiles import CameraProfile, ComputeProfile, load_camera, load_compute  # noqa: E402
 from flightsim.recorder import FrameRow, Recorder  # noqa: E402
 from flightsim.render_link import RenderClient  # noqa: E402
+
+
+_ATTITUDE_HISTORY_S = 0.5   # how far back physics.Camera.q_at can look (the history it keeps in step())
+_MOUNT_TOL_MM = 1e-6
 
 
 class Renderer(Protocol):
@@ -71,6 +76,7 @@ class RenderedCamera(physics.Camera):
         finder: LidFinder,
         camera: CameraProfile,
         compute: ComputeProfile,
+        occluder_mount_mm: tuple[float, float, float],
         recorder: Recorder | None = None,
         lid_xy: tuple[float, float] = (0.0, 0.0),
     ) -> None:
@@ -83,7 +89,20 @@ class RenderedCamera(physics.Camera):
         }
         super().__init__(dict(C, **timing), rng, drone)
         self.renderer, self.finder, self.camera, self.compute, self.recorder = renderer, finder, camera, compute, recorder
+        lookup_s = compute.detect_s + compute.detect_jitter_s + compute.link_s + float(self.C["tilt_attitude_lag_s"])
+        if lookup_s > _ATTITUDE_HISTORY_S:
+            raise ValueError(
+                f"[sim_pi:RenderedCamera] Compute delay is longer than the attitude history, so the attitude "
+                f"would be wrong — {{delay_s: {lookup_s:.3f}, history_s: {_ATTITUDE_HISTORY_S}, "
+                f"compute: {compute.name!r}}}"
+            )
         cam_pos = np.array(self.C["cam_pos"])
+        lens_mm = mount_mm_from_cam_pos((float(cam_pos[0]), float(cam_pos[1]), float(cam_pos[2])))
+        if max(abs(a - b) for a, b in zip(occluder_mount_mm, lens_mm)) > _MOUNT_TOL_MM:
+            raise ValueError(
+                f"[sim_pi:RenderedCamera] Occluder mount differs from the camera position the physics uses — "
+                f"{{occluder_mount_mm: {occluder_mount_mm}, cam_pos_mm: {lens_mm}}}"
+            )
         self.mount = Mount(*(cam_pos + np.array(self.C["pi_cam_pos_err"])).tolist(), 0.0)   # the Pi's belief
         self.imu = ImuPose(self.mount.rot_deg)
         self.last: dict[int, tuple[float, float, float]] = {}   # imu_fix's stillness state, as in cam_stream.py
@@ -169,11 +188,13 @@ def main() -> None:
     ap.add_argument("--camera", type=Path, required=True)
     ap.add_argument("--compute", type=Path, required=True)
     ap.add_argument("--layout", type=Path, required=True)
+    ap.add_argument("--mount-mm", required=True, help="X,Y,Z occluder mount the render server was started with, mm")
     ap.add_argument("--record-dir", type=Path)
     args, rest = ap.parse_known_args()
     sys.argv = [sys.argv[0], *rest]
 
     compute = load_compute(args.compute)
+    mount_x, mount_y, mount_z = (float(v) for v in args.mount_mm.split(","))
     client = RenderClient("127.0.0.1", _wait_for_port(args.render_ready_file))
     recorder: Recorder | None = None
     try:
@@ -186,7 +207,7 @@ def main() -> None:
             # reach from behind the lens to its nose side, would cover every ray that reaches the lid.
             cam_pos = np.asarray(C["cam_pos"], dtype=float)
             return RenderedCamera(C, rng, drone, renderer=client, finder=finder, camera=camera, compute=compute,
-                                  recorder=recorder, lid_xy=(float(cam_pos[0]), float(cam_pos[1])))
+                                  occluder_mount_mm=(mount_x, mount_y, mount_z), recorder=recorder, lid_xy=(float(cam_pos[0]), float(cam_pos[1])))
 
         physics.Camera = make
         physics.main()

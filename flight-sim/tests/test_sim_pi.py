@@ -42,7 +42,6 @@ class StubRenderer:
         self.scene = scene
         self.rng = np.random.default_rng(seed)
         self.calls: list[tuple[Vec3, Quat, float]] = []
-        self.last_frame_id = -1
 
     def render(self, pos: Vec3, quat: Quat, t: float) -> NDArray[np.uint8]:
         self.calls.append((pos, quat, t))
@@ -51,12 +50,12 @@ class StubRenderer:
         yaw = math.degrees(math.atan2(r_wd[1, 0], r_wd[0, 0]))
         d0 = np.array(pos) * 1000.0 - r_wd @ np.array(CAM_MOUNT_MM)
         img, _, _ = self.scene.render(d0[0], d0[1], d0[2], yaw, 0.0, 0.0, self.rng)
-        self.last_frame_id += 1
         return img
 
 
 def make_camera(scene, drone: FakeDrone, *, lag_s: float = 0.0, recorder: Recorder | None = None,
-                compute: ComputeProfile = COMPUTE, send_speed: bool = False, lid_xy: tuple[float, float] = (0.0, 0.0)):
+                compute: ComputeProfile = COMPUTE, send_speed: bool = False, lid_xy: tuple[float, float] = (0.0, 0.0),
+                occluder_mount_mm: tuple[float, float, float] = CAM_MOUNT_MM):
     fwd, left, up = (v / 1000.0 for v in CAM_MOUNT_MM)
     C = dict(MODEL["camera"], cam_pos=[fwd, -left, -up], pi_cam_pos_err=[0.0, 0.0, 0.0],
              rate_jitter_s=0.0, drop_frac=0.0, send_speed=send_speed, tilt_attitude_lag_s=lag_s,
@@ -64,7 +63,8 @@ def make_camera(scene, drone: FakeDrone, *, lag_s: float = 0.0, recorder: Record
     cam_profile = CameraProfile("stub", scene.w, scene.h, scene.hfov, True, "global", {}, "linear")
     renderer = StubRenderer(scene)
     cam = sim_pi.RenderedCamera(C, np.random.default_rng(1), drone, renderer=renderer, finder=scene.finder,
-                                camera=cam_profile, compute=compute, recorder=recorder, lid_xy=lid_xy)
+                                camera=cam_profile, compute=compute, recorder=recorder, lid_xy=lid_xy,
+                                occluder_mount_mm=occluder_mount_mm)
     return cam, renderer
 
 
@@ -233,3 +233,17 @@ def test_speed_needs_two_imu_frames_in_a_row(scene, monkeypatch: pytest.MonkeyPa
         else:
             after.append(pos_seen)
     assert after == [2, 5]
+
+
+def test_occluder_mount_that_differs_from_the_camera_position_is_refused(scene):
+    drone = FakeDrone(np.array([0.0, 0.0, -0.5]))
+    shifted = (CAM_MOUNT_MM[0] + 5.0, CAM_MOUNT_MM[1], CAM_MOUNT_MM[2])
+    with pytest.raises(ValueError, match=r"\[sim_pi:RenderedCamera\] Occluder mount differs"):
+        make_camera(scene, drone, occluder_mount_mm=shifted)
+
+
+def test_compute_delay_longer_than_the_attitude_history_is_refused(scene):
+    drone = FakeDrone(np.array([0.0, 0.0, -0.5]))
+    slow = dataclasses.replace(COMPUTE, detect_s=0.6)
+    with pytest.raises(ValueError, match=r"\[sim_pi:RenderedCamera\] Compute delay is longer than the attitude history"):
+        make_camera(scene, drone, compute=slow)

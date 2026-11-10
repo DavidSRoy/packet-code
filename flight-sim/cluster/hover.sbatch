@@ -5,17 +5,17 @@
 # Closed-loop hover: ArduPilot SITL + backend/tools/sim/hover/run.py with flightsim/sim_pi.py as the physics
 # process, which asks the Isaac render server (started here) for a frame at every camera exposure. Account,
 # partition, GPU count, time limit and log path come from flightsim.jobs.submit.
-# Results land in $run/out (small): result.json, frames.csv, camera.mp4, overlay.mp4, versions.json, *.tail.
+# Results land in $run/out (small): result.json, frames.csv, camera.mp4, overlay.mp4, versions.json, pip-freeze.txt, *.tail.
 # The bulky run directory (SITL logs, truth.npz) stays in /dev/shm and is deleted.
 # Required env: SCRATCH, RUN_NAME, REPO_DIR (pushed repo holding backend/), ISAAC_IMAGE, ARDUPILOT_TAG,
-#   ARDUPILOT_DEV_IMAGE, REPO_COMMIT, CAMERA, COMPUTE (profile names), HEIGHT, HOLD, SEED
+#   ARDUPILOT_DEV_IMAGE, OPENCV_REQUIREMENT, REPO_COMMIT, CAMERA, COMPUTE (profile names), HEIGHT, HOLD, SEED
 # Optional env: DEBUG_KILL_RENDER_AFTER_S (kills the render server that many seconds into the run)
 set -euo pipefail
 # $0 is a copy of this script in Slurm's spool; the pushed tree is next to the run directory.
 source "${SCRATCH:?}/runs/${RUN_NAME:?}/src/cluster/hover_lib.sh"
 
 : "${SCRATCH:?}" "${RUN_NAME:?}" "${REPO_DIR:?}" "${ISAAC_IMAGE:?}" "${ARDUPILOT_TAG:?}" "${ARDUPILOT_DEV_IMAGE:?}"
-: "${REPO_COMMIT:?}" "${CAMERA:?}" "${COMPUTE:?}" "${HEIGHT:?}" "${HOLD:?}" "${SEED:?}"
+: "${OPENCV_REQUIREMENT:?}" "${REPO_COMMIT:?}" "${CAMERA:?}" "${COMPUTE:?}" "${HEIGHT:?}" "${HOLD:?}" "${SEED:?}"
 sif_name="$(printf '%s' "${ISAAC_IMAGE#*/*/}" | tr ':/' '__').sif"
 isaac_sif="$SCRATCH/containers/$sif_name"
 dev_sif="$SCRATCH/containers/ardupilot-dev-base.sif"
@@ -29,6 +29,16 @@ wd="$run/work"                      # render server files (small)
 shm="/dev/shm/flightsim-${SLURM_JOB_ID:-$$}"
 state="/tmp/isaac-${SLURM_JOB_ID:-$$}"
 mkdir -p "$out" "$wd" "$shm/rec"
+
+# The job runs what bootstrap built. Fail now, not after a 45 minute run labelled with versions it did not use.
+if [[ "$(cat "$SCRATCH/ardupilot/.built-tag" 2>/dev/null)" != "$ARDUPILOT_TAG" ]]; then
+  echo "[hover] The ArduPilot build does not match versions.toml ($ARDUPILOT_TAG); run: python -m flightsim bootstrap" >&2
+  exit 1
+fi
+if [[ "$(cat "$SCRATCH/venv/.opencv-requirement" 2>/dev/null)" != "$OPENCV_REQUIREMENT" ]]; then
+  echo "[hover] The Python environment does not match versions.toml ($OPENCV_REQUIREMENT); run: python -m flightsim bootstrap" >&2
+  exit 1
+fi
 rm -f "$wd/ready"
 
 server=""
@@ -64,7 +74,8 @@ model="$REPO_DIR/backend/tools/sim/hover/model.json"
 
 nvidia-smi --query-gpu=name,driver_version --format=csv,noheader
 
-# What produced the results. No host names or paths.
+# What produced the results. No host names or paths. pip-freeze.txt lists the packages that actually ran.
+"$SCRATCH/bin/uv" pip freeze --python "$py" > "$out/pip-freeze.txt"
 isaac_digest="$(apptainer inspect --labels "$isaac_sif" | sed -n 's/^org.opencontainers.image.base.digest: //p')"
 ardupilot_commit="$(git -C "$SCRATCH/ardupilot" rev-parse HEAD)"
 ISAAC_DIGEST="$isaac_digest" ARDUPILOT_COMMIT="$ardupilot_commit" "$py" - "$out/versions.json" <<'PY'
@@ -132,6 +143,7 @@ setsid apptainer exec --bind "$SCRATCH" --bind /dev/shm --env ARDUPILOT="$SCRATC
      --physics-arg=--camera --physics-arg '$run/src/profiles/cameras/$CAMERA.json' \
      --physics-arg=--compute --physics-arg '$run/src/profiles/compute/$COMPUTE.json' \
      --physics-arg=--layout --physics-arg '$layout_dir/lid_layout.json' \
+     --physics-arg=--mount-mm=$mount_x,$mount_y,$mount_z \
      --physics-arg=--record-dir --physics-arg '$shm/rec'" &
 runner=$!
 

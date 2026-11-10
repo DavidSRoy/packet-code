@@ -67,3 +67,13 @@ def test_unknown_tone_raises(tmp_path: Path):
     bad.write_text(json.dumps(data))
     with pytest.raises(ValueError, match=r"\[profiles:load_camera\] Unknown tone"):
         load_camera(bad)
+
+
+@pytest.mark.parametrize("key, value", [("rate_hz", 0.0), ("rate_hz", -5.0), ("detect_scale", 0.0), ("detect_scale", 1.5)])
+def test_compute_values_out_of_range_raise_with_context(tmp_path: Path, key: str, value: float):
+    data = json.loads((PROFILES / "compute" / "pi-zero-2w.json").read_text())
+    data[key] = value
+    bad = tmp_path / "bad.json"
+    bad.write_text(json.dumps(data))
+    with pytest.raises(ValueError, match=rf"\[profiles:load_compute\] {key} must be.*{key}: {value}"):
+        load_compute(bad)

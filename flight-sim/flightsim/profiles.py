@@ -60,6 +60,17 @@ def _tone(path: Path, value: str) -> Tone:
     )
 
 
+def _check_compute(path: Path, profile: "ComputeProfile") -> "ComputeProfile":
+    if profile.rate_hz <= 0.0:
+        raise ValueError(f"[profiles:load_compute] rate_hz must be above 0 — {{path: {str(path)!r}, rate_hz: {profile.rate_hz}}}")
+    if not 0.0 < profile.detect_scale <= 1.0:
+        raise ValueError(
+            f"[profiles:load_compute] detect_scale must be in (0, 1] — "
+            f"{{path: {str(path)!r}, detect_scale: {profile.detect_scale}}}"
+        )
+    return profile
+
+
 def load_camera(path: Path) -> CameraProfile:
     d = json.loads(Path(path).read_text())
     try:
@@ -81,7 +92,7 @@ def load_camera(path: Path) -> CameraProfile:
 def load_compute(path: Path) -> ComputeProfile:
     d = json.loads(Path(path).read_text())
     try:
-        return ComputeProfile(
+        return _check_compute(path, ComputeProfile(
             name=str(d["name"]),
             rate_hz=float(d["rate_hz"]),
             exposure_to_readout_s=float(d["exposure_to_readout_s"]),
@@ -91,6 +102,6 @@ def load_compute(path: Path) -> ComputeProfile:
             detect_scale=float(d["detect_scale"]),
             provenance=_provenance("load_compute", path, d["provenance"]),
             sources=dict(d.get("sources", {})),
-        )
+        ))
     except KeyError as exc:
         raise _missing("load_compute", path, exc) from exc

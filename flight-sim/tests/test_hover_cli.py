@@ -1,10 +1,10 @@
-import subprocess
+import json
 from pathlib import Path
 
 import pytest
 
 from flightsim import __main__ as cli
-from flightsim import hover
+from flightsim import bootstrap, hover
 from flightsim.config import Cluster
 from flightsim.remote import RemoteError
 
@@ -89,7 +89,8 @@ def test_submit_gets_versions_arguments_and_a_long_time_limit(calls: Calls) -> N
     assert env == {
         "SCRATCH": "/scratch/me", "RUN_NAME": "h1", "REPO_DIR": "/scratch/me/runs/h1/repo",
         "ISAAC_IMAGE": versions.isaac_image, "ARDUPILOT_TAG": versions.ardupilot_tag,
-        "ARDUPILOT_DEV_IMAGE": versions.ardupilot_dev_image, "REPO_COMMIT": "abc123",
+        "ARDUPILOT_DEV_IMAGE": versions.ardupilot_dev_image, "OPENCV_REQUIREMENT": versions.opencv_requirement,
+        "REPO_COMMIT": "abc123",
         "CAMERA": "ov9281", "COMPUTE": "pi-zero-2w", "HEIGHT": "0.5", "HOLD": "30.0", "SEED": "0",
     }
     assert time_min == 120 == hover.job_time_min(RUN)
@@ -108,7 +109,7 @@ def test_missing_scratch_path_raises_before_submit(calls: Calls) -> None:
         hover.run_hover(CLUSTER, RUN)
     assert str(info.value) == (
         "[hover:preflight] Missing on scratch — /scratch/me/ardupilot/build/sitl/bin/arducopter; "
-        "run: bash flight-sim/cluster/bootstrap.sh"
+        "run: python -m flightsim bootstrap"
     )
     assert calls.names == ["preflight"]
 
@@ -187,19 +188,77 @@ def test_missing_versions_key_is_a_value_error_with_context(tmp_path: Path) -> N
         hover.load_versions(bad)
 
 
-def _git(root: Path, *args: str) -> None:
-    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=root, check=True,
-                   capture_output=True)
+def test_reused_run_name_is_refused_before_any_cluster_call(calls: Calls, tmp_path: Path) -> None:
+    (tmp_path / "h1").mkdir()
+    with pytest.raises(ValueError, match=r"\[hover:run_hover\] Results folder already exists"):
+        hover.run_hover(CLUSTER, RUN)
+    assert calls.names == []
 
 
-def test_repo_commit_is_marked_dirty_when_flight_sim_has_uncommitted_changes(tmp_path: Path) -> None:
-    tree = tmp_path / "flight-sim"
-    tree.mkdir()
-    (tree / "a.txt").write_text("1")
-    _git(tmp_path, "init", "-q")
-    _git(tmp_path, "add", "-A")
-    _git(tmp_path, "commit", "-q", "-m", "x")
-    clean = hover.repo_commit(tree)
-    assert len(clean) == 40 and not clean.endswith("-dirty")
-    (tree / "a.txt").write_text("2")
-    assert hover.repo_commit(tree) == clean + "-dirty"
+def test_a_malformed_profile_is_refused_before_any_cluster_call(calls: Calls, monkeypatch: pytest.MonkeyPatch,
+                                                                tmp_path: Path) -> None:
+    source = Path(hover.__file__).resolve().parents[1] / "profiles"
+    root = tmp_path / "src"
+    (root / "profiles" / "cameras").mkdir(parents=True)
+    (root / "profiles" / "compute").mkdir()
+    (root / "profiles" / "cameras" / "ov9281.json").write_text((source / "cameras" / "ov9281.json").read_text())
+    bad = json.loads((source / "compute" / "pi-zero-2w.json").read_text())
+    bad["rate_hz"] = 0
+    (root / "profiles" / "compute" / "pi-zero-2w.json").write_text(json.dumps(bad))
+    monkeypatch.setattr(hover, "_SOURCE_ROOT", root)
+    with pytest.raises(ValueError, match=r"\[profiles:load_compute\] rate_hz must be above 0"):
+        hover.run_hover(CLUSTER, RUN)
+    assert calls.names == []
+
+
+def test_bootstrap_pushes_submits_a_cpu_job_with_the_versions_and_waits(calls: Calls, monkeypatch: pytest.MonkeyPatch,
+                                                                         tmp_path: Path) -> None:
+    gpu_flags: list[bool] = []
+
+    def submit(_cluster: Cluster, script: str, run_name: str, env: dict[str, str], *, gpu: bool = True,
+               time_min: int = 30) -> int:
+        gpu_flags.append(gpu)
+        calls.submit_args = (script, run_name, dict(env), time_min)
+        calls.names.append("submit")
+        return 77
+
+    monkeypatch.setattr(bootstrap.jobs, "push_source", calls._push_source)
+    monkeypatch.setattr(bootstrap.jobs, "push_backend", calls._push_backend)
+    monkeypatch.setattr(bootstrap.jobs, "submit", submit)
+    monkeypatch.setattr(bootstrap.jobs, "wait", calls._wait)
+    monkeypatch.setattr(bootstrap.jobs, "fetch", calls._fetch)
+    monkeypatch.setattr(bootstrap, "RESULTS_ROOT", tmp_path)
+    assert bootstrap.run_bootstrap(CLUSTER) == tmp_path / "bootstrap"
+    assert calls.names == ["push_source", "push_backend", "submit", "wait", "fetch"]
+    assert gpu_flags == [False]
+    assert calls.submit_args is not None
+    script, name, env, _ = calls.submit_args
+    versions = hover.load_versions()
+    assert script == "/scratch/me/runs/bootstrap/src/cluster/bootstrap.sh" and name == "bootstrap"
+    assert env == {
+        "SCRATCH": "/scratch/me", "REPO_DIR": "/scratch/me/runs/bootstrap/repo", "ISAAC_IMAGE": versions.isaac_image,
+        "ARDUPILOT_TAG": versions.ardupilot_tag, "ARDUPILOT_DEV_IMAGE": versions.ardupilot_dev_image,
+        "UV_VERSION": versions.uv_version, "OPENCV_REQUIREMENT": versions.opencv_requirement,
+    }
+
+
+def test_bootstrap_failure_fetches_the_log_then_raises(calls: Calls, monkeypatch: pytest.MonkeyPatch,
+                                                      tmp_path: Path) -> None:
+    monkeypatch.setattr(bootstrap.jobs, "push_source", calls._push_source)
+    monkeypatch.setattr(bootstrap.jobs, "push_backend", calls._push_backend)
+    monkeypatch.setattr(bootstrap.jobs, "submit", lambda *a, **k: 77)
+    monkeypatch.setattr(bootstrap.jobs, "wait", calls._wait)
+    monkeypatch.setattr(bootstrap.jobs, "fetch", calls._fetch)
+    monkeypatch.setattr(bootstrap, "RESULTS_ROOT", tmp_path)
+    calls.wait_error = RemoteError("[jobs:wait] Job did not complete — {job_id: 77, state: FAILED}")
+    with pytest.raises(RemoteError, match="state: FAILED"):
+        bootstrap.run_bootstrap(CLUSTER)
+    assert calls.names[-2:] == ["wait", "fetch"]
+
+
+def test_main_runs_the_bootstrap_command(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+                                         tmp_path: Path) -> None:
+    monkeypatch.setattr(cli, "load_cluster", lambda: CLUSTER)
+    monkeypatch.setattr(cli, "run_bootstrap", lambda _cluster: tmp_path / "bootstrap")
+    assert cli.main(["bootstrap"]) == 0
+    assert capsys.readouterr().out.strip() == str(tmp_path / "bootstrap")

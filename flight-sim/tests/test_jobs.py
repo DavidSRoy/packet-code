@@ -103,6 +103,14 @@ def test_wait_times_out(monkeypatch: pytest.MonkeyPatch) -> None:
         jobs.wait(CLUSTER, 9, timeout_s=50.0)
 
 
+def test_wait_does_not_count_queue_time(monkeypatch: pytest.MonkeyPatch) -> None:
+    _no_sleep(monkeypatch)
+    ticks = iter([0.0, 100.0, 200.0, 210.0])
+    monkeypatch.setattr(jobs.time, "monotonic", lambda: next(ticks))
+    _record_ssh(monkeypatch, ["PENDING\n", "PENDING\n", "RUNNING\n", "COMPLETED\n"])
+    assert jobs.wait(CLUSTER, 9, timeout_s=50.0) == "COMPLETED"
+
+
 def test_push_source_pipes_git_archive_into_tar(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[tuple[list[str], bytes | None]] = []
 

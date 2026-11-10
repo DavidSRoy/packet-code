@@ -4,6 +4,7 @@ import time
 from collections.abc import Sequence
 from pathlib import Path
 
+from flightsim.bootstrap import run_bootstrap
 from flightsim.compare import compare, describe, summarize
 from flightsim.config import load_cluster
 from flightsim.hover import HoverRun, run_hover
@@ -20,6 +21,7 @@ def main(argv: Sequence[str]) -> int:
     hover.add_argument("--hold", type=float, required=True, help="hold time at height, s")
     hover.add_argument("--seed", type=int, default=0)
     hover.add_argument("--name", help="run name; default hover-<timestamp>")
+    commands.add_parser("bootstrap", help="prepare the cluster: images, ArduPilot build, Python environment (idempotent)")
     cmp = commands.add_parser("compare", help="differences between two result folders (B minus A)")
     cmp.add_argument("a", type=Path)
     cmp.add_argument("b", type=Path)
@@ -36,11 +38,19 @@ def main(argv: Sequence[str]) -> int:
         for key in diff:
             print(f"{key:15s} A {sa[key]:9.3f}  B {sb[key]:9.3f}  B-A {diff[key]:9.3f}")
         return 0
+    if args.command == "bootstrap":
+        try:
+            folder = run_bootstrap(load_cluster())
+        except (RemoteError, FileNotFoundError) as exc:
+            print(exc, file=sys.stderr)
+            return 1
+        print(folder)
+        return 0
     name = args.name or time.strftime("hover-%Y%m%d-%H%M%S")
     run = HoverRun(args.camera, args.compute, args.height, args.hold, args.seed, name)
     try:
         folder = run_hover(load_cluster(), run)
-    except (RemoteError, FileNotFoundError) as exc:
+    except (RemoteError, FileNotFoundError, ValueError) as exc:
         print(exc, file=sys.stderr)
         return 1
     print(folder)

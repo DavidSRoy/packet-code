@@ -10,6 +10,7 @@ from pathlib import Path
 
 from flightsim import jobs
 from flightsim.config import Cluster
+from flightsim.profiles import load_camera, load_compute
 from flightsim.remote import RemoteError, ssh
 
 _SOURCE_ROOT = Path(__file__).resolve().parents[1]
@@ -64,19 +65,13 @@ def isaac_sif_name(image: str) -> str:
 
 
 def repo_commit(root: Path = _SOURCE_ROOT) -> str:
-    """HEAD of the repo, with "-dirty" appended when flight-sim or backend has uncommitted changes."""
+    """HEAD of the repo. The push refuses uncommitted changes, so HEAD is what runs."""
     head = subprocess.run(
         ["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=root, timeout=30.0, check=False
     )
     if head.returncode != 0:
         raise RemoteError(f"[hover:repo_commit] git rev-parse failed — {{stderr: {head.stderr[-300:]!r}}}")
-    status = subprocess.run(
-        ["git", "status", "--porcelain", "--", ".", "../backend"],
-        capture_output=True, text=True, cwd=root, timeout=30.0, check=False,
-    )
-    if status.returncode != 0:
-        raise RemoteError(f"[hover:repo_commit] git status failed — {{stderr: {status.stderr[-300:]!r}}}")
-    return head.stdout.strip() + ("-dirty" if status.stdout.strip() else "")
+    return head.stdout.strip()
 
 
 def preflight(cluster: Cluster) -> None:
@@ -92,19 +87,26 @@ def preflight(cluster: Cluster) -> None:
     missing = ssh(cluster, command).strip()
     if missing:
         raise RemoteError(
-            f"[hover:preflight] Missing on scratch — {missing}; run: bash flight-sim/cluster/bootstrap.sh"
+            f"[hover:preflight] Missing on scratch — {missing}; run: python -m flightsim bootstrap"
         )
 
 
 def _check_profiles(run: HoverRun) -> None:
-    for kind, name in (("camera", run.camera), ("compute", run.compute)):
-        path = _SOURCE_ROOT / "profiles" / ("cameras" if kind == "camera" else "compute") / f"{name}.json"
+    """Load both profiles here, so a bad file fails before a GPU job is spent on it."""
+    cameras, computes = _SOURCE_ROOT / "profiles" / "cameras", _SOURCE_ROOT / "profiles" / "compute"
+    for kind, folder, name in (("camera", cameras, run.camera), ("compute", computes, run.compute)):
+        path = folder / f"{name}.json"
         if not path.is_file():
             raise FileNotFoundError(f"[hover:run_hover] No such {kind} profile — {{path: {path}}}")
+    load_camera(cameras / f"{run.camera}.json")
+    load_compute(computes / f"{run.compute}.json")
 
 
 def run_hover(cluster: Cluster, run: HoverRun) -> Path:
     """preflight, push, submit, wait, fetch. Returns the local results folder."""
+    dest = RESULTS_ROOT / run.name
+    if dest.exists():
+        raise ValueError(f"[hover:run_hover] Results folder already exists; pick another --name — {{dest: {dest}}}")
     _check_profiles(run)
     versions = load_versions()
     preflight(cluster)
@@ -114,7 +116,8 @@ def run_hover(cluster: Cluster, run: HoverRun) -> Path:
     env = {
         "SCRATCH": cluster.scratch_dir, "RUN_NAME": run.name, "REPO_DIR": f"{run_dir}/repo",
         "ISAAC_IMAGE": versions.isaac_image, "ARDUPILOT_TAG": versions.ardupilot_tag,
-        "ARDUPILOT_DEV_IMAGE": versions.ardupilot_dev_image, "REPO_COMMIT": repo_commit(),
+        "ARDUPILOT_DEV_IMAGE": versions.ardupilot_dev_image, "OPENCV_REQUIREMENT": versions.opencv_requirement,
+        "REPO_COMMIT": repo_commit(),
         "CAMERA": run.camera, "COMPUTE": run.compute,
         "HEIGHT": str(run.height), "HOLD": str(run.hold), "SEED": str(run.seed),
     }
@@ -123,7 +126,6 @@ def run_hover(cluster: Cluster, run: HoverRun) -> Path:
         env["DEBUG_KILL_RENDER_AFTER_S"] = kill_after
     time_min = job_time_min(run)
     job_id = jobs.submit(cluster, f"{run_dir}/src/cluster/hover.sbatch", run.name, env, time_min=time_min)
-    dest = RESULTS_ROOT / run.name
     try:
         jobs.wait(cluster, job_id, timeout_s=time_min * 60 + _WAIT_SLACK_S)
     except RemoteError:

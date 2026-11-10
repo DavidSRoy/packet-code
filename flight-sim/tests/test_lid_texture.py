@@ -26,4 +26,5 @@ def test_texture_decodes_head_on_at_half_a_metre(tmp_path):
         warnings.simplefilter("ignore", ResourceWarning)  # LidFinder never closes its layout file
         found = LidFinder(str(LAYOUT_DIR / "lid_layout.json")).find(frame, K)
     assert [r["box"] for r in found] == [1]
-    assert np.linalg.norm(np.array(found[0]["xyz_m"]) - [0, 0, z_m]) < 0.005
+    assert abs(found[0]["yaw_deg"]) < 0.5  # a texture turned 180 degrees would decode at yaw 180
+    assert np.linalg.norm(np.array(found[0]["xyz_m"]) - [0, 0, z_m]) < 0.001

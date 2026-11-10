@@ -9,7 +9,7 @@ Quat = tuple[float, float, float, float]
 _NED_TO_NWU = np.diag([1.0, -1.0, -1.0])
 
 
-def _quat_to_matrix(q: Quat) -> NDArray[np.float64]:
+def quat_to_matrix(q: Quat) -> NDArray[np.float64]:
     w, x, y, z = q
     n = math.sqrt(w * w + x * x + y * y + z * z)
     if n == 0.0:
@@ -49,7 +49,7 @@ def camera_pose_world(
     """World is north-west-up metres. The returned quaternion orients a USD camera
     (looks along -Z, +Y is image up) to look along body down, image top toward the
     nose rotated by mount_rot_deg toward body right."""
-    r_body = _quat_to_matrix(q_body_to_ned)
+    r_body = quat_to_matrix(q_body_to_ned)
     pos = _NED_TO_NWU @ (np.array(p_ned) + r_body @ np.array(cam_pos_frd))
 
     a = math.radians(mount_rot_deg)

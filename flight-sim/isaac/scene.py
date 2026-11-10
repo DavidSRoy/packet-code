@@ -14,7 +14,14 @@ from pxr import Gf, Sdf, Usd, UsdGeom, UsdLux, UsdShade, Vt
 from flightsim.drone_geometry import LID_SIZE_MM, camera_frame_cuboids
 from flightsim.profiles import CameraProfile
 
-BOX_HEIGHT_M = 0.15  # not in the CAD notes the oracle uses; only sets how far the ground is below the lid
+BOX_HEIGHT_M = 0.15  # GUESS: not in the CAD notes the oracle uses; only sets how far the ground is below the lid
+# GUESSES, chosen by looking at frames (white sticker about 195/255, ground about 135 before the grey conversion);
+# none is measured. Albedos are linear reflectance.
+_DOME_INTENSITY = 80.0
+_SUN_INTENSITY = 500.0
+_GROUND_ALBEDO = 0.37
+_LID_ALBEDO = 0.59
+_DRONE_ALBEDO = 0.08
 _APERTURE_MM = 20.955
 _STICKER_LIFT_M = 0.0001
 
@@ -90,9 +97,9 @@ def _sticker(stage: Usd.Stage, png: Path, size_m: tuple[float, float]) -> None:
 
 
 def _lights(stage: Usd.Stage, sun_elevation_deg: float) -> None:
-    UsdLux.DomeLight.Define(stage, "/World/Dome").CreateIntensityAttr(80.0)
+    UsdLux.DomeLight.Define(stage, "/World/Dome").CreateIntensityAttr(_DOME_INTENSITY)
     sun = UsdLux.DistantLight.Define(stage, "/World/Sun")
-    sun.CreateIntensityAttr(500.0)
+    sun.CreateIntensityAttr(_SUN_INTENSITY)
     # A distant light shines along its local -Z; tip it from straight down by (90 - elevation).
     UsdGeom.Xformable(sun).AddRotateXYZOp().Set(Gf.Vec3f(-(90.0 - sun_elevation_deg), 0.0, 0.0))
 
@@ -107,7 +114,12 @@ def _camera_rig(stage: Usd.Stage, camera: CameraProfile) -> CameraRig:
     cam.GetFocalLengthAttr().Set(_APERTURE_MM / (2.0 * math.tan(math.radians(camera.hfov_deg) / 2.0)))
     cam.GetClippingRangeAttr().Set(Gf.Vec2f(0.01, 100.0))
     for i, cuboid in enumerate(camera_frame_cuboids()):
-        _cuboid(stage, f"/World/Rig/Drone/Part{i:02d}", cuboid.centre_m, cuboid.size_m, 0.08)
+        _cuboid(stage, f"/World/Rig/Drone/Part{i:02d}", cuboid.centre_m, cuboid.size_m, _DRONE_ALBEDO)
+        # Only the pieces of the drone below the lens are modelled; the rest would shade the lid too, so
+        # the sun shadows of these cuboids are not physical. Keep them out of the shadow pass.
+        UsdGeom.PrimvarsAPI(stage.GetPrimAtPath(f"/World/Rig/Drone/Part{i:02d}")).CreatePrimvar(
+            "doNotCastShadows", Sdf.ValueTypeNames.Bool
+        ).Set(True)
     return CameraRig(translate, orient)
 
 
@@ -120,8 +132,8 @@ def build_scene(
     UsdGeom.Xform.Define(stage, "/World")
     UsdGeom.Xform.Define(stage, "/World/Rig/Drone")
     lid_w, lid_h = LID_SIZE_MM[0] / 1000.0, LID_SIZE_MM[1] / 1000.0
-    _cuboid(stage, "/World/Ground", (0.0, 0.0, -BOX_HEIGHT_M - 0.01), (40.0, 40.0, 0.02), 0.37)
-    _cuboid(stage, "/World/Box", (0.0, 0.0, -BOX_HEIGHT_M / 2), (lid_w, lid_h, BOX_HEIGHT_M), 0.59)
+    _cuboid(stage, "/World/Ground", (0.0, 0.0, -BOX_HEIGHT_M - 0.01), (40.0, 40.0, 0.02), _GROUND_ALBEDO)
+    _cuboid(stage, "/World/Box", (0.0, 0.0, -BOX_HEIGHT_M / 2), (lid_w, lid_h, BOX_HEIGHT_M), _LID_ALBEDO)
     _sticker(stage, lid_png, lid_size_m)
     _lights(stage, sun_elevation_deg)
     return _camera_rig(stage, camera)

@@ -4,6 +4,7 @@ Run with Isaac's own Python (python.sh). Only numpy is needed beyond Isaac itsel
 """
 import argparse
 import sys
+import time
 import traceback
 from pathlib import Path
 
@@ -13,10 +14,12 @@ import numpy as np  # noqa: E402
 from numpy.typing import NDArray  # noqa: E402
 
 from flightsim.frames import Quat, Vec3  # noqa: E402
+from flightsim.grey import to_grey  # noqa: E402
 from flightsim.profiles import load_camera  # noqa: E402
 from flightsim.render_link import serve  # noqa: E402
 
-_RT_SUBFRAMES = 64  # path-tracing samples per frame; 4 and 16 real-time subframes were still speckled
+_DEFAULT_RENDERER = "PathTracing"
+_DEFAULT_SUBFRAMES = 64
 _MAX_STEPS = 40  # steps before the first annotator data shows up
 
 
@@ -27,13 +30,10 @@ def _parse() -> argparse.Namespace:
     parser.add_argument("--lid-size-m", type=float, nargs=2, required=True, metavar=("W", "H"))
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--ready-file", type=Path, required=True)
+    parser.add_argument("--renderer", choices=("RaytracedLighting", "PathTracing"), default=_DEFAULT_RENDERER)
+    parser.add_argument("--subframes", type=int, default=_DEFAULT_SUBFRAMES)
     parser.add_argument("--sun-elevation-deg", type=float, default=60.0)
     return parser.parse_args()
-
-
-def _to_grey(rgba: NDArray[np.uint8]) -> NDArray[np.uint8]:
-    rgb = rgba[..., :3].astype(np.float32)
-    return np.rint(rgb @ np.array([0.299, 0.587, 0.114], np.float32)).astype(np.uint8)
 
 
 def main() -> None:
@@ -42,7 +42,7 @@ def main() -> None:
 
     from isaacsim import SimulationApp
 
-    app = SimulationApp({"headless": True, "renderer": "PathTracing", "width": camera.width, "height": camera.height})
+    app = SimulationApp({"headless": True, "renderer": args.renderer, "width": camera.width, "height": camera.height})
     try:
         # Imports that need the Kit runtime must come after SimulationApp starts.
         import omni.replicator.core as rep
@@ -60,7 +60,7 @@ def main() -> None:
 
         def capture() -> NDArray[np.uint8]:
             for _ in range(_MAX_STEPS):
-                rep.orchestrator.step(rt_subframes=_RT_SUBFRAMES)
+                rep.orchestrator.step(rt_subframes=args.subframes)
                 data = rgb.get_data()
                 if data is not None and data.size > 0:
                     frame = np.asarray(data)
@@ -69,17 +69,28 @@ def main() -> None:
                             f"[render_server:capture] Unexpected frame shape — {{shape: {frame.shape}, "
                             f"expected: {(camera.height, camera.width)}}}"
                         )
-                    return _to_grey(frame)
+                    return to_grey(frame, camera.tone)
             raise RuntimeError(f"[render_server:capture] No frame — {{steps: {_MAX_STEPS}}}")
 
         def render_fn(pos: Vec3, quat: Quat, t: float) -> NDArray[np.uint8]:
             try:
+                start = time.perf_counter()
                 rig.set_pose(pos, quat)
-                return capture()
+                frame = capture()
+                print(f"[render_server] frame t={t:g} {(time.perf_counter() - start) * 1e3:.0f} ms", file=sys.stderr, flush=True)
+                return frame
             except Exception:
                 traceback.print_exc()  # serve() only prints ValueError text and drops the client
                 raise
 
+        # The tonemapper, exposure and denoiser are left at Isaac's defaults; their values are logged here.
+        import carb.settings
+
+        settings = carb.settings.get_settings()
+        for key in ("/rtx/post/tonemap/op", "/rtx/post/histogram/enabled", "/rtx/post/tonemap/filmIso",
+                    "/rtx/pathtracing/optixDenoiser/enabled", "/rtx/rendermode"):
+            print(f"[render_server] setting {key} = {settings.get(key)}", file=sys.stderr, flush=True)
+        print(f"[render_server] renderer={args.renderer} subframes={args.subframes} tone={camera.tone}", file=sys.stderr, flush=True)
         for _ in range(2):
             capture()
         print("[render_server] ready", flush=True)

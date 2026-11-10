@@ -61,7 +61,7 @@ def make_camera(scene, drone: FakeDrone, *, lag_s: float = 0.0, recorder: Record
     C = dict(MODEL["camera"], cam_pos=[fwd, -left, -up], pi_cam_pos_err=[0.0, 0.0, 0.0],
              rate_jitter_s=0.0, drop_frac=0.0, send_speed=send_speed, tilt_attitude_lag_s=lag_s,
              noise_tail_frac=0.0)
-    cam_profile = CameraProfile("stub", scene.w, scene.h, scene.hfov, True, "global", {})
+    cam_profile = CameraProfile("stub", scene.w, scene.h, scene.hfov, True, "global", {}, "linear")
     renderer = StubRenderer(scene)
     cam = sim_pi.RenderedCamera(C, np.random.default_rng(1), drone, renderer=renderer, finder=scene.finder,
                                 camera=cam_profile, compute=compute, recorder=recorder)

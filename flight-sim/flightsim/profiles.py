@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Literal, get_args
 
 Provenance = Literal["measured", "datasheet", "estimate"]
+Tone = Literal["linear", "srgb"]
 _VALID = set(get_args(Provenance))
 
 
@@ -17,6 +18,7 @@ class CameraProfile:
     mono: bool
     shutter: str
     provenance: Mapping[str, Provenance]
+    tone: Tone  # response of the grey frame the detector sees: linear in scene radiance, or sRGB-encoded
     sources: Mapping[str, str] = field(default_factory=dict)
 
 
@@ -50,6 +52,14 @@ def _missing(fn: str, path: Path, exc: KeyError) -> ValueError:
     return ValueError(f"[profiles:{fn}] Missing key — {{path: {str(path)!r}, key: {exc.args[0]!r}}}")
 
 
+def _tone(path: Path, value: str) -> Tone:
+    if value == "linear" or value == "srgb":
+        return value
+    raise ValueError(
+        f"[profiles:load_camera] Unknown tone — {{path: {str(path)!r}, value: {value!r}, allowed: ['linear', 'srgb']}}"
+    )
+
+
 def load_camera(path: Path) -> CameraProfile:
     d = json.loads(Path(path).read_text())
     try:
@@ -61,6 +71,7 @@ def load_camera(path: Path) -> CameraProfile:
             mono=bool(d["mono"]),
             shutter=str(d["shutter"]),
             provenance=_provenance("load_camera", path, d["provenance"]),
+            tone=_tone(path, str(d["tone"])),
             sources=dict(d.get("sources", {})),
         )
     except KeyError as exc:

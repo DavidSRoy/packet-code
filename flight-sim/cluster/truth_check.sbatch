@@ -6,6 +6,7 @@
 # each pose. Exits non-zero when any pose fails. Results land in $run/out (frames/, contact-sheet.png,
 # truth-results.json). Account, partition, GPU count, time limit and log path come from flightsim.jobs.submit.
 # Required env: SCRATCH, RUN_NAME, ISAAC_IMAGE, REPO_DIR (pushed repo holding backend/)
+# Optional env: RENDERER, SUBFRAMES (render_server defaults otherwise)
 set -euo pipefail
 
 : "${SCRATCH:?}" "${RUN_NAME:?}" "${ISAAC_IMAGE:?}" "${REPO_DIR:?}"
@@ -53,7 +54,8 @@ apptainer exec --nv --env ACCEPT_EULA=Y --env OMNI_KIT_ACCEPT_EULA=YES \
   "${binds[@]}" --bind "$run:/run-dir" \
   "$sif" /isaac-sim/python.sh -u /run-dir/src/isaac/render_server.py \
   --camera /run-dir/src/profiles/cameras/ov9281.json --lid-png /run-dir/out/lid.png \
-  --lid-size-m "$lid_w" "$lid_h" --port 0 --ready-file /run-dir/out/ready &
+  --lid-size-m "$lid_w" "$lid_h" --port 0 --ready-file /run-dir/out/ready \
+  ${RENDERER:+--renderer "$RENDERER"} ${SUBFRAMES:+--subframes "$SUBFRAMES"} &
 server=$!
 
 # The first render compiles shaders (about 4.5 minutes); allow 20.
@@ -66,6 +68,12 @@ done
 
 status=0
 "$py" -m flightsim.truth_check --port "$(cat "$out/ready")" --out "$out" --layout-dir "$layout_dir" || status=$?
-wait "$server" || true
+# The client sends quit when it can; if it died first, the server must not hold the GPU until the time limit.
+for _ in $(seq 1 30); do
+  kill -0 "$server" 2>/dev/null || break
+  sleep 1
+done
+kill "$server" 2>/dev/null || true
+wait "$server" 2>/dev/null || true
 server=""
 exit "$status"

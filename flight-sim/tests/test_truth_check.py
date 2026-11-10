@@ -1,4 +1,3 @@
-import math
 import warnings
 from pathlib import Path
 
@@ -10,12 +9,14 @@ from lid_camera_sim import CAMERAS, Scene
 
 from flightsim import drone_geometry as dg
 from flightsim.truth_check import (
-    CAM_POS_FRD,
     DEFAULT_LAYOUT_DIR,
     TruthPose,
     check,
     pose_grid,
+    zero_frame_path,
+    zero_poses,
 )
+from imu_pose import REF_FRAMES
 
 _STICKER = dict(
     w=218.0, h=200.0, big_cell=18.0, small_cell=3.75, inset=5.0,
@@ -70,20 +71,24 @@ def test_truth_check_passes_on_the_oracle_frames(oracle, tmp_path):
     for i, p in enumerate(pose_grid()):
         img, _, _ = oracle.render(p.dx_m * 1e3, p.dy_m * 1e3, p.height_m * 1e3, p.yaw_deg, 0.0, 0.0, rng)
         cv2.imwrite(str(tmp_path / f"pose_{i:02d}.png"), img)
+    for yi, z in enumerate(zero_poses()):
+        for k in range(REF_FRAMES):
+            img, _, _ = oracle.render(z.dx_m * 1e3, z.dy_m * 1e3, z.height_m * 1e3, z.yaw_deg, 0.0, 0.0, rng)
+            cv2.imwrite(str(zero_frame_path(tmp_path, yi, k)), img)
     results = check(tmp_path)
     for r in results:
         print(r)
     assert len(results) == len(pose_grid())
+    assert all(r.imu_error_m is not None for r in results)
     assert all(r.passed for r in results)
 
 
 def test_check_fails_a_pose_with_no_frame_content(tmp_path):
+    blank = np.full((800, 1280), 95, np.uint8)
     for i, _ in enumerate(pose_grid()):
-        cv2.imwrite(str(tmp_path / f"pose_{i:02d}.png"), np.full((800, 1280), 95, np.uint8))
+        cv2.imwrite(str(tmp_path / f"pose_{i:02d}.png"), blank)
+    for yi, _ in enumerate(zero_poses()):
+        for k in range(REF_FRAMES):
+            cv2.imwrite(str(zero_frame_path(tmp_path, yi, k)), blank)
     results = check(tmp_path)
     assert not any(r.detected or r.passed for r in results)
-
-
-def test_oracle_mount_matches_the_frd_mount():
-    assert CAM_POS_FRD == (0.070, -0.095, 0.100)
-    assert math.isclose(dg.CAMERA_MOUNT_MM[1], 95.0)

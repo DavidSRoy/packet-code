@@ -1,24 +1,12 @@
 import math
-import warnings
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-import lid_stickers as LS
+from conftest import MOUNT
 from imu_pose import ImuPose
-from lid_camera_sim import Scene
-from lid_pose import Mount, imu_fix, lid_pose
+from lid_pose import imu_fix, lid_pose
 from lid_tags import camera_matrix
-
-LAYOUT = str(Path(__file__).resolve().parents[2] / "backend" / "companion" / "stickers_218x200" / "lid_layout.json")
-
-# The oracle's defaults (lid_camera_sim.py main): 218x200 sticker, extra small tags.
-STICKER = dict(
-    w=218.0, h=200.0, big_cell=18.0, small_cell=3.75, inset=5.0,
-    extra=[(-44.5, 80), (0, 80), (44.5, 80), (-44.5, -80), (0, -80), (44.5, -80),
-           (-89, 36), (-89, -36), (89, 36), (89, -36)],
-)
 
 # Oracle truth -> lid_pose convention, read from the code (no sign flips):
 # * Scene.pose puts the drone origin d0 = (dx, dy, height) mm in the lid frame (origin sticker
@@ -33,19 +21,6 @@ STICKER = dict(
 #   D = diag(1, -1, -1), so B_ned = C @ R_wd @ D, and the Euler angles come out of
 #   B = Rz(yaw) Ry(pitch) Rx(roll) (imu_pose.body_to_world).
 FLIP = np.diag([1.0, -1.0, -1.0])
-# Oracle mount D (70 mm ahead, 95 mm left, 100 mm below): the default mount A looks at the jaws
-# from 0.5 m and sees almost no lid. 95 mm left is right_m = -0.095.
-CAM_MOUNT_MM = (70.0, 95.0, -100.0)
-MOUNT = Mount(fwd_m=0.070, right_m=-0.095, down_m=0.100, rot_deg=0.0)
-
-
-@pytest.fixture(scope="module")
-def scene():
-    LS.configure(**STICKER)
-    with warnings.catch_warnings():
-        # LidFinder (backend/companion/lid_tags.py) never closes the layout file it reads; not ours to change.
-        warnings.simplefilter("ignore", ResourceWarning)
-        return Scene("C920", CAM_MOUNT_MM, 0.0, LAYOUT)
 
 
 def attitude(scene, dx, dy, height, yaw, roll, pitch):

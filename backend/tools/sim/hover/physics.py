@@ -236,6 +236,23 @@ class Camera:
                 break
         return best if best is not None else self.d.q
 
+    def measure(self, t_exp, t_cap, p_true, q_true):
+        """(position, yaw) the Pi reports for the frame exposed at t_exp, or None for no message. Overridable."""
+        C = self.C
+        # the Pi: tag pose in the camera frame (true attitude at exposure), turned into the
+        # drone position with the attitude it has at t_cap - lag
+        lid = np.array([0.0, 0.0, C["lid_height_above_ground"] * -1.0])
+        R_true = quat_to_R(q_true)
+        R_used = quat_to_R(self.q_at(t_cap - C["tilt_attitude_lag_s"]))
+        r_cam = np.array(C["cam_pos"])
+        rel_cam = R_true.T @ (lid - (p_true + R_true @ r_cam))   # lid seen from the lens (body axes), true
+        r_cam_pi = r_cam + np.array(C["pi_cam_pos_err"])         # where the Pi thinks the lens is
+        p_meas = lid - R_used @ (rel_cam + r_cam_pi)
+        sc = C["noise_tail_mult"] if self.rng.random() < C["noise_tail_frac"] else 1.0
+        p_meas = p_meas + sc * self.rng.normal(0, [C["noise_xy_m"], C["noise_xy_m"], C["noise_z_m"]])
+        yaw = quat_to_euler(q_true)[2] + self.rng.normal(0, C["noise_yaw_rad"])
+        return p_meas, yaw
+
     def step(self, t):
         C, d = self.C, self.d
         self.q_hist.append((t, d.q.copy()))
@@ -253,18 +270,10 @@ class Camera:
         out = []
         while self.pending and self.pending[0][0] <= t:
             t_send, t_exp, t_cap, p_true, q_true = self.pending.pop(0)
-            # the Pi: tag pose in the camera frame (true attitude at exposure), turned into the
-            # drone position with the attitude it has at t_cap - lag
-            lid = np.array([0.0, 0.0, C["lid_height_above_ground"] * -1.0])
-            R_true = quat_to_R(q_true)
-            R_used = quat_to_R(self.q_at(t_cap - C["tilt_attitude_lag_s"]))
-            r_cam = np.array(C["cam_pos"])
-            rel_cam = R_true.T @ (lid - (p_true + R_true @ r_cam))   # lid seen from the lens (body axes), true
-            r_cam_pi = r_cam + np.array(C["pi_cam_pos_err"])         # where the Pi thinks the lens is
-            p_meas = lid - R_used @ (rel_cam + r_cam_pi)
-            sc = C["noise_tail_mult"] if self.rng.random() < C["noise_tail_frac"] else 1.0
-            p_meas = p_meas + sc * self.rng.normal(0, [C["noise_xy_m"], C["noise_xy_m"], C["noise_z_m"]])
-            yaw = quat_to_euler(q_true)[2] + self.rng.normal(0, C["noise_yaw_rad"])
+            measured = self.measure(t_exp, t_cap, p_true, q_true)
+            if measured is None:
+                continue
+            p_meas, yaw = measured
             out.append(("pos", t_cap, p_meas, yaw))
             if C["send_speed"] and self.prev is not None and 0 < t_cap - self.prev[0] < C["speed_max_gap_s"]:
                 vel = (p_meas - self.prev[1]) / (t_cap - self.prev[0])

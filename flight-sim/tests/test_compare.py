@@ -47,7 +47,7 @@ def test_compare_is_b_minus_a(tmp_path: Path) -> None:
 
 
 def test_compare_names_the_folder_when_a_file_is_missing(tmp_path: Path) -> None:
-    with pytest.raises(FileNotFoundError, match=r"\[compare:summarize\].*result.json"):
+    with pytest.raises(FileNotFoundError, match=r"\[compare:load\].*result.json"):
         summarize(tmp_path)
 
 
@@ -80,5 +80,19 @@ def test_compare_with_a_killed_run_gives_nan_errors(tmp_path: Path) -> None:
 def test_malformed_result_raises_the_formatted_error(tmp_path: Path) -> None:
     run = make_run(tmp_path / "a", 5.0, 10.0, [(-0.8, 1)])
     (run / "result.json").write_text("{}")
-    with pytest.raises(ValueError, match=r"\[compare:summarize\] Missing key"):
+    with pytest.raises(ValueError, match=r"\[compare:load\] Missing key"):
+        summarize(run)
+
+
+def test_a_bad_frames_csv_value_gets_the_formatted_error(tmp_path: Path) -> None:
+    run = make_run(tmp_path / "a", 5.0, 10.0, [(-0.8, 1)])
+    (run / "frames.csv").write_text("frame,detected,true_z\n0,1,\n")
+    with pytest.raises(ValueError, match=r"\[compare:load\] Bad value in frames.csv — .*column: 'true_z'"):
+        summarize(run)
+
+
+def test_malformed_result_json_gets_the_formatted_error(tmp_path: Path) -> None:
+    run = make_run(tmp_path / "a", 5.0, 10.0, [(-0.8, 1)])
+    (run / "result.json").write_text("{not json")
+    with pytest.raises(ValueError, match=r"\[compare:load\] Not valid JSON"):
         summarize(run)

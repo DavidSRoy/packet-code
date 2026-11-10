@@ -30,20 +30,18 @@ class RenderClient:
         self._timeout_s = timeout_s
         self._sock = socket.create_connection((host, port), timeout=timeout_s)
         self._sock.settimeout(timeout_s)
-        self.last_frame_id = -1
 
     def render(self, pos: Vec3, quat: Quat, t: float) -> NDArray[np.uint8]:
         request = json.dumps({"pos": list(pos), "quat": list(quat), "t": t}) + "\n"
         try:
             self._sock.sendall(request.encode())
-            width, height, frame_id = _HEADER.unpack(_recv_exact(self._sock, _HEADER.size))
+            width, height, _ = _HEADER.unpack(_recv_exact(self._sock, _HEADER.size))
             data = _recv_exact(self._sock, width * height)
         except TimeoutError as exc:
             self._sock.close()  # a late reply must not be read as the next frame
             raise TimeoutError(
                 f"[render_link:render] No reply from renderer — {{timeout_s: {self._timeout_s}, t: {t}}}"
             ) from exc
-        self.last_frame_id = frame_id
         return np.frombuffer(data, dtype=np.uint8).reshape(height, width)
 
     def quit(self) -> None:

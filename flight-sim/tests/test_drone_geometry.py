@@ -3,6 +3,7 @@ from pathlib import Path
 
 import lid_camera_sim as oracle
 import numpy as np
+import pytest
 
 from flightsim import drone_geometry as dg
 
@@ -55,8 +56,7 @@ MODEL = Path(__file__).resolve().parents[2] / "backend" / "tools" / "sim" / "hov
 def test_mount_from_the_physics_model_is_the_drone_frame_lens_position():
     # model.json camera.cam_pos is body FRD (x nose, y right, z down); the oracle frame is x nose, y left, z up
     assert dg.mount_mm_from_cam_pos((0.127, -0.001, 0.101)) == (127.0, 1.0, -101.0)
-    fwd, right, down = json.loads(MODEL.read_text())["camera"]["cam_pos"]
-    assert dg.mount_mm_from_model(MODEL) == (fwd * 1000.0, -right * 1000.0, -down * 1000.0)
+    assert dg.mount_mm_from_model(MODEL) == pytest.approx((127.0, 1.0, -101.0))   # model.json cam_pos [0.127, -0.001, 0.101]
 
 
 def test_occluders_sit_where_the_oracle_draws_them_for_the_physics_model_mount():

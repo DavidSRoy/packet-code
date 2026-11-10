@@ -57,9 +57,7 @@ def test_render_round_trip(server: int):
         assert a.shape == (8, 12)
         assert a.dtype == np.uint8
         assert np.array_equal(a, ramp(POS, QUAT, 1.25))
-        first = client.last_frame_id
-        client.render(POS, QUAT, 1.35)
-        assert client.last_frame_id == first + 1
+        assert np.array_equal(client.render(POS, QUAT, 1.35), ramp(POS, QUAT, 1.35))
     finally:
         client.close()
 
@@ -120,6 +118,6 @@ def test_server_drops_client_when_callback_returns_wrong_array(
                 client.render(POS, QUAT, 0.0)
         finally:
             client.close()
-        assert "[render_link:serve]" in capsys.readouterr().err
     finally:
-        stop(thread, port)
+        stop(thread, port)    # joins the server thread, so everything it printed is captured below
+    assert "[render_link:serve]" in capsys.readouterr().err

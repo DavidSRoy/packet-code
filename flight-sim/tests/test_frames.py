@@ -37,12 +37,6 @@ def test_lever_arm_moves_camera_forward():
     assert pos == pytest.approx((0.127, 0, 0.899))
 
 
-def test_mount_rotation_turns_image_up_toward_right():
-    _, q = camera_pose_world((0, 0, -1.0), (1, 0, 0, 0), (0, 0, 0), 90.0)
-    assert rotate(q, (0, 1, 0)) == pytest.approx((0, -1, 0))
-    assert rotate(q, (0, 0, -1)) == pytest.approx((0, 0, -1))
-
-
 def test_roll_tilts_view_axis():
     a = math.radians(30) / 2
     _, q = camera_pose_world((0, 0, -1.0), (math.cos(a), math.sin(a), 0, 0), (0, 0, 0))

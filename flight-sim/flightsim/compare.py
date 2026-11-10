@@ -8,19 +8,38 @@ HOLD_MARGIN_M = 0.05    # a frame is in the hold when it is within this of the t
 
 def _read(path: Path) -> str:
     if not path.is_file():
-        raise FileNotFoundError(f"[compare:summarize] Missing result file — {{path: {str(path)!r}}}")
+        raise FileNotFoundError(f"[compare:load] Missing result file — {{path: {str(path)!r}}}")
     return path.read_text()
 
 
 def _number(raw: object, key: str, folder: Path) -> float:
     if isinstance(raw, (int, float)):
         return float(raw)
-    raise ValueError(f"[compare:summarize] Not a number — {{folder: {str(folder)!r}, key: {key!r}, value: {raw!r}}}")
+    raise ValueError(f"[compare:load] Not a number — {{folder: {str(folder)!r}, key: {key!r}, value: {raw!r}}}")
+
+
+def _json(path: Path) -> dict[str, object]:
+    try:
+        data = json.loads(_read(path))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"[compare:load] Not valid JSON — {{path: {str(path)!r}, error: {exc}}}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"[compare:load] Expected a JSON object — {{path: {str(path)!r}}}")
+    return data
+
+
+def _cell(row: dict[str, str], key: str, folder: Path) -> float:
+    try:
+        return float(row[key])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(
+            f"[compare:load] Bad value in frames.csv — {{folder: {str(folder)!r}, column: {key!r}, value: {row.get(key)!r}}}"
+        ) from exc
 
 
 def _load(folder: Path) -> tuple[dict[str, float], str, bool]:
     """Stats, the run's status, and whether the detection rate used the hold window."""
-    result = json.loads(_read(folder / "result.json"))
+    result = _json(folder / "result.json")
     rows = list(csv.DictReader(_read(folder / "frames.csv").splitlines()))
     try:
         score = result.get("score") or {}
@@ -32,14 +51,14 @@ def _load(folder: Path) -> tuple[dict[str, float], str, bool]:
         in_hold = False
         if start:
             floor = _number(start[2], "start_fc.z", folder) - _number(result["height"], "height", folder) + HOLD_MARGIN_M
-            hold = [r for r in rows if float(r["true_z"]) < floor]
+            hold = [r for r in rows if _cell(r, "true_z", folder) < floor]
             if hold:
                 rows, in_hold = hold, True
         if not rows:
-            raise ValueError(f"[compare:summarize] No frames to rate — {{folder: {str(folder)!r}}}")
-        rate = sum(int(r["detected"]) for r in rows) / len(rows)
+            raise ValueError(f"[compare:load] No frames to rate — {{folder: {str(folder)!r}}}")
+        rate = sum(_cell(r, "detected", folder) for r in rows) / len(rows)
     except KeyError as exc:
-        raise ValueError(f"[compare:summarize] Missing key — {{folder: {str(folder)!r}, key: {exc.args[0]!r}}}") from exc
+        raise ValueError(f"[compare:load] Missing key — {{folder: {str(folder)!r}, key: {exc.args[0]!r}}}") from exc
     return {"xy_rms_mm": rms, "xy_max_mm": peak, "detection_rate": rate}, status, in_hold
 
 

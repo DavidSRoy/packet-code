@@ -60,6 +60,7 @@ def test_resent_servo_packet_during_a_slow_render_steps_physics_once(tmp_path: P
         assert proc.poll() is None, "physics exited at startup"
         sitl.sendto(_servo_packet(7), ("127.0.0.1", port))
         time.sleep(0.3)                                     # physics is now inside its 1.5 s render
+        sitl.sendto(b"xy", ("127.0.0.1", port))             # junk shorter than the header must not end the drain
         sitl.sendto(_servo_packet(7), ("127.0.0.1", port))  # SITL's resend of the same frame
         sitl.sendto(_servo_packet(8), ("127.0.0.1", port))
         replies = _replies(sitl, 3.0)

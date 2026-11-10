@@ -184,7 +184,7 @@ def main() -> None:
         def make(C: Mapping[str, object], rng: np.random.Generator, drone: physics.Drone) -> RenderedCamera:
             # The sticker centre goes under the lens at rest. Under the drone centre the gripper jaws, which
             # reach from behind the lens to its nose side, would cover every ray that reaches the lid.
-            cam_pos = C["cam_pos"]
+            cam_pos = np.asarray(C["cam_pos"], dtype=float)
             return RenderedCamera(C, rng, drone, renderer=client, finder=finder, camera=camera, compute=compute,
                                   recorder=recorder, lid_xy=(float(cam_pos[0]), float(cam_pos[1])))
 

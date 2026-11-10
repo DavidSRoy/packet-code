@@ -11,6 +11,8 @@
 #   ARDUPILOT_DEV_IMAGE, REPO_COMMIT, CAMERA, COMPUTE (profile names), HEIGHT, HOLD, SEED
 # Optional env: DEBUG_KILL_RENDER_AFTER_S (kills the render server that many seconds into the run)
 set -euo pipefail
+# $0 is a copy of this script in Slurm's spool; the pushed tree is next to the run directory.
+source "${SCRATCH:?}/runs/${RUN_NAME:?}/src/cluster/hover_lib.sh"
 
 : "${SCRATCH:?}" "${RUN_NAME:?}" "${REPO_DIR:?}" "${ISAAC_IMAGE:?}" "${ARDUPILOT_TAG:?}" "${ARDUPILOT_DEV_IMAGE:?}"
 : "${REPO_COMMIT:?}" "${CAMERA:?}" "${COMPUTE:?}" "${HEIGHT:?}" "${HOLD:?}" "${SEED:?}"
@@ -43,9 +45,11 @@ cleanup() {
   pkill -KILL -f "$shm" 2>/dev/null || true
   # Evidence first, even for a failed or killed run.
   cp "$shm/rec/frames.csv" "$shm/rec/camera.mp4" "$shm/rec/overlay.mp4" "$out/" 2>/dev/null || true
-  cp "$shm/hover/result.json" "$out/" 2>/dev/null || true
+  # result.json carries absolute paths (flown, dflog) and the logs echo them; fetched results are shared, so scrub.
+  [[ ! -f "$shm/hover/result.json" ]] || scrub_paths "$shm/hover/result.json" "$SCRATCH" "$shm" > "$out/result.json" || true
   for f in "$shm/hover/run.log" "$shm/hover/physics.log" "$shm/hover/sitl.log" "$wd/render_server.log"; do
-    [[ -f "$f" ]] && tail -n 200 "$f" > "$out/$(basename "$f").tail" || true
+    [[ -f "$f" ]] || continue
+    tail -n 200 "$f" | sed -e "s#$SCRATCH#<path>#g" -e "s#$shm#<path>#g" > "$out/$(basename "$f").tail" || true
   done
   rm -rf "$shm" "$state"
 }
@@ -131,32 +135,9 @@ setsid apptainer exec --bind "$SCRATCH" --bind /dev/shm --env ARDUPILOT="$SCRATC
      --physics-arg=--record-dir --physics-arg '$shm/rec'" &
 runner=$!
 
-# Watch the render server while the run lives. A normal run ends with the client telling the server to quit, so
-# the server exits a moment before run.py finishes scoring: give the run time to end by itself. If the server
-# died for another reason the physics process dies, SITL waits for it forever and run.py waits in FC time, so
-# nothing would ever end by itself.
+# End the run if the render server, physics or SITL vanishes before run.py is done (see hover_lib.sh).
 grace_s=25
-started=$SECONDS
-killed=0
-gone_at=""
-while kill -0 "$runner" 2>/dev/null; do
-  if [[ -n "${DEBUG_KILL_RENDER_AFTER_S:-}" && "$killed" -eq 0 && $((SECONDS - started)) -ge "$DEBUG_KILL_RENDER_AFTER_S" ]]; then
-    echo "[hover] $(date +%T) debug: killing the render server" >&2
-    kill_group "$server"
-    killed=1
-  fi
-  if ! kill -0 "$server" 2>/dev/null; then
-    [[ -n "$gone_at" ]] || { gone_at=$SECONDS; echo "[hover] render server exited during the run" >&2; }
-    if (( SECONDS - gone_at >= grace_s )); then
-      echo "[hover] run still going $grace_s s after the render server exited; ending it" >&2
-      kill_group "$runner"
-      pkill -KILL -f "$shm" 2>/dev/null || true
-      status=1
-      break
-    fi
-  fi
-  sleep 2
-done
+watch_run
 rc=0
 wait "$runner" 2>/dev/null || rc=$?
 [[ "$status" -ne 0 ]] || status=$rc

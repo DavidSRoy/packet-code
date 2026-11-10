@@ -381,10 +381,10 @@ def main():
         try:
             while True:
                 data, addr = sock.recvfrom(256)
-                if struct.unpack_from("<HHI", data)[2] != fcount:
+                if len(data) >= 8 and struct.unpack_from("<HHI", data)[2] != fcount:
                     queued = (data, addr)
                     break
-        except (BlockingIOError, struct.error):
+        except BlockingIOError:
             pass
         sock.settimeout(1.0)
         if wm and t - last_wm >= 0.1:

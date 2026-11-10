@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -91,7 +92,7 @@ def test_submit_gets_versions_arguments_and_a_long_time_limit(calls: Calls) -> N
         "ARDUPILOT_DEV_IMAGE": versions.ardupilot_dev_image, "REPO_COMMIT": "abc123",
         "CAMERA": "ov9281", "COMPUTE": "pi-zero-2w", "HEIGHT": "0.5", "HOLD": "30.0", "SEED": "0",
     }
-    assert time_min == 120
+    assert time_min == 120 == hover.job_time_min(RUN)
     assert calls.wait_timeout_s > time_min * 60
 
 
@@ -169,3 +170,36 @@ def test_main_reports_remote_errors_without_a_traceback(calls: Calls, monkeypatc
                      "--seed", "0"])
     assert code == 1
     assert "[remote:ssh] No live connection" in capsys.readouterr().err
+
+
+def test_time_limit_grows_with_the_hold_and_never_drops_below_the_floor() -> None:
+    short = hover.HoverRun("ov9281", "pi-zero-2w", 0.1, 3.0, 0, "h")
+    long = hover.HoverRun("ov9281", "pi-zero-2w", 0.5, 300.0, 0, "h")
+    assert hover.job_time_min(short) == 120
+    assert hover.job_time_min(long) > 120 and hover.job_time_min(long) > hover.job_time_min(
+        hover.HoverRun("ov9281", "pi-zero-2w", 0.5, 200.0, 0, "h"))
+
+
+def test_missing_versions_key_is_a_value_error_with_context(tmp_path: Path) -> None:
+    bad = tmp_path / "versions.toml"
+    bad.write_text('isaac_image = "x"\n')
+    with pytest.raises(ValueError, match=r"\[hover:load_versions\] Missing or non-string key — \{key: ardupilot_tag"):
+        hover.load_versions(bad)
+
+
+def _git(root: Path, *args: str) -> None:
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=root, check=True,
+                   capture_output=True)
+
+
+def test_repo_commit_is_marked_dirty_when_flight_sim_has_uncommitted_changes(tmp_path: Path) -> None:
+    tree = tmp_path / "flight-sim"
+    tree.mkdir()
+    (tree / "a.txt").write_text("1")
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", "-A")
+    _git(tmp_path, "commit", "-q", "-m", "x")
+    clean = hover.repo_commit(tree)
+    assert len(clean) == 40 and not clean.endswith("-dirty")
+    (tree / "a.txt").write_text("2")
+    assert hover.repo_commit(tree) == clean + "-dirty"

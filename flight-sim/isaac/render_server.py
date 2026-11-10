@@ -19,7 +19,10 @@ from flightsim.profiles import load_camera  # noqa: E402
 from flightsim.render_link import serve  # noqa: E402
 
 _DEFAULT_RENDERER = "PathTracing"
-_DEFAULT_SUBFRAMES = 64
+# Measured with truth_check on the cluster GPU: path tracing at 2, 4, 8, 16 and 64 subframes all pass both
+# gates with near-identical errors; real-time ray tracing is too noisy to pass. Frame time (about 3.3 s) is set by the
+# pose change, not the sample count, so the cheapest setting that passes is used.
+_DEFAULT_SUBFRAMES = 4
 _MAX_STEPS = 40  # steps before the first annotator data shows up
 
 

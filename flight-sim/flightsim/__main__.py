@@ -2,7 +2,9 @@ import argparse
 import sys
 import time
 from collections.abc import Sequence
+from pathlib import Path
 
+from flightsim.compare import compare, summarize
 from flightsim.config import load_cluster
 from flightsim.hover import HoverRun, run_hover
 from flightsim.remote import RemoteError
@@ -18,7 +20,19 @@ def main(argv: Sequence[str]) -> int:
     hover.add_argument("--hold", type=float, required=True, help="hold time at height, s")
     hover.add_argument("--seed", type=int, default=0)
     hover.add_argument("--name", help="run name; default hover-<timestamp>")
+    cmp = commands.add_parser("compare", help="differences between two result folders (B minus A)")
+    cmp.add_argument("a", type=Path)
+    cmp.add_argument("b", type=Path)
     args = parser.parse_args(list(argv))
+    if args.command == "compare":
+        try:
+            sa, sb, diff = summarize(args.a), summarize(args.b), compare(args.a, args.b)
+        except (FileNotFoundError, ValueError) as exc:
+            print(exc, file=sys.stderr)
+            return 1
+        for key in diff:
+            print(f"{key:15s} A {sa[key]:9.3f}  B {sb[key]:9.3f}  B-A {diff[key]:9.3f}")
+        return 0
     name = args.name or time.strftime("hover-%Y%m%d-%H%M%S")
     run = HoverRun(args.camera, args.compute, args.height, args.hold, args.seed, name)
     try:

@@ -1,0 +1,21 @@
+{
+  "name": "ov9281-quarter",
+  "width": 320,
+  "height": 200,
+  "hfov_deg": 70.0,
+  "mono": true,
+  "shutter": "global",
+  "tone": "linear",
+  "provenance": {
+    "width": "estimate",
+    "height": "estimate",
+    "hfov_deg": "estimate",
+    "tone": "estimate"
+  },
+  "sources": {
+    "width": "test fixture: the ov9281 profile at a quarter of the pixels per side, to check that a worse camera gives a worse result",
+    "height": "test fixture: see width",
+    "hfov_deg": "test fixture: same lens as ov9281, so the same field of view",
+    "tone": "test fixture: same as ov9281"
+  }
+}

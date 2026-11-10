@@ -6,6 +6,7 @@ backend/tools/sim/lid_camera_sim.py (drone frame: x nose, y left, z up, mm); a t
 from dataclasses import dataclass
 
 import numpy as np
+from numpy.typing import NDArray
 
 # Oracle mount D: lens centre in the drone frame, mm (70 ahead, 95 left, 100 below).
 CAMERA_MOUNT_MM = (70.0, 95.0, -100.0)
@@ -62,3 +63,40 @@ def camera_frame_cuboids(mount_mm: tuple[float, float, float] = CAMERA_MOUNT_MM)
         size = tuple((b - a) / 1000.0 for a, b in zip(lo, hi))
         cuboids.append(Cuboid(name, (centre[0], centre[1], centre[2]), (size[0], size[1], size[2])))
     return cuboids
+
+
+# Corner signs of the six faces of a cuboid, counter-clockwise seen from outside.
+_FACES = (
+    ((1, -1, -1), (1, 1, -1), (1, 1, 1), (1, -1, 1)),
+    ((-1, -1, -1), (-1, -1, 1), (-1, 1, 1), (-1, 1, -1)),
+    ((-1, 1, -1), (-1, 1, 1), (1, 1, 1), (1, 1, -1)),
+    ((-1, -1, -1), (1, -1, -1), (1, -1, 1), (-1, -1, 1)),
+    ((-1, -1, 1), (1, -1, 1), (1, 1, 1), (-1, 1, 1)),
+    ((-1, -1, -1), (-1, 1, -1), (1, 1, -1), (1, -1, -1)),
+)
+
+
+def cuboids_mesh(
+    cuboids: list[Cuboid],
+) -> tuple[NDArray[np.float64], NDArray[np.int64], NDArray[np.int64], NDArray[np.float64]]:
+    """All cuboids as one quad mesh (points, face vertex counts, face vertex indices, per-point normals).
+
+    One prim instead of one per cuboid: moving a rig of 35 separate prims cost about 2.7 s per pose
+    change in Isaac's path tracer."""
+    points: list[tuple[float, float, float]] = []
+    normals: list[tuple[float, float, float]] = []
+    for c in cuboids:
+        half = (c.size_m[0] / 2, c.size_m[1] / 2, c.size_m[2] / 2)
+        for face in _FACES:
+            normal = np.cross(np.subtract(face[1], face[0]), np.subtract(face[2], face[1]))
+            normal = normal / np.linalg.norm(normal)
+            for sx, sy, sz in face:
+                points.append((c.centre_m[0] + sx * half[0], c.centre_m[1] + sy * half[1], c.centre_m[2] + sz * half[2]))
+                normals.append((float(normal[0]), float(normal[1]), float(normal[2])))
+    n_faces = 6 * len(cuboids)
+    return (
+        np.array(points),
+        np.full(n_faces, 4, np.int64),
+        np.arange(4 * n_faces, dtype=np.int64),
+        np.array(normals),
+    )

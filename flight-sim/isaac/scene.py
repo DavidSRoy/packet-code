@@ -11,7 +11,7 @@ from pathlib import Path
 
 from pxr import Gf, Sdf, Usd, UsdGeom, UsdLux, UsdShade, Vt
 
-from flightsim.drone_geometry import LID_SIZE_MM, camera_frame_cuboids
+from flightsim.drone_geometry import LID_SIZE_MM, camera_frame_cuboids, cuboids_mesh
 from flightsim.profiles import CameraProfile
 
 BOX_HEIGHT_M = 0.15  # GUESS: not in the CAD notes the oracle uses; only sets how far the ground is below the lid
@@ -113,13 +113,18 @@ def _camera_rig(stage: Usd.Stage, camera: CameraProfile) -> CameraRig:
     cam.GetVerticalApertureAttr().Set(_APERTURE_MM * camera.height / camera.width)  # square pixels
     cam.GetFocalLengthAttr().Set(_APERTURE_MM / (2.0 * math.tan(math.radians(camera.hfov_deg) / 2.0)))
     cam.GetClippingRangeAttr().Set(Gf.Vec2f(0.01, 100.0))
-    for i, cuboid in enumerate(camera_frame_cuboids()):
-        _cuboid(stage, f"/World/Rig/Drone/Part{i:02d}", cuboid.centre_m, cuboid.size_m, _DRONE_ALBEDO)
-        # Only the pieces of the drone below the lens are modelled; the rest would shade the lid too, so
-        # the sun shadows of these cuboids are not physical. Keep them out of the shadow pass.
-        UsdGeom.PrimvarsAPI(stage.GetPrimAtPath(f"/World/Rig/Drone/Part{i:02d}")).CreatePrimvar(
-            "doNotCastShadows", Sdf.ValueTypeNames.Bool
-        ).Set(True)
+    points, counts, indices, normals = cuboids_mesh(camera_frame_cuboids())
+    drone = UsdGeom.Mesh.Define(stage, "/World/Rig/Drone/Parts")
+    drone.GetPointsAttr().Set(Vt.Vec3fArray([Gf.Vec3f(*map(float, p)) for p in points]))
+    drone.GetFaceVertexCountsAttr().Set(Vt.IntArray([int(c) for c in counts]))
+    drone.GetFaceVertexIndicesAttr().Set(Vt.IntArray([int(i) for i in indices]))
+    drone.GetNormalsAttr().Set(Vt.Vec3fArray([Gf.Vec3f(*map(float, n)) for n in normals]))
+    drone.SetNormalsInterpolation(UsdGeom.Tokens.vertex)
+    drone.GetSubdivisionSchemeAttr().Set(UsdGeom.Tokens.none)
+    UsdShade.MaterialBindingAPI.Apply(drone.GetPrim()).Bind(_matte(stage, _DRONE_ALBEDO))
+    # Only the pieces of the drone below the lens are modelled; the rest would shade the lid too, so
+    # the sun shadows of these parts are not physical. Keep them out of the shadow pass.
+    UsdGeom.PrimvarsAPI(drone.GetPrim()).CreatePrimvar("doNotCastShadows", Sdf.ValueTypeNames.Bool).Set(True)
     return CameraRig(translate, orient)
 
 

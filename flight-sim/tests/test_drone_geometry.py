@@ -26,3 +26,20 @@ def test_camera_frame_puts_the_left_jaw_edge_right_of_the_lens_and_ahead():
     assert abs(jaw.size_m[1] - 0.1918) < 1e-12
     # drone y -34.9..60 with the lens at y 95: image right = drone right = -y, so x_c = 95 - y -> 35..129.9 mm
     assert abs(jaw.centre_m[0] - (0.035 + 0.1299) / 2) < 1e-9
+
+
+def test_mesh_has_outward_faces_and_the_cuboid_bounds():
+    import numpy as np
+
+    cuboids = dg.camera_frame_cuboids()
+    points, counts, indices, normals = dg.cuboids_mesh(cuboids)
+    assert len(points) == 24 * len(cuboids) == len(normals) and (counts == 4).all() and len(indices) == len(points)
+    for i, c in enumerate(cuboids):
+        p = points[24 * i:24 * (i + 1)]
+        np.testing.assert_allclose(p.max(0) - p.min(0), c.size_m, atol=1e-12)
+        np.testing.assert_allclose((p.max(0) + p.min(0)) / 2, c.centre_m, atol=1e-12)
+        for f in range(6):  # winding matches the stored normal and points away from the centre
+            quad = p[4 * f:4 * f + 4]
+            wound = np.cross(quad[1] - quad[0], quad[2] - quad[1])
+            assert wound @ normals[24 * i + 4 * f] > 0
+            assert (quad.mean(0) - np.array(c.centre_m)) @ normals[24 * i + 4 * f] > 0

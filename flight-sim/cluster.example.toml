@@ -1,0 +1,11 @@
+# Copy to cluster.local.toml (gitignored) and fill in.
+# Host alias from ~/.ssh/config; must have a live ControlMaster connection.
+ssh_alias = "my-cluster"
+# Slurm account to charge jobs to.
+account = "my-account"
+# Slurm partition for GPU jobs.
+gpu_partition = "my-gpu-partition"
+# Slurm partition for CPU-only jobs.
+cpu_partition = "my-cpu-partition"
+# Remote directory for job inputs and outputs.
+scratch_dir = "/path/to/scratch/me"

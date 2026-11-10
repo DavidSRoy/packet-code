@@ -16,7 +16,7 @@ from flightsim.frames import Quat, Vec3  # noqa: E402
 from flightsim.profiles import load_camera  # noqa: E402
 from flightsim.render_link import serve  # noqa: E402
 
-_RT_SUBFRAMES = 4
+_RT_SUBFRAMES = 16  # fewer left visible ray-tracing noise (4 subframes)
 _MAX_STEPS = 40  # steps before the first annotator data shows up
 
 

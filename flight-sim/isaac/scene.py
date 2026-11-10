@@ -41,7 +41,7 @@ def _cuboid(stage: Usd.Stage, path: str, centre: tuple[float, float, float],
 
 def _sticker(stage: Usd.Stage, png: Path, size_m: tuple[float, float]) -> None:
     half_w, half_h = size_m[0] / 2, size_m[1] / 2
-    mesh = UsdGeom.Mesh.Define(stage, "/World/Box/Sticker")
+    mesh = UsdGeom.Mesh.Define(stage, "/World/Sticker"  # not under /World/Box: a child of that cube would inherit its scale)
     mesh.GetPointsAttr().Set(Vt.Vec3fArray([
         Gf.Vec3f(-half_w, -half_h, _STICKER_LIFT_M), Gf.Vec3f(half_w, -half_h, _STICKER_LIFT_M),
         Gf.Vec3f(half_w, half_h, _STICKER_LIFT_M), Gf.Vec3f(-half_w, half_h, _STICKER_LIFT_M)]))
@@ -73,9 +73,9 @@ def _sticker(stage: Usd.Stage, png: Path, size_m: tuple[float, float]) -> None:
 
 
 def _lights(stage: Usd.Stage, sun_elevation_deg: float) -> None:
-    UsdLux.DomeLight.Define(stage, "/World/Dome").CreateIntensityAttr(500.0)
+    UsdLux.DomeLight.Define(stage, "/World/Dome").CreateIntensityAttr(80.0)
     sun = UsdLux.DistantLight.Define(stage, "/World/Sun")
-    sun.CreateIntensityAttr(3000.0)
+    sun.CreateIntensityAttr(500.0)
     # A distant light shines along its local -Z; tip it from straight down by (90 - elevation).
     UsdGeom.Xformable(sun).AddRotateXYZOp().Set(Gf.Vec3f(-(90.0 - sun_elevation_deg), 0.0, 0.0))
 

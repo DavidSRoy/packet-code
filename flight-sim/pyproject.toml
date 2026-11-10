@@ -3,7 +3,9 @@ name = "flightsim"
 version = "0.1.0"
 description = "Flight simulator for delivery drone experiments"
 requires-python = ">=3.12,<3.13"
-dependencies = []
+dependencies = [
+    "numpy>=2.5.4",
+]
 
 [dependency-groups]
 dev = ["pytest>=8"]

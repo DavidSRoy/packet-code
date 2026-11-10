@@ -65,10 +65,6 @@
   #clock { font-family: var(--mono); color: var(--muted); font-size: 11px; white-space: nowrap; }
   .stat-row.tight .opt { display: none; }
   #top.tight #brand i { display: none; }
-  @media (max-height: 780px) {
-    .tele div { padding: 6px 14px; } .tele b { font-size: 15px; } .card-h { padding: 9px 14px 8px; }
-    #mode { font-size: 17px; } .mode-row { margin-top: 6px; }
-  }
 
   /* left: asset card */
   #left { position: fixed; z-index: 500; top: 64px; left: 12px; width: 300px; display: flex; flex-direction: column; gap: 8px;
@@ -121,7 +117,10 @@
   #att svg { flex: none; }
 
   /* right: actions + log */
-  #actions { top: 64px; right: 12px; width: 252px; padding: 12px; max-height: calc(100vh - 84px - var(--air-h, 190px)); overflow-y: auto; }
+  #actions { top: 64px; right: 12px; width: 252px; padding: 12px 12px 0; max-height: calc(100vh - 84px - var(--air-h, 190px)); overflow-y: auto; }
+  /* scroll cue: the bottom padding is a strip that stays at the fold, so content fades out there instead of ending on a hard cut */
+  #actions::after { content: ""; display: block; position: sticky; bottom: 0; height: 12px;
+    background: linear-gradient(transparent, var(--glass)); pointer-events: none; }
   /* trips (backend pad-to-pad) */
   #trips, #lights, #flyto { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
   #lights .row2 { margin-bottom: 0; grid-template-columns: repeat(5, auto); }
@@ -290,6 +289,19 @@
   .leaflet-popup-content { margin: 10px 12px; font: 12px/1.45 var(--sans); }
   .leaflet-tooltip { background: var(--glass-2); color: var(--text); border: 1px solid var(--line-2); box-shadow: none; }
   .leaflet-tooltip-top:before { border-top-color: var(--line-2); }
+  /* short windows. Media blocks stay below the base rules: same specificity, so the later rule wins. */
+  @media (max-height: 780px) {
+    .tele div { padding: 6px 14px; } .tele b { font-size: 15px; } .card-h { padding: 9px 14px 8px; }
+    #mode { font-size: 17px; } .mode-row { margin-top: 6px; }
+  }
+  /* command column: shorter rows and 4px gaps keep the test hover controls above the fold. Buttons stop at 32px: they are flight controls.
+     Starts at 820px, not 780px: without it the Stop button meets the fold up to about 807px tall in Safari. */
+  @media (max-height: 820px) {
+    .btn { height: 32px; margin-bottom: 4px; } .btn.kill { margin-top: 6px; } .stepper button { height: 24px; }
+    #actions { padding-top: 8px; } #hop, #flyto, #lights, #trips { margin-top: 8px; padding-top: 8px; }
+    .alt-row { margin: 4px 0; } #hop .alt-row, #flyto .alt-row { margin: 0 0 4px; }
+    .trip-h, .row2, #hop-arm { margin-bottom: 4px; } #b-hop-stop { margin-top: 4px; }
+  }
   @media (max-width: 1100px) {
     :root { --rcol: 244px; }
     #cam.big { inset: 64px 292px 112px 324px; width: auto; }

@@ -242,3 +242,25 @@ def test_submit_quotes_spaces_and_semicolons(monkeypatch: pytest.MonkeyPatch) ->
     assert "'/scratch/my dir;x/runs/r1/out'" in command
     assert "'/scratch/my dir;x/run me;.sbatch'" in command
     assert "--output='/scratch/my dir;x/runs/r1/out'/slurm-%j.log" in command
+
+
+def test_push_backend_archives_backend_from_repo_root(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[list[str], object]] = []
+
+    def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        calls.append((argv, kwargs.get("cwd")))
+        return subprocess.CompletedProcess(argv, 0, b"", b"")
+
+    monkeypatch.setattr(subprocess, "run", run)
+    assert jobs.push_backend(CLUSTER, "r1") == "/scratch/me/runs/r1/repo"
+    assert calls[0][0] == ["git", "status", "--porcelain", "--", "backend"]
+    assert calls[1][0] == ["git", "archive", "HEAD", "backend"]
+    assert calls[0][1] == calls[1][1] == jobs._REPO_ROOT
+    assert "tar x -C /scratch/me/runs/r1/repo" in calls[2][0][-1]
+
+
+def test_push_backend_refuses_dirty_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr(subprocess, "run", _fake_git_and_ssh(b" M backend/x.py\n", calls))
+    with pytest.raises(RemoteError, match=r"\[jobs:push_backend\] Uncommitted changes.*backend/x.py"):
+        jobs.push_backend(CLUSTER, "r1")

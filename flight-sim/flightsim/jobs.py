@@ -15,14 +15,22 @@ _ACTIVE_STATES = frozenset(
 )
 _MAX_POLL_FAILURES = 3
 _SOURCE_ROOT = Path(__file__).resolve().parents[1]
+_REPO_ROOT = _SOURCE_ROOT.parent
 _STDERR_TAIL = 500
 
 
 def _run_local(
-    caller: str, step: str, argv: list[str], run_name: str, *, input: bytes | None = None, timeout_s: float = 60.0
+    caller: str,
+    step: str,
+    argv: list[str],
+    run_name: str,
+    *,
+    input: bytes | None = None,
+    timeout_s: float = 60.0,
+    cwd: Path = _SOURCE_ROOT,
 ) -> subprocess.CompletedProcess[bytes]:
     try:
-        return subprocess.run(argv, input=input, capture_output=True, cwd=_SOURCE_ROOT, timeout=timeout_s)
+        return subprocess.run(argv, input=input, capture_output=True, cwd=cwd, timeout=timeout_s)
     except subprocess.TimeoutExpired as exc:
         raise RemoteError(
             f"[jobs:{caller}] Timed out — {{step: {step}, timeout_s: {timeout_s}, run_name: {run_name}}}"
@@ -51,36 +59,44 @@ def _export_arg(env: Mapping[str, str]) -> str:
     return ",".join(parts)
 
 
-def push_source(cluster: Cluster, run_name: str) -> str:
-    """Copy the committed tree (git archive HEAD) to the run's remote src dir."""
-    _validate_run_name("push_source", run_name)
-    remote = f"{_run_dir(cluster, run_name)}/src"
-    status = _run_local("push_source", "git status", ["git", "status", "--porcelain", "--", str(_SOURCE_ROOT)], run_name)
+def _push(caller: str, cluster: Cluster, run_name: str, remote: str, cwd: Path, pathspec: str) -> str:
+    _validate_run_name(caller, run_name)
+    status = _run_local(caller, "git status", ["git", "status", "--porcelain", "--", pathspec], run_name, cwd=cwd)
     if status.returncode != 0:
         raise RemoteError(
-            f"[jobs:push_source] git status failed — {{exit: {status.returncode}, "
+            f"[jobs:{caller}] git status failed — {{exit: {status.returncode}, "
             f"stderr: {status.stderr[-_STDERR_TAIL:]!r}}}"
         )
     dirty = status.stdout.decode(errors="replace").strip()
     if dirty:
         raise RemoteError(
-            f"[jobs:push_source] Uncommitted changes would not ship; commit first — {{paths: {dirty.splitlines()!r}}}"
+            f"[jobs:{caller}] Uncommitted changes would not ship; commit first — {{paths: {dirty.splitlines()!r}}}"
         )
-    archive = _run_local("push_source", "git archive", ["git", "archive", "HEAD"], run_name)
+    archive = _run_local(caller, "git archive", ["git", "archive", "HEAD", pathspec], run_name, cwd=cwd)
     if archive.returncode != 0:
         raise RemoteError(
-            f"[jobs:push_source] git archive failed — {{exit: {archive.returncode}, "
+            f"[jobs:{caller}] git archive failed — {{exit: {archive.returncode}, "
             f"stderr: {archive.stderr[-_STDERR_TAIL:]!r}}}"
         )
     command = f"rm -rf {shlex.quote(remote)} && mkdir -p {shlex.quote(remote)} && tar x -C {shlex.quote(remote)}"
     argv = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", cluster.ssh_alias, command]
-    pushed = _run_local("push_source", "ssh untar", argv, run_name, input=archive.stdout, timeout_s=300.0)
+    pushed = _run_local(caller, "ssh untar", argv, run_name, input=archive.stdout, timeout_s=300.0, cwd=cwd)
     if pushed.returncode != 0:
         raise RemoteError(
-            f"[jobs:push_source] Remote untar failed — {{exit: {pushed.returncode}, "
+            f"[jobs:{caller}] Remote untar failed — {{exit: {pushed.returncode}, "
             f"stderr: {pushed.stderr[-_STDERR_TAIL:]!r}}}"
         )
     return remote
+
+
+def push_source(cluster: Cluster, run_name: str) -> str:
+    """Copy the committed flight-sim tree (git archive HEAD) to the run's remote src dir."""
+    return _push("push_source", cluster, run_name, f"{_run_dir(cluster, run_name)}/src", _SOURCE_ROOT, ".")
+
+
+def push_backend(cluster: Cluster, run_name: str) -> str:
+    """Copy the committed backend/ tree to the run's remote repo dir; backend lands at <returned>/backend."""
+    return _push("push_backend", cluster, run_name, f"{_run_dir(cluster, run_name)}/repo", _REPO_ROOT, "backend")
 
 
 def submit(

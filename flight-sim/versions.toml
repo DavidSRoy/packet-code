@@ -2,4 +2,4 @@
 # 6.2.0 renders on the cluster GPU nodes; 5.1.0 was not needed.
 isaac_image = "nvcr.io/nvidia/isaac-sim:6.2.0"
 # ArduPilot release tag used by the SITL tasks.
-ardupilot_tag = "Copter-4.5.7"
+ardupilot_tag = "Copter-4.7.2"

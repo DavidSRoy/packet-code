@@ -37,6 +37,7 @@ status=0
 # (run.py starts SITL and physics in sessions of their own).
 kill_group() { [[ -z "$1" ]] || kill -KILL -- "-$1" 2>/dev/null || true; }
 cleanup() {
+  echo "[hover] $(date +%T) cleaning up" >&2
   kill_group "$runner"
   kill_group "$server"
   pkill -KILL -f "$shm" 2>/dev/null || true
@@ -140,7 +141,7 @@ killed=0
 gone_at=""
 while kill -0 "$runner" 2>/dev/null; do
   if [[ -n "${DEBUG_KILL_RENDER_AFTER_S:-}" && "$killed" -eq 0 && $((SECONDS - started)) -ge "$DEBUG_KILL_RENDER_AFTER_S" ]]; then
-    echo "[hover] debug: killing the render server" >&2
+    echo "[hover] $(date +%T) debug: killing the render server" >&2
     kill_group "$server"
     killed=1
   fi

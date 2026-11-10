@@ -41,7 +41,8 @@ def _cuboid(stage: Usd.Stage, path: str, centre: tuple[float, float, float],
 
 def _sticker(stage: Usd.Stage, png: Path, size_m: tuple[float, float]) -> None:
     half_w, half_h = size_m[0] / 2, size_m[1] / 2
-    mesh = UsdGeom.Mesh.Define(stage, "/World/Sticker"  # not under /World/Box: a child of that cube would inherit its scale)
+    # Not under /World/Box: a child of that cube would inherit its scale.
+    mesh = UsdGeom.Mesh.Define(stage, "/World/Sticker")
     mesh.GetPointsAttr().Set(Vt.Vec3fArray([
         Gf.Vec3f(-half_w, -half_h, _STICKER_LIFT_M), Gf.Vec3f(half_w, -half_h, _STICKER_LIFT_M),
         Gf.Vec3f(half_w, half_h, _STICKER_LIFT_M), Gf.Vec3f(-half_w, half_h, _STICKER_LIFT_M)]))

@@ -84,6 +84,9 @@ def main() -> None:
             capture()
         print("[render_server] ready", flush=True)
         serve(render_fn, args.port, args.ready_file)
+    except BaseException:
+        traceback.print_exc()  # app.close() below can end the process before Python prints the error
+        raise
     finally:
         app.close()
 

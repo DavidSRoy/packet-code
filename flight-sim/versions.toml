@@ -1,5 +1,5 @@
 # Pinned versions for cluster runs. Every task reads these.
-# 6.2.0 refused to start on the node driver; see the failure recorded in task 2.
-isaac_image = "PLACEHOLDER"
+# 6.2.0 renders on the cluster GPU nodes; 5.1.0 was not needed.
+isaac_image = "nvcr.io/nvidia/isaac-sim:6.2.0"
 # ArduPilot release tag used by the SITL tasks.
 ardupilot_tag = "Copter-4.5.7"

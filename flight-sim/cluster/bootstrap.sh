@@ -57,6 +57,7 @@ else
   echo "[bootstrap] built $ardu"
 fi
 
+# Managed Python only: the host python3.12 does not exist inside the build container.
 export UV_PYTHON_INSTALL_DIR="$SCRATCH/uv-python"
 uv_bin="$SCRATCH/bin/uv"
 if [[ ! -x "$uv_bin" ]]; then
@@ -66,7 +67,7 @@ if [[ -x "$SCRATCH/venv/bin/python" ]]; then
   echo "[bootstrap] already present: $SCRATCH/venv"
 else
   rm -rf "$SCRATCH/venv"
-  "$uv_bin" venv --python 3.12 "$SCRATCH/venv"
+  "$uv_bin" venv --managed-python --python 3.12 "$SCRATCH/venv"
   "$uv_bin" pip install --python "$SCRATCH/venv/bin/python" \
     -r "$REPO_DIR/backend/requirements.txt" 'opencv-python-headless>=4.12'
   echo "[bootstrap] created $SCRATCH/venv"

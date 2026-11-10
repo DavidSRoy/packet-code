@@ -1,22 +1,17 @@
 import math
+import warnings
+from pathlib import Path
 
-import cv2
 import numpy as np
 import pytest
 
 import lid_stickers as LS
-from imu_pose import rot_z
+from imu_pose import ImuPose
 from lid_camera_sim import Scene
 from lid_pose import Mount, imu_fix, lid_pose
 from lid_tags import camera_matrix
 
-# LidFinder (backend/companion/lid_tags.py) never closes the layout file it reads; not ours to change.
-pytestmark = [
-    pytest.mark.filterwarnings("ignore::ResourceWarning"),
-    pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning"),
-]
-
-LAYOUT = "../backend/companion/stickers_218x200/lid_layout.json"
+LAYOUT = str(Path(__file__).resolve().parents[2] / "backend" / "companion" / "stickers_218x200" / "lid_layout.json")
 
 # The oracle's defaults (lid_camera_sim.py main): 218x200 sticker, extra small tags.
 STICKER = dict(
@@ -47,7 +42,10 @@ MOUNT = Mount(fwd_m=0.070, right_m=-0.095, down_m=0.100, rot_deg=0.0)
 @pytest.fixture(scope="module")
 def scene():
     LS.configure(**STICKER)
-    return Scene("C920", CAM_MOUNT_MM, 0.0, LAYOUT)
+    with warnings.catch_warnings():
+        # LidFinder (backend/companion/lid_tags.py) never closes the layout file it reads; not ours to change.
+        warnings.simplefilter("ignore", ResourceWarning)
+        return Scene("C920", CAM_MOUNT_MM, 0.0, LAYOUT)
 
 
 def attitude(scene, dx, dy, height, yaw, roll, pitch):
@@ -77,7 +75,7 @@ def test_lid_pose_matches_the_renderer_truth(scene):
 def test_imu_fix_with_a_tilted_drone(scene):
     rng = np.random.default_rng(2)
     K = camera_matrix(scene.w, scene.h, scene.hfov)
-    imu_state = __import__("imu_pose").ImuPose(MOUNT.rot_deg)
+    imu_state = ImuPose(MOUNT.rot_deg)
     last = {}
     level_att = attitude(scene, 30.0, 0.0, 500.0, 10.0, 0.0, 0.0)
     for _ in range(3):                              # still and disarmed: the zero
@@ -85,9 +83,11 @@ def test_imu_fix_with_a_tilted_drone(scene):
         imu_fix(find_one(scene, img, K), level_att, K, imu_state, MOUNT, zero=True, last=last)
     att = attitude(scene, 30.0, 0.0, 500.0, 10.0, 5.0, 0.0)
     img, _, _ = scene.render(30.0, 0.0, 500.0, 10.0, 5.0, 0.0, rng)
-    fixed = imu_fix(find_one(scene, img, K), att, K, imu_state, MOUNT)
+    fixed = imu_fix(find_one(scene, img, K), att, K, imu_state, MOUNT, zero=False, last=last)
     assert fixed["pose"] == "imu"
     out = lid_pose(fixed, MOUNT)
+    print(f"imu_fix tilt_deg {out['tilt_deg']}")
+    assert out["tilt_deg"] == pytest.approx(5.0, abs=0.5)
     err_mm = np.linalg.norm((np.array(out["drone_m"]) - np.array([0.030, 0.0, 0.500])) * 1000)
     print(f"imu_fix drone_m error {err_mm:.2f} mm")
     assert err_mm < 5.0

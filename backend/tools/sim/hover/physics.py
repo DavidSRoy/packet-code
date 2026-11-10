@@ -338,6 +338,7 @@ def main():
     act = np.zeros(4)
     wm = open(a.wallmap, "w") if a.wallmap else None
     last_wm = -1.0
+    last_fcount = None
     while not stop["now"]:
         try:
             data, addr = sock.recvfrom(256)
@@ -349,6 +350,9 @@ def main():
             magic, rate, fcount, *pwm = SERVO32.unpack(data)
         else:
             continue
+        if fcount == last_fcount:
+            continue                   # SITL resent the packet while a slow camera render blocked this loop
+        last_fcount = fcount
         if first_wall is None:
             first_wall = time.time()
         if cam.link is None and time.time() - first_wall > cam_connect_t:

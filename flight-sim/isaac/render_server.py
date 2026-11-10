@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the flightsim pa
 import numpy as np  # noqa: E402
 from numpy.typing import NDArray  # noqa: E402
 
+from flightsim.drone_geometry import CAMERA_MOUNT_MM  # noqa: E402
 from flightsim.frames import Quat, Vec3  # noqa: E402
 from flightsim.grey import to_grey  # noqa: E402
 from flightsim.profiles import load_camera  # noqa: E402
@@ -35,6 +36,8 @@ def _parse() -> argparse.Namespace:
     parser.add_argument("--ready-file", type=Path, required=True)
     parser.add_argument("--renderer", choices=("RaytracedLighting", "PathTracing"), default=_DEFAULT_RENDERER)
     parser.add_argument("--subframes", type=int, default=_DEFAULT_SUBFRAMES)
+    parser.add_argument("--mount-mm", type=float, nargs=3, default=CAMERA_MOUNT_MM, metavar=("X", "Y", "Z"),
+                        help="lens position in the drone frame (nose, left, up), which sets where the occluders sit")
     parser.add_argument("--sun-elevation-deg", type=float, default=60.0)
     return parser.parse_args()
 
@@ -56,6 +59,7 @@ def main() -> None:
         rig = build_scene(
             omni.usd.get_context().get_stage(), camera, args.lid_png.resolve(),
             (args.lid_size_m[0], args.lid_size_m[1]), args.sun_elevation_deg,
+            (args.mount_mm[0], args.mount_mm[1], args.mount_mm[2]),
         )
         product = rep.create.render_product("/World/Rig/Camera", (camera.width, camera.height))
         rgb = rep.AnnotatorRegistry.get_annotator("rgb")

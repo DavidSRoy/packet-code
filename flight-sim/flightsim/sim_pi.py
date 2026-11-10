@@ -14,6 +14,10 @@ Runnable like e2e/fake_pi.py; the arguments it does not know go to physics.main(
 rate_hz in the ComputeProfile must be the effective detected rate: frames are exposed at that rate
 and never dropped because detection is slow.
 
+The sticker centre is at the lens' resting position (main() passes model.json cam_pos x, y as lid_xy), with
+lid +x pointing north; the drone starts at the physics origin. Estimates are world positions, so the hover
+holds the start point wherever the sticker is.
+
 The estimate (and the sent position) is the point the Pi believes it is reporting: the drone centre
 as seen through the Pi's mount belief (model.json cam_pos + pi_cam_pos_err). frames.csv truth is the
 CG. So est_z - true_z carries the known mount-belief offset, and err_xy_mm picks up a term that grows
@@ -68,6 +72,7 @@ class RenderedCamera(physics.Camera):
         camera: CameraProfile,
         compute: ComputeProfile,
         recorder: Recorder | None = None,
+        lid_xy: tuple[float, float] = (0.0, 0.0),
     ) -> None:
         timing = {
             "rate_hz": compute.rate_hz,
@@ -85,6 +90,7 @@ class RenderedCamera(physics.Camera):
         self.armed = False                                       # latched at the first non-zero motor command
         self.prev_imu = False                                    # the previous sent frame had pose "imu"
         self.frame = 0
+        self.lid = np.array([lid_xy[0], lid_xy[1], -float(self.C["lid_height_above_ground"])])   # sticker centre, world NED
 
     def step(self, t: float) -> None:
         if not self.armed:
@@ -94,7 +100,7 @@ class RenderedCamera(physics.Camera):
     def measure(
         self, t_exp: float, t_cap: float, p_true: NDArray[np.float64], q_true: NDArray[np.float64]
     ) -> tuple[NDArray[np.float64], float] | None:
-        lid = np.array([0.0, 0.0, -self.C["lid_height_above_ground"]])
+        lid = self.lid
         rel = p_true - lid
         cam_pos = self.C["cam_pos"]
         pos, quat = camera_pose_world(
@@ -176,8 +182,11 @@ def main() -> None:
         camera = load_camera(args.camera)
 
         def make(C: Mapping[str, object], rng: np.random.Generator, drone: physics.Drone) -> RenderedCamera:
+            # The sticker centre goes under the lens at rest. Under the drone centre the gripper jaws, which
+            # reach from behind the lens to its nose side, would cover every ray that reaches the lid.
+            cam_pos = C["cam_pos"]
             return RenderedCamera(C, rng, drone, renderer=client, finder=finder, camera=camera, compute=compute,
-                                  recorder=recorder)
+                                  recorder=recorder, lid_xy=(float(cam_pos[0]), float(cam_pos[1])))
 
         physics.Camera = make
         physics.main()

@@ -56,7 +56,7 @@ class StubRenderer:
 
 
 def make_camera(scene, drone: FakeDrone, *, lag_s: float = 0.0, recorder: Recorder | None = None,
-                compute: ComputeProfile = COMPUTE, send_speed: bool = False):
+                compute: ComputeProfile = COMPUTE, send_speed: bool = False, lid_xy: tuple[float, float] = (0.0, 0.0)):
     fwd, left, up = (v / 1000.0 for v in CAM_MOUNT_MM)
     C = dict(MODEL["camera"], cam_pos=[fwd, -left, -up], pi_cam_pos_err=[0.0, 0.0, 0.0],
              rate_jitter_s=0.0, drop_frac=0.0, send_speed=send_speed, tilt_attitude_lag_s=lag_s,
@@ -64,7 +64,7 @@ def make_camera(scene, drone: FakeDrone, *, lag_s: float = 0.0, recorder: Record
     cam_profile = CameraProfile("stub", scene.w, scene.h, scene.hfov, True, "global", {}, "linear")
     renderer = StubRenderer(scene)
     cam = sim_pi.RenderedCamera(C, np.random.default_rng(1), drone, renderer=renderer, finder=scene.finder,
-                                camera=cam_profile, compute=compute, recorder=recorder)
+                                camera=cam_profile, compute=compute, recorder=recorder, lid_xy=lid_xy)
     return cam, renderer
 
 
@@ -87,6 +87,17 @@ def test_estimate_matches_truth_over_lid(scene):
     print(f"sent position error {err_mm:.2f} mm")
     assert err_mm < 5.0
     assert renderer.calls[0][2] == pytest.approx(0.5)             # rendered at the exposure time
+
+
+def test_lid_away_from_the_physics_origin_is_rendered_relative_and_estimated_in_the_world(scene):
+    drone = FakeDrone(np.array([0.230, -0.050, -0.500]))
+    cam, renderer = make_camera(scene, drone, lid_xy=(0.200, -0.050))
+    sent = run(cam, drone, 0.7)
+    assert len(sent) == 1
+    err_mm = np.linalg.norm((np.array(sent[0][3:6]) - drone.p) * 1000)
+    assert err_mm < 5.0
+    # the camera is 30 mm north of the lid centre, as in the test above
+    assert renderer.calls[0][0][0] == pytest.approx(0.030 + CAM_MOUNT_MM[0] / 1000.0, abs=1e-9)
 
 
 def test_no_tags_sends_nothing_and_records_row(scene, tmp_path: Path):

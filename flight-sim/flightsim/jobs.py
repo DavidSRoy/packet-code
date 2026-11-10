@@ -100,7 +100,7 @@ def push_backend(cluster: Cluster, run_name: str) -> str:
 
 
 def submit(
-    cluster: Cluster, script: str, run_name: str, env: Mapping[str, str], *, gpu: bool = True
+    cluster: Cluster, script: str, run_name: str, env: Mapping[str, str], *, gpu: bool = True, time_min: int = 30
 ) -> int:
     """sbatch a remote script; the job log lands in the run's out dir. Returns the job id."""
     _validate_run_name("submit", run_name)
@@ -110,7 +110,7 @@ def submit(
     gpus = " --gpus=1" if gpu else ""
     sbatch = (
         f"sbatch --parsable -A {shlex.quote(cluster.account)} -p {shlex.quote(partition)}{gpus}"
-        f" --time=30 --export={shlex.quote(export)}"
+        f" --time={time_min} --export={shlex.quote(export)}"
         f" --output={shlex.quote(out_dir)}/slurm-%j.log {shlex.quote(script)}"
     )
     stdout = ssh(cluster, f"mkdir -p {shlex.quote(out_dir)} && {sbatch}")

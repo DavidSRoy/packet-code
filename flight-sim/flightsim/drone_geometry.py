@@ -3,7 +3,10 @@
 Pure Python so both the Isaac scene and the tests can use it. Dimensions are copied from
 backend/tools/sim/lid_camera_sim.py (drone frame: x nose, y left, z up, mm); a test pins them to it.
 """
+import json
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 from numpy.typing import NDArray
@@ -14,6 +17,19 @@ LID_TOP_Z_MM = -158.1
 LID_SIZE_MM = (225.6, 206.4)
 LEG_R_MM = 8.0
 LENS_CLEARANCE_MM = 3.0  # parts are cut off this far below the lens
+
+def mount_mm_from_cam_pos(cam_pos_frd_m: tuple[float, float, float]) -> tuple[float, float, float]:
+    """Lens position from the hover physics model (body x nose, y right, z down, metres) in this module's
+    drone frame (x nose, y left, z up, mm)."""
+    fwd, right, down = cam_pos_frd_m
+    return (fwd * 1000.0, -right * 1000.0, -down * 1000.0)
+
+
+def mount_mm_from_model(model_json: Path) -> tuple[float, float, float]:
+    """The lens position backend/tools/sim/hover/model.json gives the physics, as mount_mm_from_cam_pos."""
+    fwd, right, down = json.loads(Path(model_json).read_text())["camera"]["cam_pos"]
+    return mount_mm_from_cam_pos((float(fwd), float(right), float(down)))
+
 
 # (xmin, xmax, ymin, ymax, zmin, zmax)
 Bounds = tuple[float, float, float, float, float, float]
@@ -100,3 +116,8 @@ def cuboids_mesh(
         np.arange(4 * n_faces, dtype=np.int64),
         np.array(normals),
     )
+
+
+if __name__ == "__main__":
+    # python -m flightsim.drone_geometry <model.json>  ->  prints "x y z" in mm
+    print(*mount_mm_from_model(Path(sys.argv[1])))

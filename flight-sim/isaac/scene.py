@@ -104,7 +104,7 @@ def _lights(stage: Usd.Stage, sun_elevation_deg: float) -> None:
     UsdGeom.Xformable(sun).AddRotateXYZOp().Set(Gf.Vec3f(-(90.0 - sun_elevation_deg), 0.0, 0.0))
 
 
-def _camera_rig(stage: Usd.Stage, camera: CameraProfile) -> CameraRig:
+def _camera_rig(stage: Usd.Stage, camera: CameraProfile, mount_mm: tuple[float, float, float]) -> CameraRig:
     rig = UsdGeom.Xform.Define(stage, "/World/Rig")
     translate = rig.AddTranslateOp(UsdGeom.XformOp.PrecisionDouble)
     orient = rig.AddOrientOp(UsdGeom.XformOp.PrecisionDouble)
@@ -113,7 +113,7 @@ def _camera_rig(stage: Usd.Stage, camera: CameraProfile) -> CameraRig:
     cam.GetVerticalApertureAttr().Set(_APERTURE_MM * camera.height / camera.width)  # square pixels
     cam.GetFocalLengthAttr().Set(_APERTURE_MM / (2.0 * math.tan(math.radians(camera.hfov_deg) / 2.0)))
     cam.GetClippingRangeAttr().Set(Gf.Vec2f(0.01, 100.0))
-    points, counts, indices, normals = cuboids_mesh(camera_frame_cuboids())
+    points, counts, indices, normals = cuboids_mesh(camera_frame_cuboids(mount_mm))
     drone = UsdGeom.Mesh.Define(stage, "/World/Rig/Drone/Parts")
     drone.GetPointsAttr().Set(Vt.Vec3fArray([Gf.Vec3f(*map(float, p)) for p in points]))
     drone.GetFaceVertexCountsAttr().Set(Vt.IntArray([int(c) for c in counts]))
@@ -130,7 +130,7 @@ def _camera_rig(stage: Usd.Stage, camera: CameraProfile) -> CameraRig:
 
 def build_scene(
     stage: Usd.Stage, camera: CameraProfile, lid_png: Path,
-    lid_size_m: tuple[float, float], sun_elevation_deg: float,
+    lid_size_m: tuple[float, float], sun_elevation_deg: float, mount_mm: tuple[float, float, float],
 ) -> CameraRig:
     UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
     UsdGeom.SetStageMetersPerUnit(stage, 1.0)
@@ -141,4 +141,4 @@ def build_scene(
     _cuboid(stage, "/World/Box", (0.0, 0.0, -BOX_HEIGHT_M / 2), (lid_w, lid_h, BOX_HEIGHT_M), _LID_ALBEDO)
     _sticker(stage, lid_png, lid_size_m)
     _lights(stage, sun_elevation_deg)
-    return _camera_rig(stage, camera)
+    return _camera_rig(stage, camera, mount_mm)

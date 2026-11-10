@@ -37,6 +37,13 @@ def test_submit_gpu_builds_sbatch_and_parses_id(monkeypatch: pytest.MonkeyPatch)
     assert len(commands) == 1
 
 
+def test_submit_time_limit_is_a_parameter(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = _record_ssh(monkeypatch, ["9\n"])
+    assert jobs.submit(CLUSTER, "s.sbatch", "r1", {}, time_min=120) == 9
+    assert "--time=120 " in commands[-1]
+    assert "--time=30" not in commands[-1]
+
+
 def test_submit_cpu_uses_cpu_partition_without_gpus(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = _record_ssh(monkeypatch, ["7\n"])
     assert jobs.submit(CLUSTER, "s.sbatch", "r1", {}, gpu=False) == 7

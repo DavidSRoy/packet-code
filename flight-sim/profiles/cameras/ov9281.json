@@ -1,0 +1,21 @@
+{
+  "name": "ov9281",
+  "width": 1280,
+  "height": 800,
+  "hfov_deg": 70.0,
+  "mono": true,
+  "shutter": "global",
+  "tone": "linear",
+  "provenance": {
+    "width": "datasheet",
+    "height": "datasheet",
+    "hfov_deg": "estimate",
+    "tone": "estimate"
+  },
+  "sources": {
+    "width": "backend/companion/README.md:25,129 (script defaults; lens not calibrated)",
+    "height": "backend/companion/README.md:25,129 (script defaults; lens not calibrated)",
+    "hfov_deg": "backend/companion/README.md:25,129 (script defaults; lens not calibrated)",
+    "tone": "raw mono sensor output is linear; the camera's USB pipeline gamma has not been measured"
+  }
+}

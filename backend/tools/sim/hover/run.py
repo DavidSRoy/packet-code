@@ -4,6 +4,7 @@ ground_control/hop.py "Run test", then scored on the TRUE trajectory.
 
   python tools/sim/hover/run.py --name base --height 0.02 --hold 30 --seed 1 \
       [--parm extra.parm ...] [--set camera.rate_hz=20 ...] [--instance 0] [--speedup 4]
+      [--physics other_physics.py --physics-arg=--its-flag --physics-arg value ...]
 
 Sequence (as hop.py): EKF source set 2 (camera), EKF origin, wait until the FC position is
 still, home here, GUIDED, arm with HOP_CH high (RC override from sysid 255), wait for
@@ -317,6 +318,8 @@ def main():
     ap.add_argument("--parm", action="append", default=[])
     ap.add_argument("--p", action="append", default=[], help="param override NAME=VALUE")
     ap.add_argument("--set", action="append", default=[], help="model override for physics.py")
+    ap.add_argument("--physics", default=str(HERE / "physics.py"), help="script that stands in for physics.py (takes its arguments)")
+    ap.add_argument("--physics-arg", action="append", default=[], help="extra argument for --physics, one token each (use --physics-arg=--flag)")
     ap.add_argument("--instance", type=int, default=0)
     ap.add_argument("--speedup", type=int, default=4)
     ap.add_argument("--runs", default=str(HERE / "runs"))
@@ -351,9 +354,9 @@ def main():
     wall_map_file = work / "wallmap.txt"
     result = {"name": a.name, "flown": a.flown, "seed": a.seed, "height": a.height, "hold": a.hold, "parm": a.parm, "p": a.p, "set": a.set}
     try:
-        phys = subprocess.Popen([py, str(HERE / "physics.py"), "--out", str(work / "truth.npz"), "--seed", str(a.seed),
+        phys = subprocess.Popen([py, a.physics, "--out", str(work / "truth.npz"), "--seed", str(a.seed),
                                  "--port", str(9002 + 10 * I), "--cam-url", f"tcp:127.0.0.1:{5762 + 10 * I}",
-                                 "--wallmap", str(wall_map_file)] + sum((["--set", s] for s in a.set), []),
+                                 "--wallmap", str(wall_map_file)] + sum((["--set", s] for s in a.set), []) + a.physics_arg,
                                 stdout=open(work / "physics.log", "w"), stderr=subprocess.STDOUT)
         procs.append(phys)
         time.sleep(0.5)

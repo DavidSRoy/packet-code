@@ -71,13 +71,15 @@ if [[ ! -x "$uv_bin" ]]; then
   curl -LsSf https://astral.sh/uv/$UV_VERSION/install.sh | UV_INSTALL_DIR="$SCRATCH/bin" UV_NO_MODIFY_PATH=1 sh
 fi
 # The marker is written only after the install succeeds, so a failed install is redone next run.
-if [[ -f "$SCRATCH/venv/.complete" ]]; then
-  echo "[bootstrap] already present: $SCRATCH/venv"
+# The stamp records the OpenCV requirement the venv was built with; a missing or different stamp rebuilds.
+if [[ -f "$SCRATCH/venv/.complete" && "$(cat "$SCRATCH/venv/.opencv-requirement" 2>/dev/null)" == "$OPENCV_REQUIREMENT" ]]; then
+  echo "[bootstrap] already present: $SCRATCH/venv ($OPENCV_REQUIREMENT)"
 else
   rm -rf "$SCRATCH/venv"
   "$uv_bin" venv --managed-python --python 3.12 "$SCRATCH/venv"
   "$uv_bin" pip install --python "$SCRATCH/venv/bin/python" \
     -r "$REPO_DIR/backend/requirements.txt" "$OPENCV_REQUIREMENT"
+  echo "$OPENCV_REQUIREMENT" > "$SCRATCH/venv/.opencv-requirement"
   touch "$SCRATCH/venv/.complete"
-  echo "[bootstrap] created $SCRATCH/venv"
+  echo "[bootstrap] created $SCRATCH/venv ($OPENCV_REQUIREMENT)"
 fi

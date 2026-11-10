@@ -338,21 +338,22 @@ def main():
     act = np.zeros(4)
     wm = open(a.wallmap, "w") if a.wallmap else None
     last_wm = -1.0
-    last_fcount = None
+    queued = None                      # a packet read while dropping resends, to handle next
     while not stop["now"]:
-        try:
-            data, addr = sock.recvfrom(256)
-        except socket.timeout:
-            continue
+        if queued is not None:
+            data, addr = queued
+            queued = None
+        else:
+            try:
+                data, addr = sock.recvfrom(256)
+            except socket.timeout:
+                continue
         if len(data) == SERVO16.size:
             magic, rate, fcount, *pwm = SERVO16.unpack(data)
         elif len(data) == SERVO32.size:
             magic, rate, fcount, *pwm = SERVO32.unpack(data)
         else:
             continue
-        if fcount == last_fcount:
-            continue                   # SITL resent the packet while a slow camera render blocked this loop
-        last_fcount = fcount
         if first_wall is None:
             first_wall = time.time()
         if cam.link is None and time.time() - first_wall > cam_connect_t:
@@ -373,6 +374,19 @@ def main():
                  "velocity": drone.v.tolist(),
                  "battery": {"voltage": M["battery_v"], "current": 18.0}}
         sock.sendto((json.dumps(reply) + "\n").encode(), addr)
+        # SITL resends a packet after 1 s without a reply, so a slow camera render leaves copies of this one
+        # queued. They are already answered; stepping again would double the step. A copy that arrives after
+        # the reply (a lost reply) is not queued yet and is answered normally.
+        sock.settimeout(0.0)
+        try:
+            while True:
+                data, addr = sock.recvfrom(256)
+                if struct.unpack_from("<HHI", data)[2] != fcount:
+                    queued = (data, addr)
+                    break
+        except (BlockingIOError, struct.error):
+            pass
+        sock.settimeout(1.0)
         if wm and t - last_wm >= 0.1:
             last_wm = t
             wm.write(f"{time.time():.4f} {t:.5f}\n")

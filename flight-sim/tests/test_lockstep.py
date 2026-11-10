@@ -69,3 +69,27 @@ def test_resent_servo_packet_during_a_slow_render_steps_physics_once(tmp_path: P
         output = proc.communicate(timeout=20)[0].decode(errors="replace")
     assert len(replies) == 2, f"expected one reply per distinct frame — {{replies: {replies}, output: {output[-300:]!r}}}"
     assert abs(replies[1] - replies[0] - 1.0 / RATE_HZ) < 1e-9
+
+
+def test_resend_after_the_reply_was_lost_is_answered(tmp_path: Path) -> None:
+    # SITL's first packets can reach physics before SITL listens; its reply is then lost and only a resend can start the run
+    port = _free_port()
+    proc = subprocess.Popen(
+        [sys.executable, str(HERE / "slow_render_physics.py"), "--out", str(tmp_path / "truth.npz"),
+         "--port", str(port)],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    )
+    sitl = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        for _ in range(100):
+            if _is_bound(port) or proc.poll() is not None:
+                break
+            time.sleep(0.1)
+        sitl.sendto(_servo_packet(7), ("127.0.0.1", port))
+        assert len(_replies(sitl, 3.0)) == 1
+        sitl.sendto(_servo_packet(7), ("127.0.0.1", port))
+        assert len(_replies(sitl, 2.0)) == 1
+    finally:
+        sitl.close()
+        proc.send_signal(signal.SIGTERM)
+        proc.communicate(timeout=20)

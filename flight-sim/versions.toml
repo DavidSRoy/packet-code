@@ -3,3 +3,8 @@
 isaac_image = "nvcr.io/nvidia/isaac-sim:6.2.0"
 # ArduPilot release tag used by the SITL tasks.
 ardupilot_tag = "Copter-4.7.2"
+# Build inputs for the SITL image and venv, pinned so a rebuild gives the same binary and packages.
+# Digest of ardupilot/ardupilot-dev-base:latest as of 2026-11-09 (matches the image proven in the passing baseline).
+ardupilot_dev_image = "ardupilot/ardupilot-dev-base@sha256:d81c02a9d86ea88b297a66910a6a1f077e8c14cd9ad10e1620b44033e8e371bf"
+uv_version = "0.13.7"
+opencv_requirement = "opencv-python-headless==5.0.0.93"

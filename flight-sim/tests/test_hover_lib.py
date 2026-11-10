@@ -11,22 +11,29 @@ shm="$1"; mode="$2"
 mkdir -p "$shm/hover"
 kill_group() { [[ -z "$1" ]] || kill -KILL "$1" 2>/dev/null || true; }
 fake() { ( exec -a "$1" sleep 60 >/dev/null 2>&1 ) & echo $!; }
-status=0; grace_s=2
+status=0; grace_s=2; startup_s=3
 server=$(fake "render_server.py"); pids=("$server")
 case "$mode" in
-  all_alive|status_line|physics_missing|sitl_missing)
+  all_alive|status_line|physics_missing|sitl_missing|physics_dies)
     [[ "$mode" == physics_missing ]] || pids+=("$(fake "sim_pi.py"" --out $shm/hover/truth.npz")")
     [[ "$mode" == sitl_missing ]] || pids+=("$(fake "x/bin/arducopter"" -w --defaults $shm/hover/flown.parm")")
     ;;
+  sitl_late)
+    pids+=("$(fake "sim_pi.py"" --out $shm/hover/truth.npz")")
+    startup_s=8
+    ( sleep 4; ( exec -a "x/bin/arducopter -w --defaults $shm/hover/flown.parm" sleep 60 >/dev/null 2>&1 ) ) &
+    ;;
 esac
+[[ "$mode" != physics_dies ]] || ( sleep 1; kill "${pids[1]}" ) &
 [[ "$mode" != status_line ]] || { pids=("$server"); kill "${pids[0]}"; echo "status: ok" > "$shm/hover/run.log"; }
-if [[ "$mode" == all_alive || "$mode" == status_line ]]; then ( sleep 4 ) & else ( sleep 30 ) & fi
+if [[ "$mode" == all_alive || "$mode" == status_line || "$mode" == sitl_late ]]; then ( sleep 4 ) & else ( sleep 30 ) & fi
 runner=$!
 start=$SECONDS
 watch_run
 wait "$runner" 2>/dev/null || true
 echo "status=$status elapsed=$((SECONDS - start))"
 kill "${pids[@]}" 2>/dev/null || true
+pkill -f "$shm" 2>/dev/null || true
 """
 
 
@@ -48,6 +55,16 @@ def test_run_that_ends_by_itself_with_everything_alive_is_not_touched(tmp_path: 
 def test_missing_physics_process_ends_the_run_after_the_grace(tmp_path: Path) -> None:
     status, elapsed = _watch(tmp_path, "physics_missing")
     assert status == 1 and 2 <= elapsed < 10
+
+
+def test_physics_that_dies_after_being_seen_ends_the_run_after_the_grace(tmp_path: Path) -> None:
+    status, elapsed = _watch(tmp_path, "physics_dies")
+    assert status == 1 and 3 <= elapsed < 10
+
+
+def test_process_that_starts_late_but_inside_the_startup_allowance_is_not_killed(tmp_path: Path) -> None:
+    status, elapsed = _watch(tmp_path, "sitl_late")
+    assert status == 0 and 4 <= elapsed <= 6
 
 
 def test_missing_sitl_ends_the_run_after_the_grace(tmp_path: Path) -> None:

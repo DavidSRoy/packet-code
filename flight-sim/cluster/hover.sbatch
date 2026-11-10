@@ -46,7 +46,7 @@ cleanup() {
   # Evidence first, even for a failed or killed run.
   cp "$shm/rec/frames.csv" "$shm/rec/camera.mp4" "$shm/rec/overlay.mp4" "$out/" 2>/dev/null || true
   # result.json carries absolute paths (flown, dflog) and the logs echo them; fetched results are shared, so scrub.
-  [[ ! -f "$shm/hover/result.json" ]] || scrub_paths "$shm/hover/result.json" "$SCRATCH" "$shm" > "$out/result.json" || true
+  [[ ! -f "$shm/hover/result.json" ]] || { scrub_paths "$shm/hover/result.json" "$SCRATCH" "$shm" > "$out/result.json.tmp" && mv "$out/result.json.tmp" "$out/result.json"; } || true
   for f in "$shm/hover/run.log" "$shm/hover/physics.log" "$shm/hover/sitl.log" "$wd/render_server.log"; do
     [[ -f "$f" ]] || continue
     tail -n 200 "$f" | sed -e "s#$SCRATCH#<path>#g" -e "s#$shm#<path>#g" > "$out/$(basename "$f").tail" || true
@@ -137,6 +137,7 @@ runner=$!
 
 # End the run if the render server, physics or SITL vanishes before run.py is done (see hover_lib.sh).
 grace_s=25
+startup_s=180
 watch_run
 rc=0
 wait "$runner" 2>/dev/null || rc=$?

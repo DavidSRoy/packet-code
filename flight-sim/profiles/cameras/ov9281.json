@@ -5,5 +5,14 @@
   "hfov_deg": 70.0,
   "mono": true,
   "shutter": "global",
-  "provenance": {"width": "datasheet", "height": "datasheet", "hfov_deg": "datasheet"}
+  "provenance": {
+    "width": "datasheet",
+    "height": "datasheet",
+    "hfov_deg": "estimate"
+  },
+  "sources": {
+    "width": "backend/companion/README.md:25,129 (script defaults; lens not calibrated)",
+    "height": "backend/companion/README.md:25,129 (script defaults; lens not calibrated)",
+    "hfov_deg": "backend/companion/README.md:25,129 (script defaults; lens not calibrated)"
+  }
 }

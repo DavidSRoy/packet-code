@@ -1,6 +1,6 @@
 import json
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, get_args
 
@@ -17,6 +17,7 @@ class CameraProfile:
     mono: bool
     shutter: str
     provenance: Mapping[str, Provenance]
+    sources: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,7 @@ class ComputeProfile:
     link_s: float
     detect_scale: float
     provenance: Mapping[str, Provenance]
+    sources: Mapping[str, str] = field(default_factory=dict)
 
 
 def _provenance(fn: str, path: Path, raw: Mapping[str, str]) -> dict[str, Provenance]:
@@ -44,28 +46,40 @@ def _provenance(fn: str, path: Path, raw: Mapping[str, str]) -> dict[str, Proven
     return out
 
 
+def _missing(fn: str, path: Path, exc: KeyError) -> ValueError:
+    return ValueError(f"[profiles:{fn}] Missing key — {{path: {str(path)!r}, key: {exc.args[0]!r}}}")
+
+
 def load_camera(path: Path) -> CameraProfile:
     d = json.loads(Path(path).read_text())
-    return CameraProfile(
-        name=d["name"],
-        width=int(d["width"]),
-        height=int(d["height"]),
-        hfov_deg=float(d["hfov_deg"]),
-        mono=bool(d["mono"]),
-        shutter=str(d["shutter"]),
-        provenance=_provenance("load_camera", path, d["provenance"]),
-    )
+    try:
+        return CameraProfile(
+            name=str(d["name"]),
+            width=int(d["width"]),
+            height=int(d["height"]),
+            hfov_deg=float(d["hfov_deg"]),
+            mono=bool(d["mono"]),
+            shutter=str(d["shutter"]),
+            provenance=_provenance("load_camera", path, d["provenance"]),
+            sources=dict(d.get("sources", {})),
+        )
+    except KeyError as exc:
+        raise _missing("load_camera", path, exc) from exc
 
 
 def load_compute(path: Path) -> ComputeProfile:
     d = json.loads(Path(path).read_text())
-    return ComputeProfile(
-        name=d["name"],
-        rate_hz=float(d["rate_hz"]),
-        exposure_to_readout_s=float(d["exposure_to_readout_s"]),
-        detect_s=float(d["detect_s"]),
-        detect_jitter_s=float(d["detect_jitter_s"]),
-        link_s=float(d["link_s"]),
-        detect_scale=float(d["detect_scale"]),
-        provenance=_provenance("load_compute", path, d["provenance"]),
-    )
+    try:
+        return ComputeProfile(
+            name=str(d["name"]),
+            rate_hz=float(d["rate_hz"]),
+            exposure_to_readout_s=float(d["exposure_to_readout_s"]),
+            detect_s=float(d["detect_s"]),
+            detect_jitter_s=float(d["detect_jitter_s"]),
+            link_s=float(d["link_s"]),
+            detect_scale=float(d["detect_scale"]),
+            provenance=_provenance("load_compute", path, d["provenance"]),
+            sources=dict(d.get("sources", {})),
+        )
+    except KeyError as exc:
+        raise _missing("load_compute", path, exc) from exc

@@ -1,6 +1,7 @@
 import json
 import socket
 import struct
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
@@ -38,6 +39,7 @@ class RenderClient:
             width, height, frame_id = _HEADER.unpack(_recv_exact(self._sock, _HEADER.size))
             data = _recv_exact(self._sock, width * height)
         except TimeoutError as exc:
+            self._sock.close()  # a late reply must not be read as the next frame
             raise TimeoutError(
                 f"[render_link:render] No reply from renderer — {{timeout_s: {self._timeout_s}, t: {t}}}"
             ) from exc
@@ -65,6 +67,16 @@ def _parse(line: bytes) -> tuple[Vec3, Quat, float] | None:
         raise ValueError(f"[render_link:parse] Malformed request — {{line: {line[:80]!r}}}") from exc
 
 
+def _checked_frame(image: NDArray[np.uint8]) -> NDArray[np.uint8]:
+    if not isinstance(image, np.ndarray) or image.ndim != 2 or image.dtype != np.uint8:
+        raise ValueError(
+            f"[render_link:serve] Render callback must return a 2-D uint8 array — "
+            f"{{got: {type(image).__name__}, dtype: {getattr(image, 'dtype', None)}, "
+            f"ndim: {getattr(image, 'ndim', None)}}}"
+        )
+    return image
+
+
 def serve(
     render_fn: Callable[[Vec3, Quat, float], NDArray[np.uint8]], port: int, ready_file: Path
 ) -> None:
@@ -75,15 +87,17 @@ def serve(
         ready_file.write_text(str(listener.getsockname()[1]))
         while True:
             conn, _ = listener.accept()
-            with conn, conn.makefile("rb") as lines:
-                for line in lines:
-                    try:
+            try:
+                with conn, conn.makefile("rb") as lines:
+                    for line in lines:
                         request = _parse(line)
-                    except ValueError:
-                        break  # drop this client, keep serving
-                    if request is None:
-                        return
-                    image = render_fn(*request)
-                    height, width = image.shape
-                    conn.sendall(_HEADER.pack(width, height, frame_id) + image.tobytes())
-                    frame_id += 1
+                        if request is None:
+                            return
+                        image = _checked_frame(render_fn(*request))
+                        height, width = image.shape
+                        conn.sendall(_HEADER.pack(width, height, frame_id) + image.tobytes())
+                        frame_id += 1
+            except ValueError as exc:
+                print(exc, file=sys.stderr)  # drop this client, keep serving
+            except OSError:
+                pass  # client went away

@@ -8,10 +8,18 @@
   "detect_scale": 0.4,
   "provenance": {
     "rate_hz": "measured",
-    "exposure_to_readout_s": "measured",
+    "exposure_to_readout_s": "estimate",
     "detect_s": "measured",
-    "detect_jitter_s": "measured",
-    "link_s": "measured",
-    "detect_scale": "measured"
+    "detect_jitter_s": "estimate",
+    "link_s": "estimate",
+    "detect_scale": "estimate"
+  },
+  "sources": {
+    "rate_hz": "backend/tools/sim/hover/IDENT.md:76 (10 Hz, measured with the C920)",
+    "detect_s": "IDENT.md:80 (52 ms, 49-56)",
+    "exposure_to_readout_s": "IDENT.md:83 (60 ms +-15, fitted, not measured directly)",
+    "detect_jitter_s": "IDENT.md:81 (4-5 ms, whole capture-to-arrival chain)",
+    "link_s": "IDENT.md:80-81 (57 ms arrival minus 52 ms detect)",
+    "detect_scale": "backend/companion/cam_stream.py:61 (script default)"
   }
 }

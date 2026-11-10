@@ -38,6 +38,7 @@ import numpy as np
 
 from h264 import WifiH264
 from imu_pose import ImuPose, wrap
+from lid_pose import Mount, imu_fix as _imu_fix, lid_pose as _lid_pose
 from lid_tags import LidFinder, camera_matrix
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -131,38 +132,12 @@ NAME = camera_name(a.dev)
 HFOV = a.hfov if a.hfov else (48.8 if "C270" in NAME.upper() else 70.4 if "C920" in NAME.upper() else 70.0)
 
 
-def lid_pose(r):
-    """Camera and drone pose in the lid frame from one LidFinder result.
+MOUNT = Mount(a.mount_fwd, a.mount_right, a.mount_down, a.mount_rot)
 
-    Lid frame: origin at the sticker centre, +x along the long side (sticker
-    right), +y along the short side (sticker top), +z up out of the lid.
-    Camera frame: x image right, y image down, z out of the lens.
-    """
-    R = np.array(r["R"]); t = np.array(r["xyz_m"])
-    Rt = R.T                                  # camera frame -> lid frame
-    cam = -Rt @ t                             # camera position in the lid frame
-    # Drone body axes in the camera frame (camera looks down, image top = nose),
-    # then turned by the mount rotation about the down axis.
-    c, s = math.cos(math.radians(a.mount_rot)), math.sin(math.radians(a.mount_rot))
-    fwd_c = np.array([s, -c, 0.0])
-    right_c = np.array([c, s, 0.0])
-    down_c = np.array([0.0, 0.0, 1.0])
-    to_centre_c = -(a.mount_fwd * fwd_c + a.mount_right * right_c + a.mount_down * down_c)
-    centre = cam + Rt @ to_centre_c
-    fwd_l = Rt @ fwd_c
-    yaw = math.degrees(math.atan2(fwd_l[1], fwd_l[0]))   # nose direction from lid +x, CCW
-    down_l = Rt @ down_c
-    tilt = math.degrees(math.acos(max(-1.0, min(1.0, -down_l[2]))))
-    tag_tilt = tilt
-    if r.get("tag_R") is not None:                # the tags' own tilt, for comparison (imu_fix)
-        tag_tilt = math.degrees(math.acos(max(-1.0, min(1.0, -(np.array(r["tag_R"]).T @ down_c)[2]))))
-    return {"box": r["box"], "tags": r["tags"], "px_per_cell": round(r["px_per_cell"], 1),
-            "pose": r.get("pose", "tags"), "tag_tilt_deg": round(tag_tilt, 1),
-            "camera_m": [round(v, 4) for v in cam], "drone_m": [round(v, 4) for v in centre],
-            "yaw_deg": round(yaw, 1), "tilt_deg": round(tilt, 1),
-            "range_m": round(r["range_m"], 3), "outlines": r["outlines"],
-            "rvec": [round(float(v), 5) for v in cv2.Rodrigues(R)[0].ravel()],   # lid -> camera rotation
-            "tvec": [round(float(v), 4) for v in t]}                            # lid origin in the camera frame, m
+
+def lid_pose(r):
+    """Camera and drone pose in the lid frame from one LidFinder result (lid_pose.py)."""
+    return _lid_pose(r, MOUNT)
 
 
 def watchdog():
@@ -180,7 +155,6 @@ att_buf = collections.deque(maxlen=200)   # FC ATTITUDE: (Pi receive time, roll,
 imu = ImuPose(a.mount_rot)
 imu_lock = threading.Lock()
 imu_last = {}                             # box -> attitude of its last zero frame (stillness check)
-STILL_RAD = math.radians(0.3)             # attitude change between zero frames above this: not still
 
 
 def att_at(t):
@@ -194,25 +168,10 @@ def att_at(t):
 
 
 def imu_fix(r, t_cap, K):
-    """While still and disarmed: add the frame to the zero. Then (armed or not): the rotation
-    from the IMU tilt and the tag heading, the position from the corners (imu_pose.py).
-    Without a zero or an attitude: the tag-only pose, marked so."""
+    """The IMU pose of one LidFinder result (lid_pose.py), with the stillness state and lock kept here."""
     att = att_at(t_cap - a.imu_lag)
-    r = dict(r, pose="tags", tag_tilt=None)
-    if att is None:
-        return r
     with imu_lock:
-        if not fc["armed"] and time.time() - fc["t"] < 3.0:
-            prev = imu_last.get(r["box"])
-            if prev is not None and max(abs(att[0] - prev[0]), abs(att[1] - prev[1]), abs(wrap(att[2] - prev[2]))) > STILL_RAD:
-                imu.still[r["box"]].clear()                # moved: start the zero again
-            imu_last[r["box"]] = att
-            imu.zero(r["box"], r["R"], att)
-        res = imu.pose(r["box"], r["R"], att, r["obj"], r["img"], K)
-    if res is None:
-        return r
-    R, t = res
-    return dict(r, R=R.tolist(), xyz_m=t.tolist(), pose="imu", tag_R=r["R"])
+        return _imu_fix(r, att, K, imu, MOUNT, zero=not fc["armed"] and time.time() - fc["t"] < 3.0, last=imu_last)
 
 
 DETECT_WORKERS = 2     # each worker takes the newest frame no worker has taken yet (alternate frames)

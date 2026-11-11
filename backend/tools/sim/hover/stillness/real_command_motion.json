@@ -1,0 +1,12 @@
+{
+  "roll": {
+    "actual_ptp_deg": 1.4401522874832153,
+    "commanded_ptp_deg": 1.2490582466125488,
+    "tracking_error_rms_deg": 0.18166932354927948
+  },
+  "pitch": {
+    "actual_ptp_deg": 1.23964124917984,
+    "commanded_ptp_deg": 0.9167385697364807,
+    "tracking_error_rms_deg": 0.180929487244883
+  }
+}

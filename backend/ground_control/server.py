@@ -307,6 +307,7 @@ class Link:
         elif t == "TUNNEL" and msg.payload_type == ZERO_PAYLOAD_TYPE and msg.target_system == 254:
             s["vision_zero"] = (msg.payload[0], time.time())   # the Pi: its next camera pose resets the FC (counter)
         elif t == "GPS_GLOBAL_ORIGIN":    # the FC has an EKF origin (hop.py asks before a hover)
+            s["origin"] = (msg.latitude, msg.longitude, msg.altitude)
             s["origin_t"] = time.time()
         elif t == "HOME_POSITION":
             s["home_lat"], s["home_lon"] = msg.latitude / 1e7, msg.longitude / 1e7
@@ -933,6 +934,12 @@ def build_app(link, pilot, auto, air, ceil):
                     loop.run_in_executor(None, pilot.hop.press, d.get("height"))
                 elif kind == "hop_test":    # Run test: timed hover that lands itself (hop.py press with duration)
                     loop.run_in_executor(None, pilot.hop.press, d.get("height"), d.get("duration"))
+                elif kind == "hover_start":
+                    loop.run_in_executor(None, pilot.hop.press, d.get("height"), None, True)
+                elif kind == "hover_move":
+                    pilot.hop.move(d.get("axis"), d.get("direction"))
+                elif kind == "hover_land":
+                    pilot.hop.land()
                 elif kind == "hop_stop":    # Stop button: motors off now
                     pilot.hop.release("Stop button")
                 elif kind == "input":

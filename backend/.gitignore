@@ -18,3 +18,6 @@ logs/track/
 
 # The repo root ignores build/ (for Xcode); the three.js vendor copy needs its build/ folder
 !ground_control/static/vendor/three/build/
+
+# Local Pi archive; large recordings are not source code.
+logs/pi/

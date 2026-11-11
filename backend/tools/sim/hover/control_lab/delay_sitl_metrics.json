@@ -1,0 +1,171 @@
+[
+  {
+    "name": "lqg_delay_reference",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": false,
+    "hold_s": 28.04327404257569,
+    "position_ptp_mm": [
+      12.271093715973532,
+      11.48456902983588,
+      13.55091423438165
+    ],
+    "angle_ptp_deg": [
+      1.5422870881155282,
+      1.5981482266547504,
+      1.4993475082340484
+    ],
+    "score": {
+      "settle10_s": 0.2987807938898719,
+      "roll_ptp_deg": 1.5422870881155282,
+      "pitch_ptp_deg": 1.5981482266547504,
+      "tilt_1_3_rms_deg": 0.2380276779736165,
+      "tilt_hp_rms_deg": 0.24539641756515848,
+      "tilt_hp_p99_deg": 0.4967780839786201,
+      "hold_s": 28.04327404257569,
+      "xy_rms_mm": 4.112224119894052,
+      "xy_max_mm": 7.233470804884597,
+      "xy_p95_mm": 6.552970062916208,
+      "x_mean_mm": 0.907750943341445,
+      "y_mean_mm": -1.9389989984795792,
+      "z_rms_mm": 4.204619986630819,
+      "z_max_mm": 8.247009321271953,
+      "tilt_rms_deg": 0.2769769465259792,
+      "rate_hp_rms_dps": 3.096743136233744,
+      "tilt_peak_hz": 0.14264063475095437,
+      "xy_peak_hz": 0.24962111081417016
+    },
+    "meets_target": false
+  },
+  {
+    "name": "lqg_delay_bank0",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 28.03762453009182,
+    "position_ptp_mm": [
+      16.405524038748627,
+      14.617342695102131,
+      13.740413170528875
+    ],
+    "angle_ptp_deg": [
+      1.7556393846606526,
+      1.6008660581913952,
+      0.4424070656945315
+    ],
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.7556393846606526,
+      "pitch_ptp_deg": 1.6008660581913952,
+      "tilt_1_3_rms_deg": 0.17842782103170646,
+      "tilt_hp_rms_deg": 0.18606921092815726,
+      "tilt_hp_p99_deg": 0.3757778974614272,
+      "hold_s": 28.03762453009182,
+      "xy_rms_mm": 4.540568523045697,
+      "xy_max_mm": 8.909772442207256,
+      "xy_p95_mm": 7.834982378205796,
+      "x_mean_mm": 0.5491817051436579,
+      "y_mean_mm": -1.681254337495814,
+      "z_rms_mm": 3.707124871417713,
+      "z_max_mm": 7.335541292910391,
+      "tilt_rms_deg": 0.30534426260660374,
+      "rate_hp_rms_dps": 2.5585767911581274,
+      "tilt_peak_hz": 0.9273294694613874,
+      "xy_peak_hz": 0.24966562639345044
+    },
+    "custom_samples": 280,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.035602718591690063,
+      0.030997823923826218,
+      0.056279052048921585
+    ],
+    "meets_target": false
+  },
+  {
+    "name": "lqg_delay_bank1",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 28.010828326228577,
+    "position_ptp_mm": [
+      13.804141119343084,
+      11.747260789188177,
+      13.63209553428496
+    ],
+    "angle_ptp_deg": [
+      1.4994567055773358,
+      1.2987808364754345,
+      0.2902856067183717
+    ],
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.4994567055773358,
+      "pitch_ptp_deg": 1.2987808364754345,
+      "tilt_1_3_rms_deg": 0.1422488333992336,
+      "tilt_hp_rms_deg": 0.1500463129463996,
+      "tilt_hp_p99_deg": 0.32314079305986293,
+      "hold_s": 28.010828326228577,
+      "xy_rms_mm": 4.622273748897327,
+      "xy_max_mm": 8.490050117827408,
+      "xy_p95_mm": 7.602255565648474,
+      "x_mean_mm": 1.1874091777544087,
+      "y_mean_mm": -2.4162660180477458,
+      "z_rms_mm": 4.582901736308757,
+      "z_max_mm": 8.940942842426608,
+      "tilt_rms_deg": 0.2575714918010766,
+      "rate_hp_rms_dps": 2.2813223478579574,
+      "tilt_peak_hz": 0.14279339580557388,
+      "xy_peak_hz": 0.2498884426597543
+    },
+    "custom_samples": 280,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.06229032948613167,
+      0.053057797253131866,
+      0.06486152857542038
+    ],
+    "meets_target": false
+  },
+  {
+    "name": "lqg_delay_bank2",
+    "status": "ok (force disarm after the descent)",
+    "custom_control": true,
+    "hold_s": 28.051510690176606,
+    "position_ptp_mm": [
+      12.65088961083028,
+      11.963341158987056,
+      16.08295953424094
+    ],
+    "angle_ptp_deg": [
+      1.3523396865446111,
+      1.190809136443158,
+      0.208276492292344
+    ],
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.3523396865446111,
+      "pitch_ptp_deg": 1.190809136443158,
+      "tilt_1_3_rms_deg": 0.12470624130458116,
+      "tilt_hp_rms_deg": 0.1312171702820748,
+      "tilt_hp_p99_deg": 0.28710388541101833,
+      "hold_s": 28.051510690176606,
+      "xy_rms_mm": 4.673464261348219,
+      "xy_max_mm": 8.845298675893613,
+      "xy_p95_mm": 7.794048537715047,
+      "x_mean_mm": 1.3242332158339678,
+      "y_mean_mm": -2.5829726819031014,
+      "z_rms_mm": 4.164388970496266,
+      "z_max_mm": 8.295595713383868,
+      "tilt_rms_deg": 0.2417589996636604,
+      "rate_hp_rms_dps": 2.2145679962552816,
+      "tilt_peak_hz": 0.14260249554380172,
+      "xy_peak_hz": 0.24955436720165303
+    },
+    "custom_samples": 280,
+    "custom_activity_confirmed": true,
+    "custom_max_output": [
+      0.09278912097215652,
+      0.0816141664981842,
+      0.07370389252901077
+    ],
+    "meets_target": false
+  }
+]

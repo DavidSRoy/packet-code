@@ -1,0 +1,14 @@
+12 runs in 100 s
+run                         status        xy_rms_mm    xy_p95_mm    xy_max_mm    x_mean_mm    y_mean_mm     z_rms_mm     z_max_mm tilt_rms_deg tilt_hp_rms_ tilt_hp_p99_ rate_hp_rms_ tilt_peak_hz   settle10_s
+lqg_outer_damped_slow_b1    ok (force          7.54        12.20        13.99         1.04        -5.37         4.08        11.25         0.22         0.17         0.37         2.35         0.14        18.52
+lqg_outer_damped_slow_b2    takeoff a           nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan
+lqg_outer_damped_mid_b1     ok (force          3.31         5.54         7.06        -0.85        -1.25         4.05        11.65         0.31         0.35         0.72         3.67         1.32         0.00
+lqg_outer_damped_mid_b2     ok (force          3.99         6.76         9.16         1.30        -2.75         4.12        12.10         0.26         0.26         0.55         3.15         0.14         0.00
+lqg_outer_damped_fast_b1    disarmed            nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan
+lqg_outer_damped_fast_b2    disarmed            nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan
+lqg_outer_stiff_b1          disarmed            nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan
+lqg_outer_stiff_b2          disarmed            nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan
+lqg_outer_integral_light_b1 ok (force          5.28         8.52        10.71         0.61        -3.05         4.11         7.80         0.23         0.13         0.28         2.15         0.14        16.50
+lqg_outer_integral_light_b2 ok (force          5.30         8.47        11.29        -0.15        -3.07         3.78         7.35         0.22         0.11         0.24         2.11         0.18        16.51
+lqg_outer_integral_mid_b1   ok (force          4.01         6.18         7.78         0.79        -2.53         4.09        10.08         0.28         0.27         0.56         2.90         1.32         0.00
+lqg_outer_integral_mid_b2   takeoff a           nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan          nan

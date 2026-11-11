@@ -17,6 +17,15 @@ All commands below run from this folder. Only one program can use the telemetry 
 .venv/bin/python ground_control/server.py
 ```
 
+The box-camera hover panel holds until Land, with 1 cm X/Y/Z target adjustments.
+X/Y targets are limited to 5 cm per axis; +Z is up. Emergency stop cuts motors.
+A fresh indoor boot restores and confirms the EKF reference from
+`ground_control/hover_origin.json` when the FC has no origin or GPS position.
+This saved box-test reference is not a current GPS fix; update it when moving the
+test site. Existing FC origins are preserved. The camera still supplies local
+position. Camera loss for 0.5 s requests FC LAND. Invalid frames do not renew the
+deadline. Link-loss, height, tilt, drift, and emergency motor-cut guards remain active.
+
 Open http://localhost:8650. QGroundControl can stay open: the server forwards all MAVLink to UDP 14550, and QGC connects to it by itself.
 
 | Key / button | Action |

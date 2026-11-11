@@ -1,0 +1,12 @@
+[Unit]
+Description=Packet resumable onboard log archive (pauses while armed)
+After=packet-tunnel.service
+
+[Service]
+Type=oneshot
+User=packet
+WorkingDirectory=/home/packet/companion
+ExecStart=/home/packet/companion/.venv/bin/python -u ftp_download.py --latest 5
+Nice=15
+IOSchedulingClass=idle
+TimeoutStartSec=infinity

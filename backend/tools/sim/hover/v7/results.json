@@ -1,0 +1,3926 @@
+[
+  {
+    "name": "v7_e2e_weak",
+    "height": 0.1,
+    "hold": 20.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "final_status": {
+      "state": "done",
+      "height": 0.1,
+      "reason": "test run done: landed, motors off"
+    },
+    "score": {
+      "settle10_s": 2.719658719328695,
+      "roll_ptp_deg": 2.1635300930776453,
+      "pitch_ptp_deg": 2.8006182619031375,
+      "tilt_1_3_rms_deg": 0.44517776930281416,
+      "tilt_hp_rms_deg": 0.4492919303527294,
+      "tilt_hp_p99_deg": 1.0191191746682489,
+      "hold_s": 18.018225990899516,
+      "xy_rms_mm": 4.426909970088324,
+      "xy_max_mm": 8.698508718592358,
+      "xy_p95_mm": 7.257986970657919,
+      "x_mean_mm": 0.8548293909031921,
+      "y_mean_mm": -0.40108356863770656,
+      "z_rms_mm": 19.30141897655883,
+      "z_max_mm": 31.177998602961193,
+      "tilt_rms_deg": 0.4052275457269803,
+      "rate_hp_rms_dps": 4.780703830799304,
+      "tilt_peak_hz": 1.6650478701277804,
+      "xy_peak_hz": 0.3330095740255561
+    },
+    "events_rel_s": {
+      "press": 0.0,
+      "armed": 5.97,
+      "handover": 11.16,
+      "at height": 13.21,
+      "descend": 33.23,
+      "disarmed": 36.97
+    }
+  },
+  {
+    "name": "v7cal_k1.0_d0.025",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.2022007,0.24194888,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.025",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 1.7450469917779827,
+      "roll_ptp_deg": 2.4152988820049472,
+      "pitch_ptp_deg": 3.1524701088170293,
+      "tilt_1_3_rms_deg": 0.5810030285105475,
+      "tilt_hp_rms_deg": 0.5830098568439378,
+      "tilt_hp_p99_deg": 1.2536700689955316,
+      "hold_s": 28.02000847232545,
+      "xy_rms_mm": 4.623961419435191,
+      "xy_max_mm": 9.014584604271047,
+      "xy_p95_mm": 7.741405868384299,
+      "x_mean_mm": 0.14550658973810146,
+      "y_mean_mm": -1.7130488625425102,
+      "z_rms_mm": 3.6746137034740816,
+      "z_max_mm": 7.859165517957484,
+      "tilt_rms_deg": 0.4802284930305408,
+      "rate_hp_rms_dps": 5.526838665788478,
+      "tilt_peak_hz": 1.3204853675957762,
+      "xy_peak_hz": 0.3925767309068524
+    }
+  },
+  {
+    "name": "v7cal_k1.0_d0.03",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.2022007,0.24194888,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 1.696502542078882,
+      "roll_ptp_deg": 2.5064638921160265,
+      "pitch_ptp_deg": 3.381243415155982,
+      "tilt_1_3_rms_deg": 0.6568045093926601,
+      "tilt_hp_rms_deg": 0.6586987290175961,
+      "tilt_hp_p99_deg": 1.4009342347213947,
+      "hold_s": 28.01472248344072,
+      "xy_rms_mm": 4.662339378281909,
+      "xy_max_mm": 9.036326087593997,
+      "xy_p95_mm": 7.9167845100910474,
+      "x_mean_mm": 0.19021293935136344,
+      "y_mean_mm": -1.7129561494384618,
+      "z_rms_mm": 3.5679533755350916,
+      "z_max_mm": 7.971193238048651,
+      "tilt_rms_deg": 0.5274155536124592,
+      "rate_hp_rms_dps": 6.368166122541322,
+      "tilt_peak_hz": 1.2851405622501648,
+      "xy_peak_hz": 0.39268183846532817
+    }
+  },
+  {
+    "name": "v7cal_k1.0_d0.035",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.2022007,0.24194888,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.035",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 1.7079857161799339,
+      "roll_ptp_deg": 2.6134853907174005,
+      "pitch_ptp_deg": 4.025912276244435,
+      "tilt_1_3_rms_deg": 0.834104130776642,
+      "tilt_hp_rms_deg": 0.835943621645249,
+      "tilt_hp_p99_deg": 1.6539639670788244,
+      "hold_s": 28.016809606191842,
+      "xy_rms_mm": 4.766151424709426,
+      "xy_max_mm": 9.64304988587299,
+      "xy_p95_mm": 7.81571824719903,
+      "x_mean_mm": 0.2222450170083314,
+      "y_mean_mm": -1.7069005366884562,
+      "z_rms_mm": 3.5783953442304597,
+      "z_max_mm": 8.009888194410092,
+      "tilt_rms_deg": 0.6412826565998666,
+      "rate_hp_rms_dps": 8.190544848386986,
+      "tilt_peak_hz": 1.5347550638008067,
+      "xy_peak_hz": 0.39261176050718316
+    }
+  },
+  {
+    "name": "v7cal_k1.25_d0.025",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.193559104,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.025",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.7672605662896115,
+      "pitch_ptp_deg": 2.328167019515313,
+      "tilt_1_3_rms_deg": 0.3455690788512442,
+      "tilt_hp_rms_deg": 0.34947426076652466,
+      "tilt_hp_p99_deg": 0.7733808538858886,
+      "hold_s": 28.010689307044032,
+      "xy_rms_mm": 4.284054478062314,
+      "xy_max_mm": 8.518494695609126,
+      "xy_p95_mm": 6.82826201700459,
+      "x_mean_mm": 0.08928722869512416,
+      "y_mean_mm": -1.749082825584719,
+      "z_rms_mm": 3.8541481614826507,
+      "z_max_mm": 10.061943156290248,
+      "tilt_rms_deg": 0.3377482681428475,
+      "rate_hp_rms_dps": 3.698713789305078,
+      "tilt_peak_hz": 1.1424491253134275,
+      "xy_peak_hz": 0.28561228132835687
+    }
+  },
+  {
+    "name": "v7cal_k1.25_d0.03",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.193559104,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 1.6691043652740056,
+      "roll_ptp_deg": 1.7639112931550853,
+      "pitch_ptp_deg": 2.48408393381196,
+      "tilt_1_3_rms_deg": 0.3741145773252342,
+      "tilt_hp_rms_deg": 0.3779110084020806,
+      "tilt_hp_p99_deg": 0.8596426363696775,
+      "hold_s": 28.024287904046048,
+      "xy_rms_mm": 4.16823826920679,
+      "xy_max_mm": 8.51133076141667,
+      "xy_p95_mm": 6.571417719329773,
+      "x_mean_mm": 0.12940581888190889,
+      "y_mean_mm": -1.736454260374931,
+      "z_rms_mm": 3.4149696600420882,
+      "z_max_mm": 8.402671275074963,
+      "tilt_rms_deg": 0.35034190564666456,
+      "rate_hp_rms_dps": 4.045362086025293,
+      "tilt_peak_hz": 1.1418376449608958,
+      "xy_peak_hz": 0.28545941124022395
+    }
+  },
+  {
+    "name": "v7cal_k1.25_d0.035",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.193559104,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.035",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 1.7075530358776092,
+      "roll_ptp_deg": 1.8066955450562676,
+      "pitch_ptp_deg": 2.6971834050400236,
+      "tilt_1_3_rms_deg": 0.40408654861434096,
+      "tilt_hp_rms_deg": 0.40867399503664353,
+      "tilt_hp_p99_deg": 0.9597830087905461,
+      "hold_s": 28.017905536652236,
+      "xy_rms_mm": 4.596889662521024,
+      "xy_max_mm": 8.195383447274294,
+      "xy_p95_mm": 7.281475418278827,
+      "x_mean_mm": 0.7115228799425486,
+      "y_mean_mm": -2.4188097573516254,
+      "z_rms_mm": 3.597559514140835,
+      "z_max_mm": 7.892720314300799,
+      "tilt_rms_deg": 0.3674928010363911,
+      "rate_hp_rms_dps": 4.463851846737134,
+      "tilt_peak_hz": 1.6775229767125097,
+      "xy_peak_hz": 0.24984384759548017
+    }
+  },
+  {
+    "name": "v7cal_k1.5_d0.025",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.13480046666666667,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.025",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 1.6274845568604697,
+      "roll_ptp_deg": 1.535188419560531,
+      "pitch_ptp_deg": 1.7768633908157134,
+      "tilt_1_3_rms_deg": 0.25626787702773224,
+      "tilt_hp_rms_deg": 0.2610073319171129,
+      "tilt_hp_p99_deg": 0.5523730940833348,
+      "hold_s": 28.040979620700227,
+      "xy_rms_mm": 4.368321308936047,
+      "xy_max_mm": 8.008834924883741,
+      "xy_p95_mm": 6.867725623103135,
+      "x_mean_mm": 0.6867154860764005,
+      "y_mean_mm": -2.3547475533983113,
+      "z_rms_mm": 3.469269295125932,
+      "z_max_mm": 7.814952882421372,
+      "tilt_rms_deg": 0.28639555642370135,
+      "rate_hp_rms_dps": 2.9997650941345038,
+      "tilt_peak_hz": 1.1412268188312804,
+      "xy_peak_hz": 0.24964336661934258
+    }
+  },
+  {
+    "name": "v7cal_k1.5_d0.03",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.13480046666666667,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.5273371419067523,
+      "pitch_ptp_deg": 1.8234905870900209,
+      "tilt_1_3_rms_deg": 0.2620362974942972,
+      "tilt_hp_rms_deg": 0.2690624319692904,
+      "tilt_hp_p99_deg": 0.5604417329347771,
+      "hold_s": 28.01238281815364,
+      "xy_rms_mm": 4.424891186287428,
+      "xy_max_mm": 8.037696252045063,
+      "xy_p95_mm": 6.860124229747353,
+      "x_mean_mm": 0.6174739504344211,
+      "y_mean_mm": -2.3801923361217896,
+      "z_rms_mm": 3.9118006666377405,
+      "z_max_mm": 10.207555748323077,
+      "tilt_rms_deg": 0.2902334933771886,
+      "rate_hp_rms_dps": 3.220602214015183,
+      "tilt_peak_hz": 1.142347166444591,
+      "xy_peak_hz": 0.2498884426597543
+    }
+  },
+  {
+    "name": "v7cal_k1.5_d0.035",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.13480046666666667,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.035",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.538608639567704,
+      "pitch_ptp_deg": 1.9134718780302575,
+      "tilt_1_3_rms_deg": 0.27460912280896477,
+      "tilt_hp_rms_deg": 0.284200580911125,
+      "tilt_hp_p99_deg": 0.6011108547751374,
+      "hold_s": 28.011680869548897,
+      "xy_rms_mm": 4.37074614314039,
+      "xy_max_mm": 8.205267535319695,
+      "xy_p95_mm": 6.822618320974883,
+      "x_mean_mm": 0.570143413554591,
+      "y_mean_mm": -2.362348251274243,
+      "z_rms_mm": 4.03310566510216,
+      "z_max_mm": 9.025765322227569,
+      "tilt_rms_deg": 0.2952944781039376,
+      "rate_hp_rms_dps": 3.5245149091751333,
+      "tilt_peak_hz": 1.142347166444591,
+      "xy_peak_hz": 0.2498884426597543
+    }
+  },
+  {
+    "name": "v7e2e_camera_loss",
+    "height": 0.1,
+    "hold": 20.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004",
+      "camera.blackout={\"t\":15,\"dur\":2}"
+    ],
+    "final_status": {
+      "state": "done",
+      "height": 0.1,
+      "reason": "camera-loss landing ended; FC disarmed"
+    },
+    "score": {
+      "settle10_s": 4.113624551966968,
+      "roll_ptp_deg": 1.9461370891940986,
+      "pitch_ptp_deg": 1.6202297192950947,
+      "tilt_1_3_rms_deg": 0.3109885617975174,
+      "tilt_hp_rms_deg": 0.316626589796453,
+      "tilt_hp_p99_deg": 0.7355527865079119,
+      "hold_s": 13.888809517459734,
+      "xy_rms_mm": 4.519454336667784,
+      "xy_max_mm": 13.550221879353682,
+      "xy_p95_mm": 7.005136069699257,
+      "x_mean_mm": 1.39279505520644,
+      "y_mean_mm": -0.4606030518560452,
+      "z_rms_mm": 24.61791262288012,
+      "z_max_mm": 37.235106313600355,
+      "tilt_rms_deg": 0.3214184098936312,
+      "rate_hp_rms_dps": 3.5371512036168027,
+      "tilt_peak_hz": 1.7281728172833,
+      "xy_peak_hz": 0.6480648064812375
+    },
+    "events_rel_s": {
+      "press": 0.0,
+      "armed": 6.16,
+      "handover": 12.35,
+      "at height": 14.3,
+      "descend": 30.19,
+      "disarmed": 33.24
+    }
+  },
+  {
+    "name": "v7e2e_final_camera_loss",
+    "height": 0.1,
+    "hold": 20.0,
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004",
+      "camera.blackout={\"t\":15,\"dur\":2}"
+    ],
+    "final_status": {
+      "state": "done",
+      "height": 0.1,
+      "reason": "camera-loss landing ended; FC disarmed"
+    },
+    "score": {
+      "settle10_s": 2.6710182029902327,
+      "roll_ptp_deg": 1.581008874187264,
+      "pitch_ptp_deg": 1.2822551444622023,
+      "tilt_1_3_rms_deg": 0.24494898086760186,
+      "tilt_hp_rms_deg": 0.25306305315164096,
+      "tilt_hp_p99_deg": 0.5657022666058953,
+      "hold_s": 13.846582543168601,
+      "xy_rms_mm": 4.05892455983184,
+      "xy_max_mm": 7.187547403065967,
+      "xy_p95_mm": 6.17173485521907,
+      "x_mean_mm": 1.45706376340902,
+      "y_mean_mm": -0.7725040516449316,
+      "z_rms_mm": 25.15813971587716,
+      "z_max_mm": 39.679372361581336,
+      "tilt_rms_deg": 0.2736615507063805,
+      "rate_hp_rms_dps": 3.1755262199535768,
+      "tilt_peak_hz": 0.722152012999393,
+      "xy_peak_hz": 0.3610760064996965
+    },
+    "events_rel_s": {
+      "press": 0.0,
+      "armed": 6.11,
+      "handover": 11.41,
+      "at height": 13.39,
+      "descend": 29.23,
+      "disarmed": 32.15
+    }
+  },
+  {
+    "name": "v7e2e_final_nominal",
+    "height": 0.1,
+    "hold": 20.0,
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "final_status": {
+      "state": "done",
+      "height": 0.1,
+      "reason": "test run done: landed, motors off"
+    },
+    "score": {
+      "settle10_s": 2.545511971016065,
+      "roll_ptp_deg": 1.5727925929465347,
+      "pitch_ptp_deg": 1.507507777209404,
+      "tilt_1_3_rms_deg": 0.23574632563586354,
+      "tilt_hp_rms_deg": 0.2447825535183163,
+      "tilt_hp_p99_deg": 0.5045689466100596,
+      "hold_s": 17.998615781820376,
+      "xy_rms_mm": 3.8189103348702607,
+      "xy_max_mm": 7.276858302295157,
+      "xy_p95_mm": 5.9268521814202675,
+      "x_mean_mm": 0.7484247054551261,
+      "y_mean_mm": -0.49434042747524726,
+      "z_rms_mm": 25.009789139318492,
+      "z_max_mm": 40.265027277373605,
+      "tilt_rms_deg": 0.2736503147144002,
+      "rate_hp_rms_dps": 3.206033604878291,
+      "tilt_peak_hz": 0.6667592721217344,
+      "xy_peak_hz": 0.3333796360608672
+    },
+    "events_rel_s": {
+      "press": 0.0,
+      "armed": 6.13,
+      "handover": 11.34,
+      "at height": 13.31,
+      "descend": 33.31,
+      "disarmed": 37.14
+    }
+  },
+  {
+    "name": "v7e2e_nominal",
+    "height": 0.1,
+    "hold": 20.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "final_status": {
+      "state": "done",
+      "height": 0.1,
+      "reason": "test run done: landed, motors off"
+    },
+    "score": {
+      "settle10_s": 3.684220900310148,
+      "roll_ptp_deg": 1.980804345828409,
+      "pitch_ptp_deg": 1.884818624996825,
+      "tilt_1_3_rms_deg": 0.29547134503597405,
+      "tilt_hp_rms_deg": 0.29984816835071915,
+      "tilt_hp_p99_deg": 0.6243812508747477,
+      "hold_s": 18.02444909591432,
+      "xy_rms_mm": 4.1557132661518965,
+      "xy_max_mm": 7.5312805385165325,
+      "xy_p95_mm": 6.556429224843436,
+      "x_mean_mm": 1.055672901546942,
+      "y_mean_mm": -0.6774113581981938,
+      "z_rms_mm": 18.683433353026302,
+      "z_max_mm": 31.870564290253228,
+      "tilt_rms_deg": 0.31746125672701064,
+      "rate_hp_rms_dps": 3.493407848670399,
+      "tilt_peak_hz": 0.6657420249659314,
+      "xy_peak_hz": 0.3328710124829657
+    },
+    "events_rel_s": {
+      "press": 0.0,
+      "armed": 6.13,
+      "handover": 11.34,
+      "at height": 13.31,
+      "descend": 33.34,
+      "disarmed": 37.17
+    }
+  },
+  {
+    "name": "v7final_gust_v7",
+    "seed": 10,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004",
+      "gust={\"t\":15,\"dur\":1,\"accel\":[0.3,0,0]}"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 19.224489882167454,
+      "roll_ptp_deg": 1.8291205862735458,
+      "pitch_ptp_deg": 3.595681271978244,
+      "tilt_1_3_rms_deg": 0.2398526956969849,
+      "tilt_hp_rms_deg": 0.24690579962636797,
+      "tilt_hp_p99_deg": 0.7223895338938646,
+      "hold_s": 28.01212062944402,
+      "xy_rms_mm": 6.958192168554249,
+      "xy_max_mm": 20.523227415892325,
+      "xy_p95_mm": 13.927789805474939,
+      "x_mean_mm": -2.8206556463655077,
+      "y_mean_mm": -2.3437072106581898,
+      "z_rms_mm": 2.693779543000187,
+      "z_max_mm": 11.320002057365969,
+      "tilt_rms_deg": 0.39947067063104946,
+      "rate_hp_rms_dps": 3.2115589747274327,
+      "tilt_peak_hz": 0.14279339580557388,
+      "xy_peak_hz": 0.39268183846532817
+    }
+  },
+  {
+    "name": "v7final_latency_v7",
+    "seed": 8,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.15",
+      "camera.detect_jitter_s=0.02",
+      "camera.exposure_to_readout_s=0.075"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": null,
+      "roll_ptp_deg": 2.1026882386933856,
+      "pitch_ptp_deg": 1.7918911106550133,
+      "tilt_1_3_rms_deg": 0.2934900713014656,
+      "tilt_hp_rms_deg": 0.30039200782045494,
+      "tilt_hp_p99_deg": 0.6232394256558723,
+      "hold_s": 28.012004604440307,
+      "xy_rms_mm": 12.139480737624162,
+      "xy_max_mm": 26.228052774790097,
+      "xy_p95_mm": 22.848633572884438,
+      "x_mean_mm": 1.4118807109067237,
+      "y_mean_mm": -0.5714480504814419,
+      "z_rms_mm": 3.0692352200188524,
+      "z_max_mm": 7.788967994223378,
+      "tilt_rms_deg": 0.3379450992364554,
+      "rate_hp_rms_dps": 3.494056823779983,
+      "tilt_peak_hz": 0.3212851405625412,
+      "xy_peak_hz": 0.28558679161114775
+    }
+  },
+  {
+    "name": "v7final_low_v7",
+    "seed": 4,
+    "height": 0.02,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 23.996816202868846,
+      "roll_ptp_deg": 1.8004417933611863,
+      "pitch_ptp_deg": 1.5671576125656936,
+      "tilt_1_3_rms_deg": 0.23830760706687582,
+      "tilt_hp_rms_deg": 0.24756533696685473,
+      "tilt_hp_p99_deg": 0.5250515191506492,
+      "hold_s": 28.011312755751774,
+      "xy_rms_mm": 5.273416741715241,
+      "xy_max_mm": 12.533202480221888,
+      "xy_p95_mm": 9.216846963276264,
+      "x_mean_mm": 1.784859949799988,
+      "y_mean_mm": -1.672284664852978,
+      "z_rms_mm": 2.9263321023376516,
+      "z_max_mm": 8.6959397719867,
+      "tilt_rms_deg": 0.28978669061702805,
+      "rate_hp_rms_dps": 3.2388431749424225,
+      "tilt_peak_hz": 0.39268183846532817,
+      "xy_peak_hz": 0.35698348951393466
+    }
+  },
+  {
+    "name": "v7final_noise_v7",
+    "seed": 9,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004",
+      "camera.noise_xy_m=0.0015"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 30.45965473124748,
+      "roll_ptp_deg": 1.5204688716746881,
+      "pitch_ptp_deg": 1.5907908856001738,
+      "tilt_1_3_rms_deg": 0.25510429848586996,
+      "tilt_hp_rms_deg": 0.2632603965402477,
+      "tilt_hp_p99_deg": 0.5539059039821416,
+      "hold_s": 28.012315611180874,
+      "xy_rms_mm": 5.268603663741654,
+      "xy_max_mm": 13.122966589089659,
+      "xy_p95_mm": 9.19770154630351,
+      "x_mean_mm": -0.7180094988831632,
+      "y_mean_mm": -1.2895945019636643,
+      "z_rms_mm": 3.5414371546316676,
+      "z_max_mm": 7.495988652096691,
+      "tilt_rms_deg": 0.28672827724394406,
+      "rate_hp_rms_dps": 3.4251479471620647,
+      "tilt_peak_hz": 0.1070950468541804,
+      "xy_peak_hz": 0.39268183846532817
+    }
+  },
+  {
+    "name": "v7final_nom1_v7",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.5379091965079823,
+      "pitch_ptp_deg": 1.6108703304414873,
+      "tilt_1_3_rms_deg": 0.23759603579631694,
+      "tilt_hp_rms_deg": 0.2456530501685208,
+      "tilt_hp_p99_deg": 0.4948337771737227,
+      "hold_s": 28.013214980276572,
+      "xy_rms_mm": 4.035679973682314,
+      "xy_max_mm": 7.957548334200638,
+      "xy_p95_mm": 6.32294202261484,
+      "x_mean_mm": 0.11579610381559452,
+      "y_mean_mm": -1.9188113276809162,
+      "z_rms_mm": 3.5945416147833478,
+      "z_max_mm": 7.419249306296366,
+      "tilt_rms_deg": 0.27776619517911433,
+      "rate_hp_rms_dps": 3.1003821861395053,
+      "tilt_peak_hz": 0.17849174475696733,
+      "xy_peak_hz": 0.2498884426597543
+    }
+  },
+  {
+    "name": "v7final_nom2_v7",
+    "seed": 2,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.3024629114655495,
+      "pitch_ptp_deg": 1.5097799773099168,
+      "tilt_1_3_rms_deg": 0.2381604657359438,
+      "tilt_hp_rms_deg": 0.24674369768401128,
+      "tilt_hp_p99_deg": 0.5357149675295195,
+      "hold_s": 28.05266632615364,
+      "xy_rms_mm": 4.721833879450344,
+      "xy_max_mm": 9.744757017086505,
+      "xy_p95_mm": 8.42440382033595,
+      "x_mean_mm": 1.8891362344750835,
+      "y_mean_mm": -1.6101978035248594,
+      "z_rms_mm": 3.4142121241799224,
+      "z_max_mm": 8.567833824463882,
+      "tilt_rms_deg": 0.2577091979990716,
+      "rate_hp_rms_dps": 3.2000656759788093,
+      "tilt_peak_hz": 0.3921219142682472,
+      "xy_peak_hz": 0.3564744675165884
+    }
+  },
+  {
+    "name": "v7final_nom3_v7",
+    "seed": 3,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 8.82583725929912,
+      "roll_ptp_deg": 1.5858040056041571,
+      "pitch_ptp_deg": 1.4687309424611532,
+      "tilt_1_3_rms_deg": 0.22766559672718462,
+      "tilt_hp_rms_deg": 0.2343255644665311,
+      "tilt_hp_p99_deg": 0.48852255982168613,
+      "hold_s": 28.01086721846773,
+      "xy_rms_mm": 4.717172340003715,
+      "xy_max_mm": 10.624790877716583,
+      "xy_p95_mm": 7.379563264438078,
+      "x_mean_mm": 2.0002202306271135,
+      "y_mean_mm": -0.894443534391235,
+      "z_rms_mm": 3.566490683804062,
+      "z_max_mm": 9.783253946428012,
+      "tilt_rms_deg": 0.2639956903342694,
+      "rate_hp_rms_dps": 2.9927964546819754,
+      "tilt_peak_hz": 0.17850767583022303,
+      "xy_peak_hz": 0.28561228132835687
+    }
+  },
+  {
+    "name": "v7final_old_v7",
+    "seed": 5,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.1544,0.1628,0.103]",
+      "motor_tau=0.02",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": null,
+      "roll_ptp_deg": 1.664724101588673,
+      "pitch_ptp_deg": 1.9721275218718906,
+      "tilt_1_3_rms_deg": 0.2502025918190921,
+      "tilt_hp_rms_deg": 0.25990728582976197,
+      "tilt_hp_p99_deg": 0.5595271993804434,
+      "hold_s": 28.01176186427317,
+      "xy_rms_mm": 5.625135921813773,
+      "xy_max_mm": 12.782121092862903,
+      "xy_p95_mm": 8.744521114832967,
+      "x_mean_mm": 3.3044933610981855,
+      "y_mean_mm": -2.1547385478412404,
+      "z_rms_mm": 3.1047112749336616,
+      "z_max_mm": 6.976987634319948,
+      "tilt_rms_deg": 0.2833394137717785,
+      "rate_hp_rms_dps": 3.431495244695595,
+      "tilt_peak_hz": 0.28558679161114775,
+      "xy_peak_hz": 0.4640785363681151
+    }
+  },
+  {
+    "name": "v7final_slow_v7",
+    "seed": 11,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.025",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 2.167952210591623,
+      "pitch_ptp_deg": 1.8799272022016673,
+      "tilt_1_3_rms_deg": 0.3335541814859131,
+      "tilt_hp_rms_deg": 0.35533217306365233,
+      "tilt_hp_p99_deg": 0.7765009431676996,
+      "hold_s": 28.014698978564716,
+      "xy_rms_mm": 4.383088385468127,
+      "xy_max_mm": 9.967018024577998,
+      "xy_p95_mm": 8.282840895756415,
+      "x_mean_mm": 0.09462613850222666,
+      "y_mean_mm": -0.23828510187563579,
+      "z_rms_mm": 3.177932589402364,
+      "z_max_mm": 6.61149781257922,
+      "tilt_rms_deg": 0.3359928101543391,
+      "rate_hp_rms_dps": 5.261771578871284,
+      "tilt_peak_hz": 0.39264679635945043,
+      "xy_peak_hz": 0.5354274495810688
+    }
+  },
+  {
+    "name": "v7final_strong_v7",
+    "seed": 6,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.1235,0.1302,0.0824]",
+      "motor_tau=0.02",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 2.130593113169759,
+      "roll_ptp_deg": 1.2959661954467936,
+      "pitch_ptp_deg": 1.328994234994384,
+      "tilt_1_3_rms_deg": 0.16291950235483088,
+      "tilt_hp_rms_deg": 0.18543297549005008,
+      "tilt_hp_p99_deg": 0.41813644560232494,
+      "hold_s": 28.012644031577672,
+      "xy_rms_mm": 3.9791698210599242,
+      "xy_max_mm": 8.742219936691166,
+      "xy_p95_mm": 6.5747088229622355,
+      "x_mean_mm": 1.2110856092590607,
+      "y_mean_mm": -0.2258637695164144,
+      "z_rms_mm": 2.730641485169565,
+      "z_max_mm": 6.397232717826023,
+      "tilt_rms_deg": 0.24428157107475487,
+      "rate_hp_rms_dps": 3.3144078025434225,
+      "tilt_peak_hz": 0.3212851405625412,
+      "xy_peak_hz": 0.35698348951393466
+    }
+  },
+  {
+    "name": "v7final_weak_v7",
+    "seed": 7,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v7.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 31.17513069272055,
+      "roll_ptp_deg": 2.5888404994494008,
+      "pitch_ptp_deg": 3.192430505552628,
+      "tilt_1_3_rms_deg": 0.6020540756817214,
+      "tilt_hp_rms_deg": 0.6049112374618253,
+      "tilt_hp_p99_deg": 1.2957917853259475,
+      "hold_s": 28.04931548852103,
+      "xy_rms_mm": 4.996148408481725,
+      "xy_max_mm": 11.211911595459904,
+      "xy_p95_mm": 9.408894950465195,
+      "x_mean_mm": 0.49580181482691627,
+      "y_mean_mm": -1.0797570959595486,
+      "z_rms_mm": 2.63164405881514,
+      "z_max_mm": 7.554126079947348,
+      "tilt_rms_deg": 0.48526936511078983,
+      "rate_hp_rms_dps": 6.54817368624534,
+      "tilt_peak_hz": 1.568627450981819,
+      "xy_peak_hz": 0.3565062388595043
+    }
+  },
+  {
+    "name": "v7ref_nom1_p30",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.3",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.3",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=7.5",
+      "ATC_ANG_PIT_P=7.5"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.4510881100702735,
+      "pitch_ptp_deg": 1.468299914202202,
+      "tilt_1_3_rms_deg": 0.188591589496298,
+      "tilt_hp_rms_deg": 0.2017974502587309,
+      "tilt_hp_p99_deg": 0.4276045154843803,
+      "hold_s": 28.01337308793986,
+      "xy_rms_mm": 3.971217504028161,
+      "xy_max_mm": 7.605045686712359,
+      "xy_p95_mm": 6.347301803268595,
+      "x_mean_mm": 0.12264428505219567,
+      "y_mean_mm": -1.9687763800678924,
+      "z_rms_mm": 3.5824259199791246,
+      "z_max_mm": 7.681646296376049,
+      "tilt_rms_deg": 0.255727121416719,
+      "rate_hp_rms_dps": 3.133109252527771,
+      "tilt_peak_hz": 0.17849174475696733,
+      "xy_peak_hz": 0.2498884426597543
+    }
+  },
+  {
+    "name": "v7ref_nom1_pd75",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=7.5",
+      "ATC_ANG_PIT_P=7.5"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.542545341980706,
+      "pitch_ptp_deg": 1.549228875736688,
+      "tilt_1_3_rms_deg": 0.22015945399912148,
+      "tilt_hp_rms_deg": 0.22776461961654304,
+      "tilt_hp_p99_deg": 0.46573308925465756,
+      "hold_s": 28.011853139999303,
+      "xy_rms_mm": 4.016594517459287,
+      "xy_max_mm": 7.812724928823489,
+      "xy_p95_mm": 6.421925372718086,
+      "x_mean_mm": 0.02767210853438645,
+      "y_mean_mm": -1.954188181302182,
+      "z_rms_mm": 3.60058844705526,
+      "z_max_mm": 7.756560107432558,
+      "tilt_rms_deg": 0.269661243370498,
+      "rate_hp_rms_dps": 2.958884933184544,
+      "tilt_peak_hz": 0.17849174475696733,
+      "xy_peak_hz": 0.2498884426597543
+    }
+  },
+  {
+    "name": "v7ref_nom2_p30",
+    "seed": 2,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.3",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.3",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=7.5",
+      "ATC_ANG_PIT_P=7.5"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.2314760830180522,
+      "pitch_ptp_deg": 1.2786834791366761,
+      "tilt_1_3_rms_deg": 0.18677089455720572,
+      "tilt_hp_rms_deg": 0.2015323965221692,
+      "tilt_hp_p99_deg": 0.44407516637629174,
+      "hold_s": 28.017348716210606,
+      "xy_rms_mm": 4.557651998719919,
+      "xy_max_mm": 9.5100216241467,
+      "xy_p95_mm": 7.96791797323731,
+      "x_mean_mm": 1.8904151932723712,
+      "y_mean_mm": -1.5132657694675946,
+      "z_rms_mm": 3.3914826694119435,
+      "z_max_mm": 8.223737981401163,
+      "tilt_rms_deg": 0.2335526781390023,
+      "rate_hp_rms_dps": 3.2817928889461787,
+      "tilt_peak_hz": 0.39261176050718316,
+      "xy_peak_hz": 0.3569197822792574
+    }
+  },
+  {
+    "name": "v7ref_nom2_pd75",
+    "seed": 2,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=7.5",
+      "ATC_ANG_PIT_P=7.5"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.2388898745308958,
+      "pitch_ptp_deg": 1.4671485697951756,
+      "tilt_1_3_rms_deg": 0.2213862831910349,
+      "tilt_hp_rms_deg": 0.22964627238729746,
+      "tilt_hp_p99_deg": 0.5218552957136178,
+      "hold_s": 28.02238943893687,
+      "xy_rms_mm": 4.595392313949581,
+      "xy_max_mm": 9.512445773806649,
+      "xy_p95_mm": 8.174548324017797,
+      "x_mean_mm": 1.8061159235085136,
+      "y_mean_mm": -1.488128776327597,
+      "z_rms_mm": 3.412451297454045,
+      "z_max_mm": 8.319517127035242,
+      "tilt_rms_deg": 0.2500617997828191,
+      "rate_hp_rms_dps": 3.05393178863384,
+      "tilt_peak_hz": 0.3925417075567849,
+      "xy_peak_hz": 0.3568560977788954
+    }
+  },
+  {
+    "name": "v7ref_strong_p30",
+    "seed": 6,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.3",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.3",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=7.5",
+      "ATC_ANG_PIT_P=7.5"
+    ],
+    "set": [
+      "inertia=[0.1235,0.1302,0.0824]",
+      "motor_tau=0.02",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 27.799239076866826,
+      "roll_ptp_deg": 4.914613872106191,
+      "pitch_ptp_deg": 3.7612932496886735,
+      "tilt_1_3_rms_deg": 0.35469684126175804,
+      "tilt_hp_rms_deg": 1.367966353432178,
+      "tilt_hp_p99_deg": 2.080405153392258,
+      "hold_s": 28.034912144573354,
+      "xy_rms_mm": 4.9580141073096184,
+      "xy_max_mm": 10.364963569022242,
+      "xy_p95_mm": 8.381536211261263,
+      "x_mean_mm": 0.8264877322371729,
+      "y_mean_mm": -0.5025761821475913,
+      "z_rms_mm": 3.141792376100995,
+      "z_max_mm": 6.805079236013118,
+      "tilt_rms_deg": 0.9923322329889542,
+      "rate_hp_rms_dps": 49.50372260696677,
+      "tilt_peak_hz": 5.956839664710251,
+      "xy_peak_hz": 0.35669698591079346
+    }
+  },
+  {
+    "name": "v7ref_strong_pd75",
+    "seed": 6,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=7.5",
+      "ATC_ANG_PIT_P=7.5"
+    ],
+    "set": [
+      "inertia=[0.1235,0.1302,0.0824]",
+      "motor_tau=0.02",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 2.071090780714208,
+      "roll_ptp_deg": 4.924927994464002,
+      "pitch_ptp_deg": 1.271623018545769,
+      "tilt_1_3_rms_deg": 0.20213091517830686,
+      "tilt_hp_rms_deg": 1.2239601625863843,
+      "tilt_hp_p99_deg": 1.980865594164743,
+      "hold_s": 28.01252283890321,
+      "xy_rms_mm": 4.2896661661578825,
+      "xy_max_mm": 9.94378803719675,
+      "xy_p95_mm": 6.891532102579819,
+      "x_mean_mm": 1.1156146604673225,
+      "y_mean_mm": -0.10537410326584251,
+      "z_rms_mm": 3.061785905346531,
+      "z_max_mm": 7.121004942995973,
+      "tilt_rms_deg": 0.8906161245921291,
+      "rate_hp_rms_dps": 46.23581987246583,
+      "tilt_peak_hz": 6.104417670688283,
+      "xy_peak_hz": 0.35698348951393466
+    }
+  },
+  {
+    "name": "v7ref_weak_p30",
+    "seed": 7,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.3",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.3",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=7.5",
+      "ATC_ANG_PIT_P=7.5"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 31.04614842030577,
+      "roll_ptp_deg": 1.9700319092912375,
+      "pitch_ptp_deg": 2.0576276882623485,
+      "tilt_1_3_rms_deg": 0.36217359554599926,
+      "tilt_hp_rms_deg": 0.3683567133832284,
+      "tilt_hp_p99_deg": 0.8012521899473467,
+      "hold_s": 28.03649756675606,
+      "xy_rms_mm": 4.8320176625321904,
+      "xy_max_mm": 10.806446480104045,
+      "xy_p95_mm": 8.761113056939548,
+      "x_mean_mm": 0.3984956849302703,
+      "y_mean_mm": -1.2110387880052584,
+      "z_rms_mm": 2.5548200977461706,
+      "z_max_mm": 7.58275616998691,
+      "tilt_rms_deg": 0.34248906574868976,
+      "rate_hp_rms_dps": 4.373147662015535,
+      "tilt_peak_hz": 1.569326794473117,
+      "xy_peak_hz": 0.3566651805620721
+    }
+  },
+  {
+    "name": "v7ref_weak_pd75",
+    "seed": 7,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=7.5",
+      "ATC_ANG_PIT_P=7.5"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 31.622064177750687,
+      "roll_ptp_deg": 2.2527016760178857,
+      "pitch_ptp_deg": 2.7289800899164964,
+      "tilt_1_3_rms_deg": 0.47913357745343643,
+      "tilt_hp_rms_deg": 0.4825727695695416,
+      "tilt_hp_p99_deg": 1.0735420140288265,
+      "hold_s": 28.051140322757526,
+      "xy_rms_mm": 5.0864813262823745,
+      "xy_max_mm": 11.161992305686391,
+      "xy_p95_mm": 9.32929569342614,
+      "x_mean_mm": 0.6039741795099618,
+      "y_mean_mm": -1.27059280648231,
+      "z_rms_mm": 2.723298554854474,
+      "z_max_mm": 7.542264867590104,
+      "tilt_rms_deg": 0.4108366360371065,
+      "rate_hp_rms_dps": 5.187177107437581,
+      "tilt_peak_hz": 1.568627450981819,
+      "xy_peak_hz": 0.3565062388595043
+    }
+  },
+  {
+    "name": "v7safe_nom1_p24a75",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.24",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.24",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=7.5",
+      "ATC_ANG_PIT_P=7.5"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.6214221812240317,
+      "pitch_ptp_deg": 1.6917421918959628,
+      "tilt_1_3_rms_deg": 0.26309799332232847,
+      "tilt_hp_rms_deg": 0.2695590715446814,
+      "tilt_hp_p99_deg": 0.5352364885194918,
+      "hold_s": 28.014177750255307,
+      "xy_rms_mm": 4.028970191362254,
+      "xy_max_mm": 8.150663576571576,
+      "xy_p95_mm": 6.39441859361032,
+      "x_mean_mm": 0.10611991750247163,
+      "y_mean_mm": -1.877032323218659,
+      "z_rms_mm": 3.511846557216054,
+      "z_max_mm": 7.300998395014608,
+      "tilt_rms_deg": 0.29038738998505,
+      "rate_hp_rms_dps": 3.2425119374927105,
+      "tilt_peak_hz": 0.17847581652702293,
+      "xy_peak_hz": 0.2498661431378321
+    }
+  },
+  {
+    "name": "v7safe_nom1_p26a6",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.6814944862233072,
+      "pitch_ptp_deg": 1.6638588865203225,
+      "tilt_1_3_rms_deg": 0.2495321768048696,
+      "tilt_hp_rms_deg": 0.2559005713288201,
+      "tilt_hp_p99_deg": 0.5154898939018936,
+      "hold_s": 28.033251679362927,
+      "xy_rms_mm": 4.190284441569321,
+      "xy_max_mm": 7.777459514130007,
+      "xy_p95_mm": 6.677104303241951,
+      "x_mean_mm": 0.1785174548364275,
+      "y_mean_mm": -2.0080264851604985,
+      "z_rms_mm": 3.479366990088376,
+      "z_max_mm": 7.521432062492312,
+      "tilt_rms_deg": 0.28825676818868634,
+      "rate_hp_rms_dps": 3.062066131756656,
+      "tilt_peak_hz": 0.1783643984662284,
+      "xy_peak_hz": 0.28538303754596545
+    }
+  },
+  {
+    "name": "v7safe_nom1_p26a75",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=7.5",
+      "ATC_ANG_PIT_P=7.5"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.5348423070660453,
+      "pitch_ptp_deg": 1.6083091534315686,
+      "tilt_1_3_rms_deg": 0.23630665144669785,
+      "tilt_hp_rms_deg": 0.2443653600808207,
+      "tilt_hp_p99_deg": 0.49396544153482946,
+      "hold_s": 28.01355016055291,
+      "xy_rms_mm": 4.027165211244182,
+      "xy_max_mm": 8.026398716226613,
+      "xy_p95_mm": 6.274383158186195,
+      "x_mean_mm": 0.22681093796060772,
+      "y_mean_mm": -1.897526465299327,
+      "z_rms_mm": 3.551023742958565,
+      "z_max_mm": 7.445245065560685,
+      "tilt_rms_deg": 0.2770715186539658,
+      "rate_hp_rms_dps": 3.094493618018346,
+      "tilt_peak_hz": 0.17849174475696733,
+      "xy_peak_hz": 0.2498884426597543
+    }
+  },
+  {
+    "name": "v7safe_strong_p24a75",
+    "seed": 6,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.24",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.24",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=7.5",
+      "ATC_ANG_PIT_P=7.5"
+    ],
+    "set": [
+      "inertia=[0.1235,0.1302,0.0824]",
+      "motor_tau=0.02",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 2.072748964898839,
+      "roll_ptp_deg": 1.2834544351983488,
+      "pitch_ptp_deg": 1.3922102180171805,
+      "tilt_1_3_rms_deg": 0.17995698694639203,
+      "tilt_hp_rms_deg": 0.1954330719254622,
+      "tilt_hp_p99_deg": 0.4441950611670298,
+      "hold_s": 28.012678234301966,
+      "xy_rms_mm": 4.030851338606504,
+      "xy_max_mm": 8.816566050396947,
+      "xy_p95_mm": 6.667532087210633,
+      "x_mean_mm": 1.2428953135442236,
+      "y_mean_mm": -0.20703696020261372,
+      "z_rms_mm": 2.7354802938419986,
+      "z_max_mm": 6.635326084811072,
+      "tilt_rms_deg": 0.24855251614033988,
+      "rate_hp_rms_dps": 3.0748997739435917,
+      "tilt_peak_hz": 0.3212851405625412,
+      "xy_peak_hz": 0.35698348951393466
+    }
+  },
+  {
+    "name": "v7safe_strong_p26a6",
+    "seed": 6,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.1235,0.1302,0.0824]",
+      "motor_tau=0.02",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 2.02329358969801,
+      "roll_ptp_deg": 1.3177394361065153,
+      "pitch_ptp_deg": 1.2988405777054468,
+      "tilt_1_3_rms_deg": 0.1707545808727343,
+      "tilt_hp_rms_deg": 0.18720713734650477,
+      "tilt_hp_p99_deg": 0.4219897580978349,
+      "hold_s": 28.030077687508168,
+      "xy_rms_mm": 4.132707851606181,
+      "xy_max_mm": 9.309776623135908,
+      "xy_p95_mm": 6.761774627885119,
+      "x_mean_mm": 1.2462541395163815,
+      "y_mean_mm": -0.11510469207890014,
+      "z_rms_mm": 2.7474702171561507,
+      "z_max_mm": 6.415990062189652,
+      "tilt_rms_deg": 0.24646942174198794,
+      "rate_hp_rms_dps": 3.061864340732685,
+      "tilt_peak_hz": 0.3210845522657219,
+      "xy_peak_hz": 0.3567606136285799
+    }
+  },
+  {
+    "name": "v7safe_strong_p26a75",
+    "seed": 6,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=7.5",
+      "ATC_ANG_PIT_P=7.5"
+    ],
+    "set": [
+      "inertia=[0.1235,0.1302,0.0824]",
+      "motor_tau=0.02",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 1.9982056104878865,
+      "roll_ptp_deg": 1.3171871716755128,
+      "pitch_ptp_deg": 1.3095581837869612,
+      "tilt_1_3_rms_deg": 0.1632347386722804,
+      "tilt_hp_rms_deg": 0.18520831121642214,
+      "tilt_hp_p99_deg": 0.41525256091614776,
+      "hold_s": 28.016527053872622,
+      "xy_rms_mm": 3.9883959944585055,
+      "xy_max_mm": 8.929873492093018,
+      "xy_p95_mm": 6.4425674693712764,
+      "x_mean_mm": 1.2321429911982071,
+      "y_mean_mm": -0.15348628765494984,
+      "z_rms_mm": 2.711435150841582,
+      "z_max_mm": 6.1940837612509405,
+      "tilt_rms_deg": 0.24369283568026956,
+      "rate_hp_rms_dps": 3.2940568125782907,
+      "tilt_peak_hz": 0.32122780405133167,
+      "xy_peak_hz": 0.3569197822792574
+    }
+  },
+  {
+    "name": "v7search_a45",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=4.5",
+      "ATC_ANG_PIT_P=4.5"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 31.896814336793913,
+      "tilt_hp_rms_deg": 0.9988441129362536,
+      "tilt_hp_p99_deg": 2.1784051639705013,
+      "hold_s": 28.014306483598382,
+      "xy_rms_mm": 6.398940219926071,
+      "xy_max_mm": 14.749367360862676,
+      "xy_p95_mm": 11.820158589040162,
+      "x_mean_mm": 0.6992869045984244,
+      "y_mean_mm": -2.3767478100345825,
+      "z_rms_mm": 3.9307452110013132,
+      "z_max_mm": 9.927575148083372,
+      "tilt_rms_deg": 0.770277936523919,
+      "rate_hp_rms_dps": 8.493676499521452,
+      "tilt_peak_hz": 1.3207210422999696,
+      "xy_peak_hz": 0.6425129394972825
+    }
+  },
+  {
+    "name": "v7search_a6",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 31.9152163373939,
+      "tilt_hp_rms_deg": 0.8791254638561818,
+      "tilt_hp_p99_deg": 1.8093175616764927,
+      "hold_s": 28.01332975845679,
+      "xy_rms_mm": 5.329564651084468,
+      "xy_max_mm": 11.712704399682657,
+      "xy_p95_mm": 9.125036241611753,
+      "x_mean_mm": 0.28709563612318006,
+      "y_mean_mm": -1.9493156309539643,
+      "z_rms_mm": 3.5535278387170584,
+      "z_max_mm": 8.06237066793622,
+      "tilt_rms_deg": 0.6758565495525815,
+      "rate_hp_rms_dps": 8.046012688990404,
+      "tilt_peak_hz": 1.3208389112015584,
+      "xy_peak_hz": 0.6425702811250824
+    }
+  },
+  {
+    "name": "v7search_d4a6",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.004",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.004",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "disarmed in the hold"
+  },
+  {
+    "name": "v7search_d8a45",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=4.5",
+      "ATC_ANG_PIT_P=4.5"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": null,
+      "roll_ptp_deg": 2.96012427391359,
+      "pitch_ptp_deg": 4.053943168131482,
+      "tilt_1_3_rms_deg": 0.7494807164438186,
+      "tilt_hp_rms_deg": 0.7534240123512561,
+      "tilt_hp_p99_deg": 1.6950855591347709,
+      "hold_s": 28.054400981473883,
+      "xy_rms_mm": 5.957414004620713,
+      "xy_max_mm": 14.114049306466399,
+      "xy_p95_mm": 10.499305030908973,
+      "x_mean_mm": 0.26587305091308183,
+      "y_mean_mm": -1.7835995992037843,
+      "z_rms_mm": 3.5136804791221903,
+      "z_max_mm": 7.842886642336428,
+      "tilt_rms_deg": 0.6144947140679576,
+      "rate_hp_rms_dps": 6.44574732316308,
+      "tilt_peak_hz": 1.1407182960530828,
+      "xy_peak_hz": 0.641654041529859
+    }
+  },
+  {
+    "name": "v7search_d8a6",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 29.607169628382817,
+      "tilt_hp_rms_deg": 0.7155068343312098,
+      "tilt_hp_p99_deg": 1.4994148455111365,
+      "hold_s": 28.038236005268338,
+      "xy_rms_mm": 5.430514484945354,
+      "xy_max_mm": 11.96184706455516,
+      "xy_p95_mm": 9.248815385900814,
+      "x_mean_mm": 0.8828896771016665,
+      "y_mean_mm": -2.4963749160141675,
+      "z_rms_mm": 4.279979143155052,
+      "z_max_mm": 8.364707531795274,
+      "tilt_rms_deg": 0.5724462488660449,
+      "rate_hp_rms_dps": 6.501076878053682,
+      "tilt_peak_hz": 1.319543509273668,
+      "xy_peak_hz": 0.6419400855925952
+    }
+  },
+  {
+    "name": "v7search_i2a6",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.2",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.2",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": null,
+      "roll_ptp_deg": 2.8421909440414734,
+      "pitch_ptp_deg": 3.977432546066571,
+      "tilt_1_3_rms_deg": 0.7930551194887372,
+      "tilt_hp_rms_deg": 0.7956491221521463,
+      "tilt_hp_p99_deg": 1.6332890580429824,
+      "hold_s": 28.019628275317075,
+      "xy_rms_mm": 5.412623160717111,
+      "xy_max_mm": 11.867358535505057,
+      "xy_p95_mm": 9.407851303944467,
+      "x_mean_mm": 0.2612418489798233,
+      "y_mean_mm": -1.7669803881910249,
+      "z_rms_mm": 3.4913235751073355,
+      "z_max_mm": 7.719592416035898,
+      "tilt_rms_deg": 0.6249040162133196,
+      "rate_hp_rms_dps": 7.185171184523366,
+      "tilt_peak_hz": 1.3206031944332524,
+      "xy_peak_hz": 0.6424556081026633
+    }
+  },
+  {
+    "name": "v7search_p18a6",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.18",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.18",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "disarmed in the hold"
+  },
+  {
+    "name": "v7search_p26a6",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 2.0107198080302453,
+      "tilt_hp_rms_deg": 0.5605659116675832,
+      "tilt_hp_p99_deg": 1.291597808250017,
+      "hold_s": 28.047347847713546,
+      "xy_rms_mm": 5.01029669507388,
+      "xy_max_mm": 9.571865488639403,
+      "xy_p95_mm": 8.466339087160186,
+      "x_mean_mm": 0.6294062731033768,
+      "y_mean_mm": -2.478238344485744,
+      "z_rms_mm": 3.4553833980434914,
+      "z_max_mm": 7.691646329059249,
+      "tilt_rms_deg": 0.46681369360235236,
+      "rate_hp_rms_dps": 5.737519616493986,
+      "tilt_peak_hz": 1.2835368571185577,
+      "xy_peak_hz": 0.2852304126930128
+    }
+  },
+  {
+    "name": "v7search_p26d8a6",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 1.6767540724381362,
+      "roll_ptp_deg": 2.0929398862554702,
+      "pitch_ptp_deg": 2.9614371999573903,
+      "tilt_1_3_rms_deg": 0.4684224139388813,
+      "tilt_hp_rms_deg": 0.47221332856045223,
+      "tilt_hp_p99_deg": 1.0499949743738561,
+      "hold_s": 28.048706808558407,
+      "xy_rms_mm": 4.679679955662278,
+      "xy_max_mm": 9.319687535382625,
+      "xy_p95_mm": 7.865482969025858,
+      "x_mean_mm": 0.2696013662075189,
+      "y_mean_mm": -1.760108114972483,
+      "z_rms_mm": 3.581626611611205,
+      "z_max_mm": 8.180585816527891,
+      "tilt_rms_deg": 0.41642097539044687,
+      "rate_hp_rms_dps": 4.783037081957266,
+      "tilt_peak_hz": 1.1409216507720512,
+      "xy_peak_hz": 0.2852304126930128
+    }
+  },
+  {
+    "name": "v7search_v6",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 31.695754934412086,
+      "tilt_hp_rms_deg": 1.6094061456859807,
+      "tilt_hp_p99_deg": 3.692026126337136,
+      "hold_s": 28.025171243134828,
+      "xy_rms_mm": 5.698623933867841,
+      "xy_max_mm": 12.760600379374237,
+      "xy_p95_mm": 9.80095712923874,
+      "x_mean_mm": 0.9337799401603271,
+      "y_mean_mm": -2.371021447922278,
+      "z_rms_mm": 3.5993621871379435,
+      "z_max_mm": 8.31386081320648,
+      "tilt_rms_deg": 1.1646952991127846,
+      "rate_hp_rms_dps": 15.757646484892613,
+      "tilt_peak_hz": 1.5700267618212318,
+      "xy_peak_hz": 0.39250669045530795
+    }
+  },
+  {
+    "name": "v7val_gust_a6",
+    "seed": 10,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004",
+      "gust={\"t\":15,\"dur\":1,\"accel\":[0.3,0,0]}"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 28.787122281401917,
+      "roll_ptp_deg": 2.1661180337421437,
+      "pitch_ptp_deg": 4.196633411183609,
+      "tilt_1_3_rms_deg": 0.30778442332666484,
+      "tilt_hp_rms_deg": 0.3117353663963657,
+      "tilt_hp_p99_deg": 0.839619398406264,
+      "hold_s": 28.044719615568198,
+      "xy_rms_mm": 7.350238128865746,
+      "xy_max_mm": 21.901048708556125,
+      "xy_p95_mm": 14.416192867050928,
+      "x_mean_mm": -3.2223805529780076,
+      "y_mean_mm": -2.344599096983985,
+      "z_rms_mm": 2.8840100269615605,
+      "z_max_mm": 11.773362012410166,
+      "tilt_rms_deg": 0.43099085423237515,
+      "rate_hp_rms_dps": 3.5135147114634515,
+      "tilt_peak_hz": 0.14262791941535524,
+      "xy_peak_hz": 0.3922267783922269
+    }
+  },
+  {
+    "name": "v7val_gust_pd",
+    "seed": 10,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004",
+      "gust={\"t\":15,\"dur\":1,\"accel\":[0.3,0,0]}"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 19.309298321024528,
+      "roll_ptp_deg": 1.9424176300773297,
+      "pitch_ptp_deg": 3.562209432200387,
+      "tilt_1_3_rms_deg": 0.23323305306327738,
+      "tilt_hp_rms_deg": 0.23924536742859764,
+      "tilt_hp_p99_deg": 0.6749985362073604,
+      "hold_s": 28.011270512147306,
+      "xy_rms_mm": 7.210044751896233,
+      "xy_max_mm": 20.46968490657712,
+      "xy_p95_mm": 14.215843711723577,
+      "x_mean_mm": -3.1832741554160138,
+      "y_mean_mm": -2.34076107489664,
+      "z_rms_mm": 2.740094844768943,
+      "z_max_mm": 11.599471238907173,
+      "tilt_rms_deg": 0.40165428765683375,
+      "rate_hp_rms_dps": 3.058564515965911,
+      "tilt_peak_hz": 0.14280614066417843,
+      "xy_peak_hz": 0.3927168868264907
+    }
+  },
+  {
+    "name": "v7val_gust_v6",
+    "seed": 10,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004",
+      "gust={\"t\":15,\"dur\":1,\"accel\":[0.3,0,0]}"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 19.75673772428046,
+      "roll_ptp_deg": 2.008691470190011,
+      "pitch_ptp_deg": 3.4950701004477507,
+      "tilt_1_3_rms_deg": 0.2724539199034608,
+      "tilt_hp_rms_deg": 0.2770005119861095,
+      "tilt_hp_p99_deg": 0.5887045818189827,
+      "hold_s": 28.024806810158992,
+      "xy_rms_mm": 7.219099593540482,
+      "xy_max_mm": 22.72721459774786,
+      "xy_p95_mm": 14.91843179366711,
+      "x_mean_mm": -2.9403077517586427,
+      "y_mean_mm": -2.1219819364974613,
+      "z_rms_mm": 3.1077999628086515,
+      "z_max_mm": 11.929337460724582,
+      "tilt_rms_deg": 0.4199317998548293,
+      "rate_hp_rms_dps": 3.3217536310663953,
+      "tilt_peak_hz": 0.10704727921508397,
+      "xy_peak_hz": 0.39250669045530795
+    }
+  },
+  {
+    "name": "v7val_latency_a6",
+    "seed": 8,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.15",
+      "camera.detect_jitter_s=0.02",
+      "camera.exposure_to_readout_s=0.075"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 31.75911153762748,
+      "roll_ptp_deg": 2.543160405464718,
+      "pitch_ptp_deg": 1.9892646035206527,
+      "tilt_1_3_rms_deg": 0.4298838330224131,
+      "tilt_hp_rms_deg": 0.4331223957941526,
+      "tilt_hp_p99_deg": 0.9225626653707992,
+      "hold_s": 28.010611073037502,
+      "xy_rms_mm": 13.775185614281753,
+      "xy_max_mm": 25.990316840195224,
+      "xy_p95_mm": 23.099195449793175,
+      "x_mean_mm": 2.6732079737171452,
+      "y_mean_mm": -1.2400914222678618,
+      "z_rms_mm": 3.3594250655711604,
+      "z_max_mm": 8.261218085403893,
+      "tilt_rms_deg": 0.4240476752231047,
+      "rate_hp_rms_dps": 4.341510891508501,
+      "tilt_peak_hz": 0.3213138164944015,
+      "xy_peak_hz": 0.3213138164944015
+    }
+  },
+  {
+    "name": "v7val_latency_pd",
+    "seed": 8,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.15",
+      "camera.detect_jitter_s=0.02",
+      "camera.exposure_to_readout_s=0.075"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 31.834770208436257,
+      "roll_ptp_deg": 2.207012081861534,
+      "pitch_ptp_deg": 1.7551917114663165,
+      "tilt_1_3_rms_deg": 0.29567659805752805,
+      "tilt_hp_rms_deg": 0.3005501886162969,
+      "tilt_hp_p99_deg": 0.6216797772183634,
+      "hold_s": 28.05180120710267,
+      "xy_rms_mm": 13.247520201489316,
+      "xy_max_mm": 25.436543259760928,
+      "xy_p95_mm": 22.37256594075291,
+      "x_mean_mm": 2.6351281034392215,
+      "y_mean_mm": -1.212971203197167,
+      "z_rms_mm": 3.3602062030642816,
+      "z_max_mm": 8.282533817163179,
+      "tilt_rms_deg": 0.35363060368942456,
+      "rate_hp_rms_dps": 3.324594847963874,
+      "tilt_peak_hz": 0.3208270207649295,
+      "xy_peak_hz": 0.3208270207649295
+    }
+  },
+  {
+    "name": "v7val_latency_v6",
+    "seed": 8,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.15",
+      "camera.detect_jitter_s=0.02",
+      "camera.exposure_to_readout_s=0.075"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": null,
+      "roll_ptp_deg": 2.3563861421763312,
+      "pitch_ptp_deg": 1.9441428130291623,
+      "tilt_1_3_rms_deg": 0.3944192160646575,
+      "tilt_hp_rms_deg": 0.39858465305101143,
+      "tilt_hp_p99_deg": 0.8310085714870695,
+      "hold_s": 28.01352434178142,
+      "xy_rms_mm": 12.446909303434275,
+      "xy_max_mm": 26.650948448497537,
+      "xy_p95_mm": 22.96883640668582,
+      "x_mean_mm": 2.256262785157603,
+      "y_mean_mm": -0.6692210398683276,
+      "z_rms_mm": 2.9061573177227853,
+      "z_max_mm": 7.255084386290328,
+      "tilt_rms_deg": 0.3881643874135325,
+      "rate_hp_rms_dps": 4.219984847007895,
+      "tilt_peak_hz": 0.32125646974864125,
+      "xy_peak_hz": 0.2855613064432367
+    }
+  },
+  {
+    "name": "v7val_low_a6",
+    "seed": 4,
+    "height": 0.02,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 28.872064129244222,
+      "roll_ptp_deg": 2.0824144160287905,
+      "pitch_ptp_deg": 1.7362984754254562,
+      "tilt_1_3_rms_deg": 0.3075169098987492,
+      "tilt_hp_rms_deg": 0.3123125187884404,
+      "tilt_hp_p99_deg": 0.6467298952628863,
+      "hold_s": 28.016402722394318,
+      "xy_rms_mm": 5.675923105032164,
+      "xy_max_mm": 13.785270512824866,
+      "xy_p95_mm": 9.707849819315767,
+      "x_mean_mm": 1.850693022263283,
+      "y_mean_mm": -1.570919239291802,
+      "z_rms_mm": 2.887127313165538,
+      "z_max_mm": 8.569884924572186,
+      "tilt_rms_deg": 0.3357724363855098,
+      "rate_hp_rms_dps": 3.464667963202515,
+      "tilt_peak_hz": 0.39264679635945043,
+      "xy_peak_hz": 0.35695163305404587
+    }
+  },
+  {
+    "name": "v7val_low_pd",
+    "seed": 4,
+    "height": 0.02,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 28.930219902589084,
+      "roll_ptp_deg": 1.871240258570026,
+      "pitch_ptp_deg": 1.582603029665847,
+      "tilt_1_3_rms_deg": 0.23458070534048245,
+      "tilt_hp_rms_deg": 0.2427017369470184,
+      "tilt_hp_p99_deg": 0.507756849522455,
+      "hold_s": 28.010786540547443,
+      "xy_rms_mm": 5.377894682762486,
+      "xy_max_mm": 12.97346446030264,
+      "xy_p95_mm": 9.389681937795968,
+      "x_mean_mm": 1.858114539075077,
+      "y_mean_mm": -1.3884090054553415,
+      "z_rms_mm": 2.9664318126183207,
+      "z_max_mm": 8.74282254299404,
+      "tilt_rms_deg": 0.29449756089648943,
+      "rate_hp_rms_dps": 3.1169785302790873,
+      "tilt_peak_hz": 0.3927168868264907,
+      "xy_peak_hz": 0.35701535166044607
+    }
+  },
+  {
+    "name": "v7val_low_v6",
+    "seed": 4,
+    "height": 0.02,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 28.90478831261412,
+      "roll_ptp_deg": 1.9883192478280975,
+      "pitch_ptp_deg": 1.6955762161597367,
+      "tilt_1_3_rms_deg": 0.2875126531462891,
+      "tilt_hp_rms_deg": 0.2937975353258349,
+      "tilt_hp_p99_deg": 0.6104676741607112,
+      "hold_s": 28.01029502231267,
+      "xy_rms_mm": 5.321702562558675,
+      "xy_max_mm": 12.551286081739608,
+      "xy_p95_mm": 9.37832045151739,
+      "x_mean_mm": 1.808503792106097,
+      "y_mean_mm": -1.6375107456569187,
+      "z_rms_mm": 2.9033767396520767,
+      "z_max_mm": 8.499400313217516,
+      "tilt_rms_deg": 0.3154715650273108,
+      "rate_hp_rms_dps": 3.4697177993769377,
+      "tilt_peak_hz": 0.3927168868264907,
+      "xy_peak_hz": 0.35701535166044607
+    }
+  },
+  {
+    "name": "v7val_noise_a6",
+    "seed": 9,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004",
+      "camera.noise_xy_m=0.0015"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 30.48631550889542,
+      "roll_ptp_deg": 1.706255162946876,
+      "pitch_ptp_deg": 1.8919422818723304,
+      "tilt_1_3_rms_deg": 0.31985846830390346,
+      "tilt_hp_rms_deg": 0.32438464809905804,
+      "tilt_hp_p99_deg": 0.6703092863367593,
+      "hold_s": 28.0152157464252,
+      "xy_rms_mm": 5.626380050057902,
+      "xy_max_mm": 14.289394007081649,
+      "xy_p95_mm": 10.046955467733971,
+      "x_mean_mm": -0.6419631535454569,
+      "y_mean_mm": -1.1305072454764855,
+      "z_rms_mm": 3.134699533978696,
+      "z_max_mm": 6.652175713754066,
+      "tilt_rms_deg": 0.3269766787967389,
+      "rate_hp_rms_dps": 3.6211184268141206,
+      "tilt_peak_hz": 1.4278065322161835,
+      "xy_peak_hz": 0.39264679635945043
+    }
+  },
+  {
+    "name": "v7val_noise_pd",
+    "seed": 9,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004",
+      "camera.noise_xy_m=0.0015"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 30.582619867607466,
+      "roll_ptp_deg": 1.5603741591720524,
+      "pitch_ptp_deg": 1.6325747489045825,
+      "tilt_1_3_rms_deg": 0.2453101265656395,
+      "tilt_hp_rms_deg": 0.2523626834817603,
+      "tilt_hp_p99_deg": 0.5357470884328452,
+      "hold_s": 28.013387757944614,
+      "xy_rms_mm": 5.482533649117535,
+      "xy_max_mm": 14.006800226233926,
+      "xy_p95_mm": 9.717590348763187,
+      "x_mean_mm": -0.5985366696009062,
+      "y_mean_mm": -1.2614303788820134,
+      "z_rms_mm": 3.1174991446477893,
+      "z_max_mm": 6.957844812511244,
+      "tilt_rms_deg": 0.2866776462534558,
+      "rate_hp_rms_dps": 3.1551828425771173,
+      "tilt_peak_hz": 0.10708548991621375,
+      "xy_peak_hz": 0.39264679635945043
+    }
+  },
+  {
+    "name": "v7val_noise_v6",
+    "seed": 9,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004",
+      "camera.noise_xy_m=0.0015"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 30.39880047976441,
+      "roll_ptp_deg": 1.6301489475100188,
+      "pitch_ptp_deg": 1.7862868804739682,
+      "tilt_1_3_rms_deg": 0.3055010616354642,
+      "tilt_hp_rms_deg": 0.3108039918671474,
+      "tilt_hp_p99_deg": 0.6482660092930413,
+      "hold_s": 28.013463244553044,
+      "xy_rms_mm": 5.436479888565964,
+      "xy_max_mm": 12.96377553274138,
+      "xy_p95_mm": 9.630341760138718,
+      "x_mean_mm": -0.8013734719403395,
+      "y_mean_mm": -1.5147539264449674,
+      "z_rms_mm": 3.1042651994727017,
+      "z_max_mm": 6.428290404122378,
+      "tilt_rms_deg": 0.3133670690402194,
+      "rate_hp_rms_dps": 3.689358409903343,
+      "tilt_peak_hz": 0.1070950468541804,
+      "xy_peak_hz": 0.39268183846532817
+    }
+  },
+  {
+    "name": "v7val_nom1_a6",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 1.7239375291305876,
+      "roll_ptp_deg": 1.9694472416117346,
+      "pitch_ptp_deg": 1.9291521082832563,
+      "tilt_1_3_rms_deg": 0.31575405599812084,
+      "tilt_hp_rms_deg": 0.31978107484865426,
+      "tilt_hp_p99_deg": 0.6538838696786662,
+      "hold_s": 28.012841504292382,
+      "xy_rms_mm": 4.362530132237686,
+      "xy_max_mm": 8.254047706289189,
+      "xy_p95_mm": 7.154964411824485,
+      "x_mean_mm": 0.24427493237862874,
+      "y_mean_mm": -1.9045629031961901,
+      "z_rms_mm": 3.532274140749467,
+      "z_max_mm": 7.2868625762142205,
+      "tilt_rms_deg": 0.32606504717055973,
+      "rate_hp_rms_dps": 3.471378335038928,
+      "tilt_peak_hz": 1.142347166444591,
+      "xy_peak_hz": 0.2498884426597543
+    }
+  },
+  {
+    "name": "v7val_nom1_pd",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.6842467742684417,
+      "pitch_ptp_deg": 1.6444869427093272,
+      "tilt_1_3_rms_deg": 0.23262157829529403,
+      "tilt_hp_rms_deg": 0.23885931089571244,
+      "tilt_hp_p99_deg": 0.48163859935198805,
+      "hold_s": 28.01165532328769,
+      "xy_rms_mm": 4.211053856480233,
+      "xy_max_mm": 7.7892312102912244,
+      "xy_p95_mm": 6.750189223247449,
+      "x_mean_mm": 0.04588571258354089,
+      "y_mean_mm": -2.025340264874154,
+      "z_rms_mm": 3.5922200411223746,
+      "z_max_mm": 7.654391324493775,
+      "tilt_rms_deg": 0.2817786133748121,
+      "rate_hp_rms_dps": 2.9449757481549037,
+      "tilt_peak_hz": 0.17849174475696733,
+      "xy_peak_hz": 0.2498884426597543
+    }
+  },
+  {
+    "name": "v7val_nom1_v6",
+    "seed": 1,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.7924803742588145,
+      "pitch_ptp_deg": 1.8112069401654507,
+      "tilt_1_3_rms_deg": 0.29870926485677757,
+      "tilt_hp_rms_deg": 0.3037987611262329,
+      "tilt_hp_p99_deg": 0.5954239685083914,
+      "hold_s": 28.01062671516518,
+      "xy_rms_mm": 4.142341074336739,
+      "xy_max_mm": 8.021643035527442,
+      "xy_p95_mm": 6.591303042778246,
+      "x_mean_mm": 0.14228243277311906,
+      "y_mean_mm": -1.9742256579647022,
+      "z_rms_mm": 3.6323312941391728,
+      "z_max_mm": 7.7074805747189,
+      "tilt_rms_deg": 0.3096241612550842,
+      "rate_hp_rms_dps": 3.473568365344172,
+      "tilt_peak_hz": 1.1424491253134275,
+      "xy_peak_hz": 0.24991074616231226
+    }
+  },
+  {
+    "name": "v7val_nom2_a6",
+    "seed": 2,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 26.562122883683767,
+      "roll_ptp_deg": 1.4860106967745326,
+      "pitch_ptp_deg": 1.6795736286309513,
+      "tilt_1_3_rms_deg": 0.31189735445535804,
+      "tilt_hp_rms_deg": 0.3168938266234299,
+      "tilt_hp_p99_deg": 0.7342812882229118,
+      "hold_s": 28.012359083047542,
+      "xy_rms_mm": 5.0483555402901485,
+      "xy_max_mm": 10.446247964796243,
+      "xy_p95_mm": 8.96555792205931,
+      "x_mean_mm": 1.8117593017654126,
+      "y_mean_mm": -1.655933378067415,
+      "z_rms_mm": 3.4135628087328738,
+      "z_max_mm": 8.379486112995021,
+      "tilt_rms_deg": 0.30592657787468813,
+      "rate_hp_rms_dps": 3.5155896345423274,
+      "tilt_peak_hz": 1.4636323070071322,
+      "xy_peak_hz": 0.35698348951393466
+    }
+  },
+  {
+    "name": "v7val_nom2_pd",
+    "seed": 2,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 26.51880907018139,
+      "roll_ptp_deg": 1.3152538044061768,
+      "pitch_ptp_deg": 1.3498954437354982,
+      "tilt_1_3_rms_deg": 0.2297933666158403,
+      "tilt_hp_rms_deg": 0.23713542181881578,
+      "tilt_hp_p99_deg": 0.5565666663446383,
+      "hold_s": 28.01935327241315,
+      "xy_rms_mm": 4.876570614404149,
+      "xy_max_mm": 10.177469541710337,
+      "xy_p95_mm": 8.320578943530425,
+      "x_mean_mm": 1.9340907948857797,
+      "y_mean_mm": -1.551683904940368,
+      "z_rms_mm": 3.39315092623046,
+      "z_max_mm": 8.368507959207266,
+      "tilt_rms_deg": 0.2595807202000639,
+      "rate_hp_rms_dps": 3.005581010761978,
+      "tilt_peak_hz": 0.39261176050718316,
+      "xy_peak_hz": 0.3569197822792574
+    }
+  },
+  {
+    "name": "v7val_nom2_v6",
+    "seed": 2,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 0.0,
+      "roll_ptp_deg": 1.3790149309700814,
+      "pitch_ptp_deg": 1.6631775548065177,
+      "tilt_1_3_rms_deg": 0.2981427709795944,
+      "tilt_hp_rms_deg": 0.3037537669052525,
+      "tilt_hp_p99_deg": 0.6675065985370584,
+      "hold_s": 28.011282380620408,
+      "xy_rms_mm": 4.778179315735901,
+      "xy_max_mm": 9.886409193395968,
+      "xy_p95_mm": 8.590631824496052,
+      "x_mean_mm": 1.7391741725701966,
+      "y_mean_mm": -1.6611543882113347,
+      "z_rms_mm": 3.4631282411324147,
+      "z_max_mm": 8.560664317891403,
+      "tilt_rms_deg": 0.29150975076131086,
+      "rate_hp_rms_dps": 3.561554553482731,
+      "tilt_peak_hz": 1.4637629418078288,
+      "xy_peak_hz": 0.35701535166044607
+    }
+  },
+  {
+    "name": "v7val_nom3_a6",
+    "seed": 3,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 8.301043921240971,
+      "roll_ptp_deg": 1.6609469416439522,
+      "pitch_ptp_deg": 1.7965063622836623,
+      "tilt_1_3_rms_deg": 0.29403917945178837,
+      "tilt_hp_rms_deg": 0.297290197380778,
+      "tilt_hp_p99_deg": 0.6300503711818316,
+      "hold_s": 28.01111979210352,
+      "xy_rms_mm": 4.954571451304614,
+      "xy_max_mm": 12.07474053005622,
+      "xy_p95_mm": 7.744158165205015,
+      "x_mean_mm": 1.8827151196525729,
+      "y_mean_mm": -1.0583518744078388,
+      "z_rms_mm": 3.5769486236797303,
+      "z_max_mm": 8.844344156914735,
+      "tilt_rms_deg": 0.3047971281015202,
+      "rate_hp_rms_dps": 3.2881849181433114,
+      "tilt_peak_hz": 1.7135207496668865,
+      "xy_peak_hz": 0.28558679161114775
+    }
+  },
+  {
+    "name": "v7val_nom3_pd",
+    "seed": 3,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 8.64908036475762,
+      "roll_ptp_deg": 1.574530090369807,
+      "pitch_ptp_deg": 1.4271307537950744,
+      "tilt_1_3_rms_deg": 0.21629770207050988,
+      "tilt_hp_rms_deg": 0.22285075513658104,
+      "tilt_hp_p99_deg": 0.46811462210185684,
+      "hold_s": 28.011708845463552,
+      "xy_rms_mm": 4.794571471042002,
+      "xy_max_mm": 10.942361662730791,
+      "xy_p95_mm": 7.537979775489586,
+      "x_mean_mm": 1.8483497569877891,
+      "y_mean_mm": -1.005452486607507,
+      "z_rms_mm": 3.501081156358915,
+      "z_max_mm": 9.285584482367964,
+      "tilt_rms_deg": 0.2645386283414226,
+      "rate_hp_rms_dps": 2.7896247966101684,
+      "tilt_peak_hz": 0.17849174475696733,
+      "xy_peak_hz": 0.28558679161114775
+    }
+  },
+  {
+    "name": "v7val_nom3_v6",
+    "seed": 3,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 8.514116534581124,
+      "roll_ptp_deg": 1.6825258413536353,
+      "pitch_ptp_deg": 1.6551880831867394,
+      "tilt_1_3_rms_deg": 0.28526642614613346,
+      "tilt_hp_rms_deg": 0.29000754970774384,
+      "tilt_hp_p99_deg": 0.6177228942451488,
+      "hold_s": 28.01164632790821,
+      "xy_rms_mm": 4.695373922512367,
+      "xy_max_mm": 10.854526484599674,
+      "xy_p95_mm": 7.377162125959068,
+      "x_mean_mm": 1.7429527859789744,
+      "y_mean_mm": -1.1152214169286618,
+      "z_rms_mm": 3.4038142666388924,
+      "z_max_mm": 8.969763398422065,
+      "tilt_rms_deg": 0.29369351473183086,
+      "rate_hp_rms_dps": 3.373908347800033,
+      "tilt_peak_hz": 1.7135207496668865,
+      "xy_peak_hz": 0.28558679161114775
+    }
+  },
+  {
+    "name": "v7val_old_a6",
+    "seed": 5,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.1544,0.1628,0.103]",
+      "motor_tau=0.02",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": null,
+      "roll_ptp_deg": 1.6461602673186988,
+      "pitch_ptp_deg": 2.207437970631994,
+      "tilt_1_3_rms_deg": 0.3115049933051869,
+      "tilt_hp_rms_deg": 0.31703433269205905,
+      "tilt_hp_p99_deg": 0.7317476134988921,
+      "hold_s": 28.01707353755026,
+      "xy_rms_mm": 5.8685232386217585,
+      "xy_max_mm": 14.211785808823814,
+      "xy_p95_mm": 9.177643970372433,
+      "x_mean_mm": 3.497404938939404,
+      "y_mean_mm": -2.0436739206245598,
+      "z_rms_mm": 3.1374393100959566,
+      "z_max_mm": 7.164600363084056,
+      "tilt_rms_deg": 0.3174195126383433,
+      "rate_hp_rms_dps": 3.6095843493085487,
+      "tilt_peak_hz": 1.1778352815215494,
+      "xy_peak_hz": 0.4639957169630346
+    }
+  },
+  {
+    "name": "v7val_old_pd",
+    "seed": 5,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.1544,0.1628,0.103]",
+      "motor_tau=0.02",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": null,
+      "roll_ptp_deg": 1.5409372775177914,
+      "pitch_ptp_deg": 1.8406625437726916,
+      "tilt_1_3_rms_deg": 0.22945984717231965,
+      "tilt_hp_rms_deg": 0.23940618241737055,
+      "tilt_hp_p99_deg": 0.5461601975271256,
+      "hold_s": 28.01301225675786,
+      "xy_rms_mm": 5.646690624872938,
+      "xy_max_mm": 13.400249247058028,
+      "xy_p95_mm": 8.959907681767218,
+      "x_mean_mm": 3.259809304968281,
+      "y_mean_mm": -2.051053948078372,
+      "z_rms_mm": 3.1215153515206557,
+      "z_max_mm": 6.945135489574622,
+      "tilt_rms_deg": 0.27563546429618546,
+      "rate_hp_rms_dps": 3.0442902965766003,
+      "tilt_peak_hz": 1.1780455153959846,
+      "xy_peak_hz": 0.4640785363681151
+    }
+  },
+  {
+    "name": "v7val_old_v6",
+    "seed": 5,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.1544,0.1628,0.103]",
+      "motor_tau=0.02",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": null,
+      "roll_ptp_deg": 1.7161353665485002,
+      "pitch_ptp_deg": 2.2526834854985904,
+      "tilt_1_3_rms_deg": 0.3099452549857758,
+      "tilt_hp_rms_deg": 0.3158328628020376,
+      "tilt_hp_p99_deg": 0.6877263619039752,
+      "hold_s": 28.012287738365515,
+      "xy_rms_mm": 5.733875901498052,
+      "xy_max_mm": 13.479109984035789,
+      "xy_p95_mm": 9.083604695417977,
+      "x_mean_mm": 3.351942061862523,
+      "y_mean_mm": -2.0482960664422243,
+      "z_rms_mm": 3.1029276073490455,
+      "z_max_mm": 7.06805352408188,
+      "tilt_rms_deg": 0.31324762486675517,
+      "rate_hp_rms_dps": 3.784385387632501,
+      "tilt_peak_hz": 1.677822400715493,
+      "xy_peak_hz": 0.4640785363681151
+    }
+  },
+  {
+    "name": "v7val_slow_a6",
+    "seed": 11,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.025",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 18.99761529126841,
+      "roll_ptp_deg": 2.256064396975157,
+      "pitch_ptp_deg": 2.2405502871635266,
+      "tilt_1_3_rms_deg": 0.4135865385079596,
+      "tilt_hp_rms_deg": 0.42174495111439075,
+      "tilt_hp_p99_deg": 0.8743726698452413,
+      "hold_s": 28.011354755202454,
+      "xy_rms_mm": 4.911846248314264,
+      "xy_max_mm": 10.782414292277757,
+      "xy_p95_mm": 9.221384365859523,
+      "x_mean_mm": 0.03944110679110814,
+      "y_mean_mm": -0.3004450640514081,
+      "z_rms_mm": 3.602899798847416,
+      "z_max_mm": 7.502727632679146,
+      "tilt_rms_deg": 0.3878117639366495,
+      "rate_hp_rms_dps": 4.980597555815674,
+      "tilt_peak_hz": 0.8567603748334433,
+      "xy_peak_hz": 0.535475234270902
+    }
+  },
+  {
+    "name": "v7val_slow_pd",
+    "seed": 11,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.025",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 28.5603135034903,
+      "roll_ptp_deg": 2.0415656446753196,
+      "pitch_ptp_deg": 1.8627901963563298,
+      "tilt_1_3_rms_deg": 0.2748201713501653,
+      "tilt_hp_rms_deg": 0.2913143641887931,
+      "tilt_hp_p99_deg": 0.6327466431692571,
+      "hold_s": 28.016143153821396,
+      "xy_rms_mm": 4.946430147211029,
+      "xy_max_mm": 11.974219231873251,
+      "xy_p95_mm": 8.662567151562559,
+      "x_mean_mm": 1.0030645874341573,
+      "y_mean_mm": -1.3491998751107128,
+      "z_rms_mm": 4.688081694106545,
+      "z_max_mm": 9.050131357206476,
+      "tilt_rms_deg": 0.31213253998036633,
+      "rate_hp_rms_dps": 4.024679001279689,
+      "tilt_peak_hz": 0.39261176050718316,
+      "xy_peak_hz": 0.5353796734188861
+    }
+  },
+  {
+    "name": "v7val_slow_v6",
+    "seed": 11,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.16176056,0.16129925333333334,0.103]",
+      "motor_tau=0.025",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 19.049806636569592,
+      "roll_ptp_deg": 2.450570426935661,
+      "pitch_ptp_deg": 2.2718324936503334,
+      "tilt_1_3_rms_deg": 0.4269033085101838,
+      "tilt_hp_rms_deg": 0.4357340651979861,
+      "tilt_hp_p99_deg": 0.8774691160892499,
+      "hold_s": 28.01413979044134,
+      "xy_rms_mm": 4.611208777355868,
+      "xy_max_mm": 10.289194559026253,
+      "xy_p95_mm": 8.687888916489165,
+      "x_mean_mm": 0.03811948306313767,
+      "y_mean_mm": -0.20619306590106848,
+      "z_rms_mm": 3.582326847644607,
+      "z_max_mm": 7.378044772048758,
+      "tilt_rms_deg": 0.3861348379195505,
+      "rate_hp_rms_dps": 5.534278751319923,
+      "tilt_peak_hz": 2.034805890229428,
+      "xy_peak_hz": 0.535475234270902
+    }
+  },
+  {
+    "name": "v7val_strong_a6",
+    "seed": 6,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.1235,0.1302,0.0824]",
+      "motor_tau=0.02",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 2.1699455756430766,
+      "roll_ptp_deg": 1.3314257783136871,
+      "pitch_ptp_deg": 1.4184105538418446,
+      "tilt_1_3_rms_deg": 0.20965840448626014,
+      "tilt_hp_rms_deg": 0.21870142273430793,
+      "tilt_hp_p99_deg": 0.48593341363389625,
+      "hold_s": 28.01211227730053,
+      "xy_rms_mm": 4.2280199765702635,
+      "xy_max_mm": 9.455078221964278,
+      "xy_p95_mm": 7.026921646313902,
+      "x_mean_mm": 1.2795315693508151,
+      "y_mean_mm": -0.20034764115741285,
+      "z_rms_mm": 2.7245273492656463,
+      "z_max_mm": 6.27235226891118,
+      "tilt_rms_deg": 0.2616234502335053,
+      "rate_hp_rms_dps": 2.946411528052292,
+      "tilt_peak_hz": 0.3212851405625412,
+      "xy_peak_hz": 0.35698348951393466
+    }
+  },
+  {
+    "name": "v7val_strong_pd",
+    "seed": 6,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.1235,0.1302,0.0824]",
+      "motor_tau=0.02",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 2.096972718156959,
+      "roll_ptp_deg": 4.7024386073552,
+      "pitch_ptp_deg": 1.31296308448018,
+      "tilt_1_3_rms_deg": 0.195768412194318,
+      "tilt_hp_rms_deg": 1.1392118506861395,
+      "tilt_hp_p99_deg": 1.8814846375881666,
+      "hold_s": 28.01121628515277,
+      "xy_rms_mm": 4.315757940961239,
+      "xy_max_mm": 9.350132690388318,
+      "xy_p95_mm": 7.315135953697194,
+      "x_mean_mm": 1.1507698909268775,
+      "y_mean_mm": -0.2549444343042706,
+      "z_rms_mm": 3.275516353485031,
+      "z_max_mm": 7.143426787536184,
+      "tilt_rms_deg": 0.8336432653861977,
+      "rate_hp_rms_dps": 43.82276245017256,
+      "tilt_peak_hz": 6.211512717542464,
+      "xy_peak_hz": 0.35698348951393466
+    }
+  },
+  {
+    "name": "v7val_strong_v6",
+    "seed": 6,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.1235,0.1302,0.0824]",
+      "motor_tau=0.02",
+      "motor_delay=0.03",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 2.0927213920073378,
+      "roll_ptp_deg": 1.3066537778091134,
+      "pitch_ptp_deg": 1.4566203554525545,
+      "tilt_1_3_rms_deg": 0.20028835069019463,
+      "tilt_hp_rms_deg": 0.21177321012668526,
+      "tilt_hp_p99_deg": 0.47515763867033317,
+      "hold_s": 28.01267758273248,
+      "xy_rms_mm": 4.031624988768556,
+      "xy_max_mm": 9.165350891841015,
+      "xy_p95_mm": 6.706709103766369,
+      "x_mean_mm": 1.1056096824832546,
+      "y_mean_mm": -0.27875792327245136,
+      "z_rms_mm": 2.7656482178056687,
+      "z_max_mm": 6.408841867150433,
+      "tilt_rms_deg": 0.25598628868226475,
+      "rate_hp_rms_dps": 3.0480160074882376,
+      "tilt_peak_hz": 0.3212851405625412,
+      "xy_peak_hz": 0.35698348951393466
+    }
+  },
+  {
+    "name": "v7val_weak_a6",
+    "seed": 7,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.22",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.006",
+      "ATC_RAT_PIT_P=0.22",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.006",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 31.49485345230156,
+      "roll_ptp_deg": 3.122846834366203,
+      "pitch_ptp_deg": 6.324320632090425,
+      "tilt_1_3_rms_deg": 1.1245120698286046,
+      "tilt_hp_rms_deg": 1.1258984790560687,
+      "tilt_hp_p99_deg": 2.658711744922529,
+      "hold_s": 28.012281519246372,
+      "xy_rms_mm": 5.934686426639555,
+      "xy_max_mm": 13.801910980377686,
+      "xy_p95_mm": 10.53046851262268,
+      "x_mean_mm": 0.5060237018780721,
+      "y_mean_mm": -1.1796570899385612,
+      "z_rms_mm": 2.6851372285352846,
+      "z_max_mm": 7.772964973636193,
+      "tilt_rms_deg": 0.8393845481515267,
+      "rate_hp_rms_dps": 10.323728045419124,
+      "tilt_peak_hz": 1.4279339580557386,
+      "xy_peak_hz": 0.35698348951393466
+    }
+  },
+  {
+    "name": "v7val_weak_pd",
+    "seed": 7,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8",
+      "ATC_RAT_RLL_P=0.26",
+      "ATC_RAT_RLL_I=0.3",
+      "ATC_RAT_RLL_D=0.008",
+      "ATC_RAT_PIT_P=0.26",
+      "ATC_RAT_PIT_I=0.3",
+      "ATC_RAT_PIT_D=0.008",
+      "ATC_ANG_RLL_P=6",
+      "ATC_ANG_PIT_P=6"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 31.394062414355627,
+      "roll_ptp_deg": 2.223855958193022,
+      "pitch_ptp_deg": 2.8958792726345757,
+      "tilt_1_3_rms_deg": 0.48482818870623906,
+      "tilt_hp_rms_deg": 0.48832574102223536,
+      "tilt_hp_p99_deg": 1.0925527898609102,
+      "hold_s": 28.010418648092646,
+      "xy_rms_mm": 5.309993229992548,
+      "xy_max_mm": 12.126057334052216,
+      "xy_p95_mm": 10.04311542018027,
+      "x_mean_mm": 0.49877564475723557,
+      "y_mean_mm": -1.3405499682245157,
+      "z_rms_mm": 2.5870570127763055,
+      "z_max_mm": 7.495082774012368,
+      "tilt_rms_deg": 0.4226513819301667,
+      "rate_hp_rms_dps": 4.971230815483476,
+      "tilt_peak_hz": 1.5708675473059628,
+      "xy_peak_hz": 0.35701535166044607
+    }
+  },
+  {
+    "name": "v7val_weak_v6",
+    "seed": 7,
+    "height": 0.1,
+    "hold": 30.0,
+    "parm": [
+      "tools/tune_v6.parm"
+    ],
+    "p": [
+      "SIM_ACC1_RND=0.8",
+      "SIM_ACC2_RND=0.8"
+    ],
+    "set": [
+      "inertia=[0.2022007008677292,0.2419488834797951,0.103]",
+      "motor_tau=0.015",
+      "motor_delay=0.04",
+      "camera.tilt_attitude_lag_s=0.06",
+      "camera.pi_cam_pos_err=[0,0,0]",
+      "camera.detect_s=0.06550807514953613",
+      "camera.detect_jitter_s=0.004"
+    ],
+    "status": "ok (force disarm after the descent)",
+    "score": {
+      "settle10_s": 31.60197137976086,
+      "roll_ptp_deg": 3.292620253481956,
+      "pitch_ptp_deg": 9.055924146778953,
+      "tilt_1_3_rms_deg": 2.0783510111927583,
+      "tilt_hp_rms_deg": 2.0791754335087176,
+      "tilt_hp_p99_deg": 3.9507299803288944,
+      "hold_s": 28.034465895162462,
+      "xy_rms_mm": 6.263754658642914,
+      "xy_max_mm": 15.159419829062124,
+      "xy_p95_mm": 11.192422470809781,
+      "x_mean_mm": 0.533752251778613,
+      "y_mean_mm": -1.3300783396629239,
+      "z_rms_mm": 2.8211703427337356,
+      "z_max_mm": 7.747279606296592,
+      "tilt_rms_deg": 1.4904517826033634,
+      "rate_hp_rms_dps": 20.393018649040936,
+      "tilt_peak_hz": 1.5694667380074911,
+      "xy_peak_hz": 0.35669698591079346
+    }
+  }
+]

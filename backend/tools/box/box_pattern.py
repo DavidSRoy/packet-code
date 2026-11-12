@@ -33,6 +33,7 @@ RAIL = 6.0           # strip of the drop panel left under the hook window
 FLAP = 25.0          # dust flap length
 LID_FLAP = 40.0      # lid side flap depth
 TAB_W, TAB_C = 30.0, 45.0   # lock tab width, and its centre offset from the centreline
+LINER = 8.0          # foil bubble liner inside the box (5/16 in thick); 0 leaves it out
 
 
 def layout(t: float) -> dict[str, float]:
@@ -54,6 +55,9 @@ def layout(t: float) -> dict[str, float]:
         "zb": LID_TOP - 1.5 * t - DROP,      # return panel mid-plane above the ground
         "lid_len": LID_LEN - 2 * SLACK,
         "ly": body_w / 2 + SLACK + t / 2,    # lid half width, crease
+        "il": 2 * fx - t,                    # inside length
+        "iw": body_w - 2 * t,                # inside width
+        "ih": LID_TOP - 2 * t,               # inside height, floor to lid
     }
     check(g)
     return g
@@ -78,6 +82,7 @@ def check(g: dict[str, float]) -> None:
     assert g["tab"] > t, "lock tabs pass through the wall"
     assert TAB_C + TAB_W / 2 + SLACK < g["fy"] - FLAP, "dust flaps stay off the wall slots"
     assert g["fy"] - JAW_HALF_W >= 8, "cheek strips beside the hook window"
+    assert min(g["il"], g["iw"], g["ih"]) - 2 * LINER > 50, "the liner leaves room for the food"
 
 
 def body_outline(g: dict[str, float]) -> list[tuple[float, float]]:
@@ -108,7 +113,14 @@ def svg(g: dict[str, float]) -> str:
     cx, cy = m + half_x, 60 + half_y
     lx = cx + half_x + 50 + g["lid_len"] / 2        # lid centre
     lid_hy = g["ly"] + LID_FLAP
-    width, height = lx + g["lid_len"] / 2 + m, cy + half_y + 125
+    liner = [] if not LINER else [      # name, length, height; two of each
+        ("LINER FLOOR AND LID", g["il"] - 2 * SLACK, g["iw"] - 2 * SLACK),
+        ("LINER SIDE", g["il"] - 2 * SLACK, g["ih"] - 2 * LINER),
+        ("LINER END", g["iw"] - 2 * LINER - 2 * SLACK, g["ih"] - 2 * LINER),
+    ]
+    kx = lx + g["lid_len"] / 2 + 50     # left edge of the liner column
+    width = (kx + liner[0][1] if liner else lx + g["lid_len"] / 2) + m
+    height = cy + half_y + 125
 
     cut, toward, away, notes = [], [], [], []
     X = lambda x, ox=cx: f"{ox + x:.2f}"
@@ -164,10 +176,17 @@ def svg(g: dict[str, float]) -> str:
     text(0, 8, "LID", lx)
     text(0, -2, dim(g["lid_len"], 2 * g["ly"]), lx)
 
+    foil, ky = [], cy - half_y
+    for name, w, h in liner:
+        foil.append(f'<rect x="{kx:.2f}" y="{ky:.2f}" width="{w:.2f}" height="{h:.2f}"/>')
+        notes.append(f'<text x="{kx + w / 2:.2f}" y="{ky + h / 2 - 2:.2f}" font-size="6" text-anchor="middle">{name}, cut 2</text>'
+                     f'<text x="{kx + w / 2:.2f}" y="{ky + h / 2 + 8:.2f}" font-size="6" text-anchor="middle">{dim(w, h)}</text>')
+        ky += h + 20
+
     stations = [0, g["tab"], g["tab"] + g["rb"], half_x - xl, half_x - xw, half_x - fx, half_x - sw, half_x]
-    inside = (2 * fx - t, g["body_w"] - 2 * t, LID_TOP - 2 * t)
+    inside = (g["il"], g["iw"], g["ih"])
     base = -half_y - 22
-    for i, s in enumerate([
+    lines = [
         f"Packet cardboard box, prototype 1 (BX-005 / BX-006). Board {t:g} mm. All sizes mm, drawn 1:1, "
         "creases at the board mid-plane. This face is the inside of the box.",
         "Solid black: cut. Dashed blue: crease, fold toward you. Dash-dot orange: crease, fold away from you "
@@ -181,7 +200,14 @@ def svg(g: dict[str, float]) -> str:
         f"Folded: {L_OUT - 2 * LEDGE_EDGE:.1f} long, {g['body_w']:.1f} wide ({W_MAX:.1f} over the lid flaps), "
         f"{LID_TOP} to the lid top. Inside {inside[0]:.1f} x {inside[1]:.1f} x {inside[2]:.1f}. "
         f"Blank: body {2 * half_x:.1f} x {2 * half_y:.1f}, lid {g['lid_len']:.1f} x {2 * lid_hy:.1f}.",
-    ]):
+    ]
+    if liner:
+        left = [v - 2 * LINER for v in inside]
+        lines.append(
+            f"Green: foil bubble liner, {LINER:g} mm thick, a different material. Cut 2 of each. Tape the floor, sides "
+            f"and ends inside the box and glue the last piece under the lid. Room left for food: "
+            f"{left[0]:.0f} x {left[1]:.0f} x {left[2]:.0f}.")
+    for i, s in enumerate(lines):
         notes.append(f'<text x="{m}" y="{Y(base - 12 * i)}" font-size="6">{s}</text>')
 
     return f'''<?xml version="1.0" encoding="UTF-8"?>
@@ -190,6 +216,7 @@ def svg(g: dict[str, float]) -> str:
 <g id="cut" fill="none" stroke="black" stroke-width="0.4">{"".join(cut)}</g>
 <g id="crease-toward" fill="none" stroke="#1565c0" stroke-width="0.4" stroke-dasharray="4 2">{"".join(toward)}</g>
 <g id="crease-away" fill="none" stroke="#e65100" stroke-width="0.4" stroke-dasharray="6 2 1 2">{"".join(away)}</g>
+<g id="liner" fill="none" stroke="#2e7d32" stroke-width="0.4">{"".join(foil)}</g>
 <g id="notes" font-family="Helvetica, Arial, sans-serif" fill="#333">{"".join(notes)}</g>
 </svg>
 '''

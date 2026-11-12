@@ -140,3 +140,13 @@ Install:
 ## Motor map
 
 The motor signal plugs are wired 180° from the ArduPilot Quad X order. The fix is in software: `SERVO1..4_FUNCTION = 34, 33, 36, 35`. If the parameters are reset, set these values again, or swap the plugs MAIN 1↔2 and MAIN 3↔4. The motor test and the props-off tilt test passed on 2026-10-22.
+
+## Cardboard box pattern (`tools/box/`)
+
+A cardboard version of the delivery box (same outside size as BX-005 with the BX-006 lid). The two end walls roll over into hollow rims, the lid sits between the rims, and the gripper fingers drop into slots in the rim tops. `tools/box/packet_box_cardboard_t4.svg` is the 1:1 cut pattern for 4 mm board (body blank 880 x 491 mm, lid 225 x 282 mm).
+
+```bash
+python3 tools/box/box_pattern.py 3 out.svg   # other board thickness, mm
+```
+
+The script checks that the folded box comes back to the CAD sizes and stops if it does not. Not yet cut or tested on the gripper.

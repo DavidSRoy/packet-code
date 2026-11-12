@@ -33,7 +33,7 @@ RAIL = 6.0           # strip of the drop panel left under the hook window
 FLAP = 25.0          # dust flap length
 LID_FLAP = 40.0      # lid side flap depth
 TAB_W, TAB_C = 30.0, 45.0   # lock tab width, and its centre offset from the centreline
-LINER = 8.0          # foil bubble liner inside the box (5/16 in thick); 0 leaves it out
+LINER = 5.0          # foil bubble liner inside the box (0.19 in roll); 0 leaves it out
 
 
 def layout(t: float) -> dict[str, float]:
@@ -181,7 +181,7 @@ def svg(g: dict[str, float]) -> str:
         foil.append(f'<rect x="{kx:.2f}" y="{ky:.2f}" width="{w:.2f}" height="{h:.2f}"/>')
         notes.append(f'<text x="{kx + w / 2:.2f}" y="{ky + h / 2 - 2:.2f}" font-size="6" text-anchor="middle">{name}, cut 2</text>'
                      f'<text x="{kx + w / 2:.2f}" y="{ky + h / 2 + 8:.2f}" font-size="6" text-anchor="middle">{dim(w, h)}</text>')
-        ky += h + 20
+        ky += h + 12
 
     stations = [0, g["tab"], g["tab"] + g["rb"], half_x - xl, half_x - xw, half_x - fx, half_x - sw, half_x]
     inside = (g["il"], g["iw"], g["ih"])

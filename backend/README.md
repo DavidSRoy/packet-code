@@ -143,7 +143,7 @@ The motor signal plugs are wired 180° from the ArduPilot Quad X order. The fix 
 
 ## Cardboard box pattern (`tools/box/`)
 
-A cardboard version of the delivery box, sized from the printed BX-005 body and BX-006 lid. The jaws hook under a ledge at each end, so each end wall rolls outward into a small tube: the ledge on top, a drop panel with a window for the hooks, and a return panel whose tabs go back through the wall. The lid sits on the walls between the two ledges. `tools/box/packet_box_cardboard_t4.svg` is the 1:1 cut pattern for 4 mm board (body blank 624 x 490 mm, lid 225 x 282 mm). The green pieces on the sheet are a cut list for an 8 mm foil bubble liner that keeps food hot; set `LINER = 0` in the script to leave it out.
+A cardboard version of the delivery box, sized from the printed BX-005 body and BX-006 lid. The jaws hook under a ledge at each end, so each end wall rolls outward into a small tube: the ledge on top, a drop panel with a window for the hooks, and a return panel whose tabs go back through the wall. The lid sits on the walls between the two ledges. `tools/box/packet_box_cardboard_t4.svg` is the 1:1 cut pattern for 4 mm board (body blank 624 x 490 mm, lid 225 x 282 mm). The green pieces on the sheet are a cut list for a 5 mm foil bubble liner that keeps food hot; set `LINER = 0` in the script to leave it out.
 
 ```bash
 python3 tools/box/box_pattern.py 3 out.svg   # other board thickness, mm

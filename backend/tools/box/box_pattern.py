@@ -99,6 +99,142 @@ def body_outline(g: dict[str, float]) -> list[tuple[float, float]]:
             + [(-x, y) for x, y in reversed(q)])
 
 
+def marks(g: dict[str, float]) -> tuple[list[tuple[float, str]], list[tuple[float, str]]]:
+    """Mark-out distances for the body blank: along the length from either end, and across
+    from either long edge. The blank is the same from both ends and from both long edges."""
+    t, fx, fy, sw = g["t"], g["fx"], g["fy"], g["sw"]
+    xw = fx + g["he"]
+    xl = xw + g["rt"]
+    xd = xl + DROP
+    xs = fx + g["zb"] - t / 2
+    half_x, half_y = xd + g["rb"] + g["tab"], fy + g["hs"]
+    along = [(half_x - d, name) for d, name in [
+        (half_x, "tab tips, the end of the blank"),
+        (xd + g["rb"], "return panel edge"),
+        (xd, "crease D, drop to return"),
+        (xd - RAIL, "window edge nearer the end"),
+        (xl + g["hem"], "hem free edge, the other window edge"),
+        (xl, "crease C, ledge to drop, and the hem fold"),
+        (xw, "crease B, end wall to ledge"),
+        (xs + t / 2 + 0.25, "wall slot edge nearer the end"),
+        (xs - t / 2 - 0.25, "wall slot, other edge"),
+        (sw + FLAP, "dust flap end"),
+        (fx, "crease A, floor to end wall"),
+        (sw, "dust flap crease, the end of the side wall"),
+        (0, "centre of the blank"),
+    ]]
+    across = [(half_y - d, name) for d, name in [
+        (half_y, "side wall edge, the long edge of the blank"),
+        (half_y - 1, "dust flap outer edge"),
+        (fy + t, "dust flap inner edge"),
+        (fy, "long strip edge, and the floor to side wall crease"),
+        (JAW_HALF_W, "window and hem ends"),
+        (TAB_C + TAB_W / 2 + SLACK, "wall slot end"),
+        (TAB_C + TAB_W / 2, "tab edge"),
+        (TAB_C - TAB_W / 2, "tab edge"),
+        (TAB_C - TAB_W / 2 - SLACK, "wall slot end"),
+        (0, "centre of the blank"),
+    ]]
+    return along, across
+
+
+def guide(g: dict[str, float]) -> str:
+    """The cutting guide as Markdown, from the same numbers as the drawing."""
+    t = g["t"]
+    along, across = marks(g)
+    x_tab, x_ret, x_d, x_win, x_hem, x_c, x_b, x_s1, x_s2, x_flap, x_a, x_sw, x_mid = [d for d, _ in along]
+    y_edge, y_f1, y_f2, y_strip, y_win, y_s1, y_t1, y_t2, y_s2, y_mid = [d for d, _ in across]
+    length, width = 2 * x_mid, 2 * y_mid
+    lid_w = 2 * (g["ly"] + LID_FLAP)
+    table = lambda rows: "\n".join(f"| {d:.1f} | {name} |" for d, name in rows)
+    liner = "" if not LINER else f"""
+## Liner ({LINER:g} mm foil bubble)
+
+Cut with scissors. Two of each.
+
+| Piece | Size | Goes |
+|---|---|---|
+| Floor and lid | {g['il'] - 2 * SLACK:.1f} x {g['iw'] - 2 * SLACK:.1f} | One on the floor, one glued under the lid |
+| Side | {g['il'] - 2 * SLACK:.1f} x {g['ih'] - 2 * LINER:.1f} | Along each long wall, standing on the floor piece |
+| End | {g['iw'] - 2 * LINER - 2 * SLACK:.1f} x {g['ih'] - 2 * LINER:.1f} | Between the side pieces at each end |
+"""
+    return f"""# Cutting guide: cardboard box, {t:g} mm board
+
+Written by `box_pattern.py` from the same numbers as the drawing. All sizes are mm.
+
+## Check the board first
+
+- Thickness: this guide is for {t:g} mm board. If yours differs by more than 0.5 mm, run the script again with your thickness.
+- Flutes (the ribs inside the board) run along the {length:.1f} length of the body.
+- Keep old creases, holes and print seams out of every piece.
+- Mark out on the plain inside face. That face ends up inside the box.
+
+## Pieces
+
+| Piece | Size | Number |
+|---|---|---|
+| Body blank | {length:.1f} x {width:.1f} | 1 |
+| Lid | {g['lid_len']:.1f} x {lid_w:.1f} | 1 |
+
+## Body: mark out
+
+Draw a rectangle {length:.1f} x {width:.1f}. Take every measurement from an edge of this rectangle.
+The blank is the same from both ends and from both long edges, so mark each distance twice.
+
+Along the length, from each end:
+
+| mm | Line |
+|---|---|
+{table(along)}
+
+Across, from each long edge:
+
+| mm | Line |
+|---|---|
+{table(across)}
+
+## Body: cut
+
+1. Corners. Cut away the four corner rectangles, each {x_flap:.1f} along the length and {y_strip:.1f} across. This leaves a long strip {width - 2 * y_strip:.1f} wide with a side wall above and below it.
+2. Dust flaps. Each side wall keeps a {FLAP:.0f} mm flap at each end, between {x_flap:.1f} and {x_sw:.1f} from the end. Trim 1 mm off the flap's outer edge. Cut out the {t:g} mm notch between the flap and the long strip, from {y_f2:.1f} to {y_strip:.1f} across.
+3. Tabs. At each end, cut the long strip back by {x_ret:.1f}, leaving two tabs {TAB_W:.0f} wide. Each tab runs from {y_t1:.1f} to {y_t2:.1f} from a long edge.
+4. Hook window. At each end, cut out the slot between {x_win:.1f} and {x_hem:.1f} from the end. It runs from {y_win:.1f} from one long edge to {y_win:.1f} from the other ({width - 2 * y_win:.1f} long).
+5. Hem sides. From each end of that slot, cut straight on to crease C: two cuts per end, from {x_hem:.1f} to {x_c:.1f} from the end.
+6. Wall slots. Two per end, between {x_s1:.1f} and {x_s2:.1f} from the end. Each runs from {y_s1:.1f} to {y_s2:.1f} from a long edge.
+
+## Body: crease
+
+Press a blunt edge along a ruler. Do not cut through.
+
+Fold toward you, so score this face:
+
+- Floor to side walls: the two long strip edges, only between the side wall ends ({x_sw:.1f} from each end).
+- Crease A: {x_a:.1f} from each end, across the long strip.
+- Dust flaps: {x_sw:.1f} from each end, across each flap.
+- Hem: crease C, {x_c:.1f} from each end, only across the window.
+
+Fold away from you, so turn the board over and score the back:
+
+- Crease B: {x_b:.1f} from each end, across the long strip.
+- Crease C beside the window: the two short lengths between the strip edge and the window.
+- Crease D: {x_d:.1f} from each end, across the long strip.
+
+## Lid
+
+Cut a rectangle {g['lid_len']:.1f} x {lid_w:.1f}. Score two lines along the {g['lid_len']:.1f} direction, {LID_FLAP:.0f} in from each long edge, and fold both flaps toward you. The face you scored is the underside.
+{liner}
+## Fold and fix
+
+1. Fold the two side walls up.
+2. Fold the four dust flaps in.
+3. Fold the end walls up outside the dust flaps and tape the flaps to them.
+4. At each end fold the ledge out and the drop panel down.
+5. Fold the return panel in, push the two tabs through the wall slots, fold them down inside and tape them.
+6. Fold each hem up and back onto its ledge and glue it flat.
+7. Fold the lid flaps down and set the lid between the two ledges.
+"""
+
+
 def svg(g: dict[str, float]) -> str:
     t, fx, fy, sw = g["t"], g["fx"], g["fy"], g["sw"]
     xw = fx + g["he"]                   # wall to ledge crease
@@ -166,10 +302,10 @@ def svg(g: dict[str, float]) -> str:
         text(s * (xl + 6), 6, "HEM", size=4)
         text(s * (xl + 6), 0, f"{g['hem']:.1f}", size=4)
         ex = s * (xw + 18)
-        text(ex, fy + 30, f"LEDGE {g['rt']:.1f}", size=5)
-        text(ex, fy + 23, f"DROP {DROP:.1f}", size=5)
-        text(ex, fy + 16, f"RETURN {g['rb']:.1f}", size=5)
-        text(ex, fy + 9, f"tabs {g['tab']:.0f} x {TAB_W:.0f}", size=5)
+        text(ex, fy + 58, f"LEDGE {g['rt']:.1f}", size=5)
+        text(ex, fy + 51, f"DROP {DROP:.1f}", size=5)
+        text(ex, fy + 44, f"RETURN {g['rb']:.1f}", size=5)
+        text(ex, fy + 37, f"tabs {g['tab']:.0f} x {TAB_W:.0f}", size=5)
         text(s * (sw + FLAP + 22), fy + g["hs"] / 2, f"FLAP {FLAP:.0f}", size=5)
         text(s * (sw + FLAP + 22), -(fy + g["hs"] / 2), f"FLAP {FLAP:.0f}", size=5)
         text(0, s * (g["ly"] + LID_FLAP / 2) - 2, f"LID FLAP {LID_FLAP:.0f}", lx)
@@ -183,7 +319,18 @@ def svg(g: dict[str, float]) -> str:
                      f'<text x="{kx + w / 2:.2f}" y="{ky + h / 2 + 8:.2f}" font-size="6" text-anchor="middle">{dim(w, h)}</text>')
         ky += h + 12
 
-    stations = [0, g["tab"], g["tab"] + g["rb"], half_x - xl, half_x - xw, half_x - fx, half_x - sw, half_x]
+    # mark-out distances at the left end: along the length above the strip, across beside it
+    along, across = marks(g)
+    for d, _ in along[:9]:
+        px, py = cx - half_x + d, cy - fy
+        notes.append(f'<line x1="{px:.2f}" y1="{py - 1:.2f}" x2="{px:.2f}" y2="{py - 7:.2f}" stroke="#888" stroke-width="0.2"/>'
+                     f'<text transform="translate({px + 1.2:.2f} {py - 9:.2f}) rotate(-90)" font-size="3.5" fill="#666">{d:.1f}</text>')
+    for d, name in across[3:]:
+        if "slot" in name:              # half a millimetre from the tab edges: the labels would overlap
+            continue
+        px, py = cx - half_x, cy - half_y + d
+        notes.append(f'<line x1="{px - 2:.2f}" y1="{py:.2f}" x2="{px - 8:.2f}" y2="{py:.2f}" stroke="#888" stroke-width="0.2"/>'
+                     f'<text x="{px - 10:.2f}" y="{py + 1.2:.2f}" font-size="3.5" fill="#666" text-anchor="end">{d:.1f}</text>')
     inside = (g["il"], g["iw"], g["ih"])
     base = -half_y - 22
     lines = [
@@ -195,8 +342,8 @@ def svg(g: dict[str, float]) -> str:
         "through the wall slots, fold them down and tape them.",
         "HEM: fold it up and back so it lies on top of the ledge, then glue it. It is the second layer of the "
         "ledge the jaws lift on. Tape the dust flaps to the end walls.",
-        "Marks along the length from the left edge to the centre: " + " | ".join(f"{s:.1f}" for s in stations)
-        + f". Across from the top edge: 0 | {g['hs']:.1f} | {half_y:.1f} (centre). All four quarters are the same.",
+        "Small grey numbers at the left end: distance from the left end along the length, and from the top long "
+        "edge across. The right end and the bottom half mirror them. The cutting guide lists every mark.",
         f"Folded: {L_OUT - 2 * LEDGE_EDGE:.1f} long, {g['body_w']:.1f} wide ({W_MAX:.1f} over the lid flaps), "
         f"{LID_TOP} to the lid top. Inside {inside[0]:.1f} x {inside[1]:.1f} x {inside[2]:.1f}. "
         f"Blank: body {2 * half_x:.1f} x {2 * half_y:.1f}, lid {g['lid_len']:.1f} x {2 * lid_hy:.1f}.",
@@ -228,6 +375,9 @@ if __name__ == "__main__":
     geometry = layout(thickness)
     with open(out, "w", encoding="utf-8") as fh:
         fh.write(svg(geometry))
+    guide_path = out.rsplit(".", 1)[0] + "_guide.md"
+    with open(guide_path, "w", encoding="utf-8") as fh:
+        fh.write(guide(geometry))
     for key, value in geometry.items():
         print(f"{key:8s} {value:8.2f}")
     print("wrote", out)

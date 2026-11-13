@@ -35,6 +35,11 @@ LID_FLAP = 40.0      # lid side flap depth
 TAB_W, TAB_C = 30.0, 45.0   # lock tab width, and its centre offset from the centreline
 LINER = 5.0          # foil bubble liner inside the box (0.19 in roll); 0 leaves it out
 
+# The board to cut from: a 20 x 20 x 34 in wardrobe box opened flat (nominal sizes, measure yours)
+BOX_PANEL_W, BOX_PANEL_H, BOX_FLAP = 508.0, 864.0, 254.0   # panel width and height, flap depth
+BOX_TRIM = 5.0       # stay this far inside each of the box's own creases
+BOX_FOOT = 40.0      # gap left below each piece, above the bottom crease
+
 
 def layout(t: float) -> dict[str, float]:
     body_w = W_MAX - 2 * t - 2 * SLACK
@@ -168,6 +173,7 @@ Written by `box_pattern.py` from the same numbers as the drawing. All sizes are 
 - Flutes (the ribs inside the board) run along the {length:.1f} length of the body.
 - Keep old creases, holes and print seams out of every piece.
 - Mark out on the plain inside face. That face ends up inside the box.
+- The drawing ending `_on_wardrobe_box.svg` shows where the body and lid sit on a 20 x 20 x 34 in wardrobe box.
 
 ## Pieces
 
@@ -235,12 +241,144 @@ Cut a rectangle {g['lid_len']:.1f} x {lid_w:.1f}. Score two lines along the {g['
 """
 
 
-def svg(g: dict[str, float]) -> str:
+def body_elements(g: dict[str, float], cx: float = 0.0, cy: float = 0.0) -> tuple[list[str], list[str], list[str]]:
+    """The body blank as SVG elements centred on (cx, cy): cuts, creases folding toward you,
+    creases folding away."""
     t, fx, fy, sw = g["t"], g["fx"], g["fy"], g["sw"]
     xw = fx + g["he"]                   # wall to ledge crease
     xl = xw + g["rt"]                   # ledge to drop crease
     xd = xl + DROP                      # drop to return crease
     xs = fx + g["zb"] - t / 2           # wall slot centre: the return panel mid-plane, up the wall
+    half_y = fy + g["hs"]
+    cut, toward, away = [], [], []
+    X = lambda x: f"{cx + x:.2f}"
+    Y = lambda y: f"{cy - y:.2f}"
+
+    def line(out, xa, ya, xb, yb):
+        out.append(f'<line x1="{X(xa)}" y1="{Y(ya)}" x2="{X(xb)}" y2="{Y(yb)}"/>')
+
+    def rect(out, xa, ya, xb, yb):
+        out.append(f'<rect x="{X(min(xa, xb))}" y="{Y(max(ya, yb))}" '
+                   f'width="{abs(xb - xa):.2f}" height="{abs(yb - ya):.2f}"/>')
+
+    cut.append('<polygon points="' + " ".join(f"{X(x)},{Y(y)}" for x, y in body_outline(g)) + '"/>')
+    jw = JAW_HALF_W
+    for sx in (1, -1):
+        rect(cut, sx * (xl + g["hem"]), -jw, sx * (xd - RAIL), jw)           # hook window
+        for s in (1, -1):
+            line(cut, sx * xl, s * jw, sx * (xl + g["hem"]), s * jw)         # hem flap sides
+            rect(cut, sx * (xs - t / 2 - 0.25), s * (TAB_C - TAB_W / 2 - SLACK),
+                 sx * (xs + t / 2 + 0.25), s * (TAB_C + TAB_W / 2 + SLACK))  # wall slot for a lock tab
+            line(toward, sx * sw, s * (fy + t), sx * sw, s * (half_y - 1))   # dust flap
+            line(away, sx * xl, s * jw, sx * xl, s * fy)                     # ledge to drop, beside the window
+        line(toward, sx * fx, -fy, sx * fx, fy)                              # floor to end wall
+        line(toward, sx * xl, -jw, sx * xl, jw)                              # hem, folds back onto the ledge
+        line(away, sx * xw, -fy, sx * xw, fy)                                # end wall to ledge
+        line(away, sx * xd, -fy, sx * xd, fy)                                # drop to return
+        line(toward, -sw, sx * fy, sw, sx * fy)                              # floor to side wall
+    return cut, toward, away
+
+
+def chain(dims: list[str], notes: list[str], points: list[float], at: float, names: list[str],
+          vertical: bool = False, reach: float = 8.0, size: float = 5.0) -> None:
+    """One dimension line through the given cut points: a tick at each point, a stub of
+    length `reach` back toward the drawing, and the length of each run beside the line."""
+    a, b = points[0], points[-1]
+    ends = (at, a, at, b) if vertical else (a, at, b, at)
+    dims.append('<line x1="{:.2f}" y1="{:.2f}" x2="{:.2f}" y2="{:.2f}"/>'.format(*ends))
+    lo, hi = sorted((at - size / 2 - max(reach, 0), at + size / 2 - min(reach, 0)))
+    for p in points:
+        tick = (lo, p, hi, p) if vertical else (p, lo, p, hi)
+        dims.append('<line x1="{:.2f}" y1="{:.2f}" x2="{:.2f}" y2="{:.2f}"/>'.format(*tick))
+    for (p, q), name in zip(zip(points, points[1:]), names):
+        label, mid = f"{name} {abs(q - p):.1f}".strip(), (p + q) / 2
+        if vertical:
+            where = f'transform="translate({at + 1.6 * size:.2f} {mid:.2f}) rotate(-90)" text-anchor="middle"'
+        elif len(label) * size * 0.52 > abs(q - p):         # too long for its run: hang it below the line
+            where = f'transform="translate({mid + 0.35 * size:.2f} {at + size:.2f}) rotate(-90)" text-anchor="end"'
+        else:
+            where = f'x="{mid:.2f}" y="{at - 0.6 * size:.2f}" text-anchor="middle"'
+        notes.append(f'<text {where} font-size="{size}">{label}</text>')
+
+
+def on_box(g: dict[str, float]) -> str:
+    """The body and lid laid over a wardrobe box opened flat, drawn at 1:4."""
+    along, across = marks(g)
+    length, width = 2 * along[-1][0], 2 * across[-1][0]       # the body runs up the panel, so its width goes across
+    lid_w, lid_len = 2 * (g["ly"] + LID_FLAP), g["lid_len"]
+    pw, ph, fl = BOX_PANEL_W, BOX_PANEL_H, BOX_FLAP
+    assert width + 2 * BOX_TRIM <= pw, f"the body is {width:.1f} wide, the trimmed panel only {pw - 2 * BOX_TRIM:.1f}"
+    assert length + BOX_FOOT <= ph and lid_len + BOX_FOOT <= ph and lid_w + 2 * BOX_TRIM <= pw, "pieces fit the panel"
+
+    ox, oy = 150.0, 120.0
+    top, bottom = oy + fl, oy + fl + ph                       # the creases above and below the panels
+    canvas_w, canvas_h = ox + 4 * pw + 80, bottom + fl + 250
+    box, dims, notes = [], [], []
+    for i in range(4):
+        x = ox + i * pw
+        box.append(f'<rect x="{x:.1f}" y="{oy:.1f}" width="{pw:.1f}" height="{fl:.1f}" fill="#f1eee6" stroke-dasharray="14 10"/>'
+                   f'<rect x="{x:.1f}" y="{bottom:.1f}" width="{pw:.1f}" height="{fl:.1f}" fill="#f1eee6" stroke-dasharray="14 10"/>'
+                   f'<rect x="{x:.1f}" y="{top:.1f}" width="{pw:.1f}" height="{ph:.1f}" fill="white"/>')
+    label = lambda x, y, s, size=22, anchor="middle": notes.append(
+        f'<text x="{x:.1f}" y="{y:.1f}" font-size="{size}" text-anchor="{anchor}">{s}</text>')
+    for i, s in enumerate(["PANEL 1: spare", "PANEL 2: body", "PANEL 3: lid", "PANEL 4: spare"]):
+        label(ox + (i + 0.5) * pw, top + 44, s)
+    label(ox + 1.5 * pw, oy + fl / 2 + 8, "top flaps: cut off along the crease")
+    label(ox + 0.5 * pw, bottom + fl - 30, "bottom flaps: cut off along the crease", 18)
+    label(ox + 3.5 * pw, top + ph / 2, "&#8593; flutes run this way &#8595;")
+    label(ox + 0.5 * pw, top + ph / 2, "room for a second body")
+
+    bx, by = ox + 1.5 * pw, bottom - BOX_FOOT - length / 2    # body centre, its length running up the panel
+    cut, toward, away = body_elements(g)
+    fill = '<polygon points="' + " ".join(f"{x:.2f},{-y:.2f}" for x, y in body_outline(g)) + '"/>'
+    lxc, lyc = ox + 2.5 * pw, bottom - BOX_FOOT - lid_len / 2  # lid centre, same direction
+    lid = (f'<rect x="{lxc - lid_w / 2:.2f}" y="{lyc - lid_len / 2:.2f}" width="{lid_w:.2f}" height="{lid_len:.2f}"/>')
+    lid_creases = "".join(f'<line x1="{lxc + s * g["ly"]:.2f}" y1="{lyc - lid_len / 2:.2f}" '
+                          f'x2="{lxc + s * g["ly"]:.2f}" y2="{lyc + lid_len / 2:.2f}"/>' for s in (1, -1))
+    label(lxc, lyc + 8, "LID")
+
+    big = dict(size=16.0, reach=0.0)
+    chain(dims, notes, [ox + i * pw for i in range(5)], oy - 30, ["panel"] * 4, **big)
+    chain(dims, notes, [oy, top, bottom, bottom + fl], ox - 40, ["flap", "panel", "flap"], vertical=True, **big)
+    side = (pw - width) / 2
+    chain(dims, notes, [ox + pw, bx - width / 2, bx + width / 2, ox + 2 * pw], bottom + 70, ["", "body", ""], **big)
+    chain(dims, notes, [top, by - length / 2, by + length / 2, bottom], ox + pw - 60, ["clear", "body", "foot"],
+          vertical=True, **big)
+    chain(dims, notes, [ox + 2 * pw, lxc - lid_w / 2, lxc + lid_w / 2, ox + 3 * pw], bottom + 70, ["", "lid", ""], **big)
+    chain(dims, notes, [top, lyc - lid_len / 2, lyc + lid_len / 2, bottom], lxc + lid_w / 2 + 50,
+          ["clear", "lid", "foot"], vertical=True, **big)
+    for i, s in enumerate([
+        f"Medium wardrobe box, 20 x 20 x 34 in, opened flat. Drawn at 1:4, sizes in mm. Board {g['t']:g} mm.",
+        "Panel sizes are the nominal ones from the listing. Measure your box before you cut.",
+        f"Cut along the box's own creases, then trim {BOX_TRIM:g} mm inside each one. That leaves "
+        f"{pw - 2 * BOX_TRIM:.0f} mm for the {width:.1f} mm body, {side - BOX_TRIM:.1f} mm to spare each side.",
+        f"Keep hand holes, bar notches and old creases out of both pieces. The panel is {ph - length:.0f} mm longer "
+        "than the body, so slide the body up if the bottom is damaged.",
+    ]):
+        label(ox, bottom + fl + 70 + 34 * i, s, 22, "start")
+    return f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{canvas_w / 4:.1f}mm" height="{canvas_h / 4:.1f}mm" viewBox="0 0 {canvas_w:.1f} {canvas_h:.1f}">
+<rect width="100%" height="100%" fill="white"/>
+<g id="box" stroke="#8d8878" stroke-width="2">{"".join(box)}</g>
+<g transform="translate({bx:.2f} {by:.2f}) rotate(90)">
+<g fill="#ecd9b4" stroke="none">{fill}</g>
+<g fill="none" stroke="black" stroke-width="1.2">{"".join(cut)}</g>
+<g fill="none" stroke="#1565c0" stroke-width="1.2" stroke-dasharray="10 6">{"".join(toward)}</g>
+<g fill="none" stroke="#e65100" stroke-width="1.2" stroke-dasharray="14 5 3 5">{"".join(away)}</g>
+</g>
+<g fill="#ecd9b4" stroke="black" stroke-width="1.2">{lid}</g>
+<g fill="none" stroke="#1565c0" stroke-width="1.2" stroke-dasharray="10 6">{lid_creases}</g>
+<g id="dims" fill="none" stroke="#444" stroke-width="0.9">{"".join(dims)}</g>
+<g id="notes" font-family="Helvetica, Arial, sans-serif" fill="#333">{"".join(notes)}</g>
+</svg>
+'''
+
+
+def svg(g: dict[str, float]) -> str:
+    t, fx, fy, sw = g["t"], g["fx"], g["fy"], g["sw"]
+    xw = fx + g["he"]                   # wall to ledge crease
+    xl = xw + g["rt"]                   # ledge to drop crease
+    xd = xl + DROP                      # drop to return crease
     half_x, half_y = xd + g["rb"] + g["tab"], fy + g["hs"]
     outline = body_outline(g)
     assert max(x for x, _ in outline) == half_x and max(y for _, y in outline) == half_y
@@ -256,39 +394,21 @@ def svg(g: dict[str, float]) -> str:
     ]
     kx = lx + g["lid_len"] / 2 + 50     # left edge of the liner column
     width = (kx + liner[0][1] if liner else lx + g["lid_len"] / 2) + m
-    height = cy + half_y + 125
+    height = cy + half_y + 170
 
-    cut, toward, away, notes = [], [], [], []
+    cut, toward, away = body_elements(g, cx, cy)
+    notes: list[str] = []
     X = lambda x, ox=cx: f"{ox + x:.2f}"
     Y = lambda y: f"{cy - y:.2f}"
-
-    def line(out, xa, ya, xb, yb, ox=cx):
-        out.append(f'<line x1="{X(xa, ox)}" y1="{Y(ya)}" x2="{X(xb, ox)}" y2="{Y(yb)}"/>')
-
-    def rect(out, xa, ya, xb, yb, ox=cx):
-        out.append(f'<rect x="{X(min(xa, xb), ox)}" y="{Y(max(ya, yb))}" '
-                   f'width="{abs(xb - xa):.2f}" height="{abs(yb - ya):.2f}"/>')
 
     def text(x, y, s, ox=cx, size=6.0):
         notes.append(f'<text x="{X(x, ox)}" y="{Y(y)}" font-size="{size}" text-anchor="middle">{s}</text>')
 
-    cut.append('<polygon points="' + " ".join(f"{X(x)},{Y(y)}" for x, y in outline) + '"/>')
-    jw = JAW_HALF_W
-    for sx in (1, -1):
-        rect(cut, sx * (xl + g["hem"]), -jw, sx * (xd - RAIL), jw)           # hook window
-        for s in (1, -1):
-            line(cut, sx * xl, s * jw, sx * (xl + g["hem"]), s * jw)         # hem flap sides
-            rect(cut, sx * (xs - t / 2 - 0.25), s * (TAB_C - TAB_W / 2 - SLACK),
-                 sx * (xs + t / 2 + 0.25), s * (TAB_C + TAB_W / 2 + SLACK))  # wall slot for a lock tab
-            line(toward, sx * sw, s * (fy + t), sx * sw, s * (half_y - 1))   # dust flap
-            line(away, sx * xl, s * jw, sx * xl, s * fy)                     # ledge to drop, beside the window
-        line(toward, sx * fx, -fy, sx * fx, fy)                              # floor to end wall
-        line(toward, sx * xl, -jw, sx * xl, jw)                              # hem, folds back onto the ledge
-        line(away, sx * xw, -fy, sx * xw, fy)                                # end wall to ledge
-        line(away, sx * xd, -fy, sx * xd, fy)                                # drop to return
-        line(toward, -sw, sx * fy, sw, sx * fy)                              # floor to side wall
-        line(toward, -g["lid_len"] / 2, sx * g["ly"], g["lid_len"] / 2, sx * g["ly"], lx)   # lid flap
-    rect(cut, -g["lid_len"] / 2, -lid_hy, g["lid_len"] / 2, lid_hy, lx)
+    for s in (1, -1):                   # lid flap creases, then the lid outline
+        toward.append(f'<line x1="{X(-g["lid_len"] / 2, lx)}" y1="{Y(s * g["ly"])}" '
+                      f'x2="{X(g["lid_len"] / 2, lx)}" y2="{Y(s * g["ly"])}"/>')
+    cut.append(f'<rect x="{X(-g["lid_len"] / 2, lx)}" y="{Y(lid_hy)}" '
+               f'width="{g["lid_len"]:.2f}" height="{2 * lid_hy:.2f}"/>')
 
     dim = lambda a, b: f"{a:.1f} x {b:.1f}"
     text(0, 8, "FLOOR")
@@ -331,8 +451,29 @@ def svg(g: dict[str, float]) -> str:
         px, py = cx - half_x, cy - half_y + d
         notes.append(f'<line x1="{px - 2:.2f}" y1="{py:.2f}" x2="{px - 8:.2f}" y2="{py:.2f}" stroke="#888" stroke-width="0.2"/>'
                      f'<text x="{px - 10:.2f}" y="{py + 1.2:.2f}" font-size="3.5" fill="#666" text-anchor="end">{d:.1f}</text>')
+    # dimension chains outside the drawing: the length of every panel between cut points and creases
+    dims: list[str] = []
+    left, top, right, bottom = cx - half_x, cy - half_y, cx + half_x, cy + half_y
+    a = [along[i][0] for i in (0, 1, 2, 5, 6, 10)]          # end, return, creases D, C, B, A
+    run = [left + d for d in a] + [right - d for d in reversed(a)]
+    ends = ["tab", "return", "drop", "ledge", "end wall"]
+    chain(dims, notes, run, bottom + 10, ends + ["floor"] + ends[::-1])
+    chain(dims, notes, [left, right], bottom + 50, ["overall"], reach=0)
+    b = [along[i][0] for i in (0, 9, 11)]                   # end, dust flap end, side wall end
+    chain(dims, notes, [left + d for d in b] + [right - d for d in reversed(b)], top - 10,
+          ["cut away", "flap", "side wall", "flap", "cut away"], reach=-8)
+    c = [across[0][0], across[3][0]]                        # long edge, strip edge
+    chain(dims, notes, [top + d for d in c] + [bottom - d for d in reversed(c)], right + 10,
+          ["side wall", "floor", "side wall"], vertical=True)
+    chain(dims, notes, [top, bottom], right + 26, ["overall"], vertical=True, reach=0)
+    lid_l, lid_r, lid_t = lx - g["lid_len"] / 2, lx + g["lid_len"] / 2, cy - lid_hy
+    chain(dims, notes, [lid_l, lid_r], cy + lid_hy + 10, ["lid"])
+    chain(dims, notes, [lid_t, lid_t + LID_FLAP, cy + lid_hy - LID_FLAP, cy + lid_hy], lid_r + 10,
+          ["flap", "lid", "flap"], vertical=True)
+    chain(dims, notes, [lid_t, cy + lid_hy], lid_r + 26, ["overall"], vertical=True, reach=0)
+
     inside = (g["il"], g["iw"], g["ih"])
-    base = -half_y - 22
+    base = -half_y - 66
     lines = [
         f"Packet cardboard box, prototype 1 (BX-005 / BX-006). Board {t:g} mm. All sizes mm, drawn 1:1, "
         "creases at the board mid-plane. This face is the inside of the box.",
@@ -364,6 +505,7 @@ def svg(g: dict[str, float]) -> str:
 <g id="crease-toward" fill="none" stroke="#1565c0" stroke-width="0.4" stroke-dasharray="4 2">{"".join(toward)}</g>
 <g id="crease-away" fill="none" stroke="#e65100" stroke-width="0.4" stroke-dasharray="6 2 1 2">{"".join(away)}</g>
 <g id="liner" fill="none" stroke="#2e7d32" stroke-width="0.4">{"".join(foil)}</g>
+<g id="dims" fill="none" stroke="#444" stroke-width="0.25">{"".join(dims)}</g>
 <g id="notes" font-family="Helvetica, Arial, sans-serif" fill="#333">{"".join(notes)}</g>
 </svg>
 '''
@@ -375,9 +517,11 @@ if __name__ == "__main__":
     geometry = layout(thickness)
     with open(out, "w", encoding="utf-8") as fh:
         fh.write(svg(geometry))
-    guide_path = out.rsplit(".", 1)[0] + "_guide.md"
-    with open(guide_path, "w", encoding="utf-8") as fh:
+    stem = out.rsplit(".", 1)[0]
+    with open(stem + "_guide.md", "w", encoding="utf-8") as fh:
         fh.write(guide(geometry))
+    with open(stem + "_on_wardrobe_box.svg", "w", encoding="utf-8") as fh:
+        fh.write(on_box(geometry))
     for key, value in geometry.items():
         print(f"{key:8s} {value:8.2f}")
     print("wrote", out)

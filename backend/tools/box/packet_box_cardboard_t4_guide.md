@@ -8,6 +8,7 @@ Written by `box_pattern.py` from the same numbers as the drawing. All sizes are 
 - Flutes (the ribs inside the board) run along the 624.4 length of the body.
 - Keep old creases, holes and print seams out of every piece.
 - Mark out on the plain inside face. That face ends up inside the box.
+- The drawing ending `_on_wardrobe_box.svg` shows where the body and lid sit on a 20 x 20 x 34 in wardrobe box.
 
 ## Pieces
 

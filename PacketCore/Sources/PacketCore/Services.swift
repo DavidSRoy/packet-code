@@ -13,6 +13,10 @@ protocol MenuRepository {
 protocol OrderService {
     func placeOrder(lines: [CartLine], customerName: String, dropoff: String) async throws -> CustomerOrder
     func watchOrder(id: String) -> AsyncStream<CustomerOrder>
+    /// Ops inbox. Nil status lists everything (worker default limit applies).
+    func fetchOrders(status: OrderStatus?) async throws -> [CustomerOrder]
+    /// Ops fulfillment step. Drone id only needed when accepting.
+    func advanceOrder(id: String, status: OrderStatus, droneId: String?) async throws -> CustomerOrder
 }
 
 protocol PaymentService {
@@ -69,6 +73,14 @@ final class MockOrderService: OrderService {
                       dropoffPad: slugPad(dropoff))
     }
 
+    func fetchOrders(status: OrderStatus?) async throws -> [CustomerOrder] {
+        [] // Ops console is live-only; the offline demo has no inbox.
+    }
+
+    func advanceOrder(id: String, status: OrderStatus, droneId: String?) async throws -> CustomerOrder {
+        CustomerOrder(id: id, status: status, droneId: droneId) // Offline stand-in.
+    }
+
     func watchOrder(id: String) -> AsyncStream<CustomerOrder> {
         let steps: [OrderStatus] = [.placed, .accepted, .pickedUp, .loaded, .inFlight, .delivered]
         return AsyncStream { continuation in
@@ -96,11 +108,15 @@ final class MockOrderService: OrderService {
 struct ApiConfig {
     var baseURL = URL(string: "http://127.0.0.1:8787")!
     var readToken = "dev-read-token"
+    /// Command endpoint token (ops console: hold/resume/return/goto).
+    var commandToken = "dev-command-token"
     /// Single-vendor POC: every order is picked up at the vendor pad.
     var pickupPad = "qfc"
-    init(baseURL: URL? = nil, readToken: String? = nil, pickupPad: String? = nil) {
+    init(baseURL: URL? = nil, readToken: String? = nil, commandToken: String? = nil,
+         pickupPad: String? = nil) {
         if let baseURL { self.baseURL = baseURL }
         if let readToken { self.readToken = readToken }
+        if let commandToken { self.commandToken = commandToken }
         if let pickupPad { self.pickupPad = pickupPad }
     }
 
@@ -196,6 +212,24 @@ final class APIOrderService: OrderService {
         return try JSONDecoder().decode(CustomerOrder.self, from: data)
     }
 
+    func fetchOrders(status: OrderStatus?) async throws -> [CustomerOrder] {
+        var path = "/v1/orders"
+        if let status { path += "?status=\(status.rawValue)" }
+        let (data, resp) = try await session.data(for: try request(path, method: "GET"))
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+        guard code == 200 else { throw OrderAPIError.http(code, decodeError(data)) }
+        return try JSONDecoder().decode(OrdersResponse.self, from: data).orders
+    }
+
+    func advanceOrder(id: String, status: OrderStatus, droneId: String?) async throws -> CustomerOrder {
+        var body: [String: Any] = ["status": status.rawValue]
+        if let droneId { body["drone_id"] = droneId }
+        let (data, resp) = try await session.data(for: try request("/v1/orders/\(id)", method: "PATCH", body: body))
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+        guard code == 200 else { throw OrderAPIError.http(code, decodeError(data)) }
+        return try JSONDecoder().decode(CustomerOrder.self, from: data)
+    }
+
     func watchOrder(id: String) -> AsyncStream<CustomerOrder> {
         AsyncStream { continuation in
             let task = Task {
@@ -224,6 +258,10 @@ final class APIOrderService: OrderService {
 }
 
 // MARK: - Live drone position (telemetry worker /v1/drones/:id/position)
+
+private struct OrdersResponse: Decodable {
+    var orders: [CustomerOrder]
+}
 
 private struct PositionResponse: Decodable {
     var online: Bool

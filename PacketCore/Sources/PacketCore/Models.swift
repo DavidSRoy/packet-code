@@ -41,6 +41,8 @@ struct CustomerOrder: Identifiable, Codable, Equatable {
     var dropoffPad: String
     var droneId: String?
     var commandId: String?
+    var reason: String?
+    var flightPlan: FlightPlan?
 
     enum CodingKeys: String, CodingKey {
         case id, status
@@ -49,11 +51,35 @@ struct CustomerOrder: Identifiable, Codable, Equatable {
         case dropoffPad = "dropoff"
         case droneId = "drone_id"
         case commandId = "command_id"
+        case reason
+        /// Exposed for ops tooling; the customer app never writes it.
+        case flightPlan = "flight_plan"
+    }
+
+    /// Dispatch's filed plan (ops sees it; the customer app never does).
+    struct FlightPlan: Codable, Equatable {
+        var orderId: String
+        var droneId: String
+        var from: String
+        var to: String
+        var routePath: [[Double]]?
+        var lengthM: Double?
+        var estTimeS: Double?
+
+        enum CodingKeys: String, CodingKey {
+            case orderId = "order_id"
+            case droneId = "drone_id"
+            case from, to
+            case routePath = "route_path"
+            case lengthM = "length_m"
+            case estTimeS = "est_time_s"
+        }
     }
 
     init(id: String, status: OrderStatus, itemCounts: [String: Int] = [:],
          pickup: String = "", dropoffPad: String = "",
-         droneId: String? = nil, commandId: String? = nil) {
+         droneId: String? = nil, commandId: String? = nil, reason: String? = nil,
+         flightPlan: FlightPlan? = nil) {
         self.id = id
         self.status = status
         self.itemCounts = itemCounts
@@ -61,6 +87,8 @@ struct CustomerOrder: Identifiable, Codable, Equatable {
         self.dropoffPad = dropoffPad
         self.droneId = droneId
         self.commandId = commandId
+        self.reason = reason
+        self.flightPlan = flightPlan
     }
 
     private struct WireItem: Codable {
@@ -78,6 +106,8 @@ struct CustomerOrder: Identifiable, Codable, Equatable {
         dropoffPad = try c.decodeIfPresent(String.self, forKey: .dropoffPad) ?? ""
         droneId = try c.decodeIfPresent(String.self, forKey: .droneId)
         commandId = try c.decodeIfPresent(String.self, forKey: .commandId)
+        reason = try c.decodeIfPresent(String.self, forKey: .reason)
+        flightPlan = try c.decodeIfPresent(FlightPlan.self, forKey: .flightPlan)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -89,6 +119,8 @@ struct CustomerOrder: Identifiable, Codable, Equatable {
         try c.encode(dropoffPad, forKey: .dropoffPad)
         try c.encodeIfPresent(droneId, forKey: .droneId)
         try c.encodeIfPresent(commandId, forKey: .commandId)
+        try c.encodeIfPresent(reason, forKey: .reason)
+        try c.encodeIfPresent(flightPlan, forKey: .flightPlan)
     }
 
     static func preview() -> CustomerOrder {

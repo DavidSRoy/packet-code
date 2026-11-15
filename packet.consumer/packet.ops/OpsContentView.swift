@@ -11,6 +11,11 @@ struct OpsContentView: View {
             .tabItem { Label("Queue", systemImage: "tray.full") }
 
             NavigationStack {
+                OpsFleetView(state: state)
+            }
+            .tabItem { Label("Fleet", systemImage: "map") }
+
+            NavigationStack {
                 OpsSettingsView(state: state)
             }
             .tabItem { Label("Settings", systemImage: "gearshape") }

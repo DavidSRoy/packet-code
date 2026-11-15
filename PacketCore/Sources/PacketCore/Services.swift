@@ -17,6 +17,27 @@ protocol OrderService {
     func fetchOrders(status: OrderStatus?) async throws -> [CustomerOrder]
     /// Ops fulfillment step. Drone id only needed when accepting.
     func advanceOrder(id: String, status: OrderStatus, droneId: String?) async throws -> CustomerOrder
+    /// Per-drone state for the fleet map and detail (ops only).
+    func fetchDroneState(id: String) async throws -> DroneStateInfo
+    /// Command console. Pad only needed for goto.
+    func sendCommand(droneId: String, action: DroneCommand, pad: String?) async throws -> String
+}
+
+/// Command console actions. The worker has no takeoff/land/abort —
+/// the console is limited to what dispatch actually offers.
+enum DroneCommand: String {
+    case hold, resume
+    case returnHome = "return"
+    case gotoTrip = "goto"
+
+    var label: String {
+        switch self {
+        case .hold: return "Hold"
+        case .resume: return "Resume"
+        case .returnHome: return "Return"
+        case .gotoTrip: return "Goto"
+        }
+    }
 }
 
 protocol PaymentService {
@@ -79,6 +100,16 @@ final class MockOrderService: OrderService {
 
     func advanceOrder(id: String, status: OrderStatus, droneId: String?) async throws -> CustomerOrder {
         CustomerOrder(id: id, status: status, droneId: droneId) // Offline stand-in.
+    }
+
+    func fetchDroneState(id: String) async throws -> DroneStateInfo {
+        DroneStateInfo(online: true, batteryPercent: 100, currentPad: "qfc",
+                       controlAllowed: true, canGoto: ["uplace"],
+                       latitude: 47.6625, longitude: -122.295)
+    }
+
+    func sendCommand(droneId: String, action: DroneCommand, pad: String?) async throws -> String {
+        "cmd_mock" // Offline stand-in.
     }
 
     func watchOrder(id: String) -> AsyncStream<CustomerOrder> {
@@ -230,6 +261,24 @@ final class APIOrderService: OrderService {
         return try JSONDecoder().decode(CustomerOrder.self, from: data)
     }
 
+    func fetchDroneState(id: String) async throws -> DroneStateInfo {
+        let (data, resp) = try await session.data(for: try request("/v1/drones/\(id)/state", method: "GET"))
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+        guard code == 200 else { throw OrderAPIError.http(code, decodeError(data)) }
+        return try JSONDecoder().decode(DroneStateInfo.self, from: data)
+    }
+
+    func sendCommand(droneId: String, action: DroneCommand, pad: String?) async throws -> String {
+        var body: [String: Any] = ["action": action.rawValue]
+        if let pad { body["pad"] = pad }
+        var req = try request("/v1/drones/\(droneId)/commands", method: "POST", body: body)
+        req.setValue("Bearer \(config.commandToken)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await session.data(for: req)
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+        guard code == 202 else { throw OrderAPIError.http(code, decodeError(data)) }
+        return try JSONDecoder().decode(CommandResponse.self, from: data).command.id
+    }
+
     func watchOrder(id: String) -> AsyncStream<CustomerOrder> {
         AsyncStream { continuation in
             let task = Task {
@@ -261,6 +310,62 @@ final class APIOrderService: OrderService {
 
 private struct OrdersResponse: Decodable {
     var orders: [CustomerOrder]
+}
+
+/// Decoded slice of GET /v1/drones/:id/state for the ops console.
+struct DroneStateInfo: Decodable, Equatable {
+    var online: Bool
+    var batteryPercent: Int?
+    var currentPad: String?
+    var controlAllowed: Bool?
+    var canGoto: [String]
+    var latitude: Double?
+    var longitude: Double?
+
+    init(online: Bool, batteryPercent: Int? = nil, currentPad: String? = nil,
+         controlAllowed: Bool? = nil, canGoto: [String] = [],
+         latitude: Double? = nil, longitude: Double? = nil) {
+        self.online = online
+        self.batteryPercent = batteryPercent
+        self.currentPad = currentPad
+        self.controlAllowed = controlAllowed
+        self.canGoto = canGoto
+        self.latitude = latitude
+        self.longitude = longitude
+    }
+
+    enum CodingKeys: String, CodingKey { case online, battery, autonomy, position }
+    enum BatteryKeys: String, CodingKey { case percent }
+    enum AutonomyKeys: String, CodingKey {
+        case currentPad = "current_pad"
+        case controlAllowed = "backend_control_allowed"
+        case canGoto = "can_goto"
+    }
+    enum PositionKeys: String, CodingKey { case lat, lon }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        online = try c.decode(Bool.self, forKey: .online)
+        if let b = try? c.nestedContainer(keyedBy: BatteryKeys.self, forKey: .battery) {
+            batteryPercent = try b.decodeIfPresent(Int.self, forKey: .percent)
+        }
+        var goto: [String] = []
+        if let a = try? c.nestedContainer(keyedBy: AutonomyKeys.self, forKey: .autonomy) {
+            currentPad = try a.decodeIfPresent(String.self, forKey: .currentPad)
+            controlAllowed = try a.decodeIfPresent(Bool.self, forKey: .controlAllowed)
+            goto = (try? a.decodeIfPresent([String].self, forKey: .canGoto)) ?? []
+        }
+        canGoto = goto
+        if let p = try? c.nestedContainer(keyedBy: PositionKeys.self, forKey: .position) {
+            latitude = try p.decodeIfPresent(Double.self, forKey: .lat)
+            longitude = try p.decodeIfPresent(Double.self, forKey: .lon)
+        }
+    }
+}
+
+private struct CommandResponse: Decodable {
+    struct Issued: Decodable { var id: String }
+    var command: Issued
 }
 
 private struct PositionResponse: Decodable {

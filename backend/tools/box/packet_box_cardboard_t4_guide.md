@@ -7,9 +7,9 @@ The box is one piece. The drone lifts it by a hand hole in each end wall.
 ## Check the board first
 
 - Thickness: this guide is for 4 mm board. If yours differs by more than 0.5 mm, run the script again with your thickness.
-- Flutes (the ribs inside the board) run up the walls, across the 904.0 length of the blank.
+- Board: one flat sheet of single-wall C-flute board, at least 904.0 x 467.4. A 24 x 36 in sheet (609.6 x 914.4) takes one blank with 10 to spare in length, so start from a square end.
+- Flutes (the ribs inside the board) run up the walls, across the 904.0 length of the blank. On a 24 x 36 in sheet that is along the 24 in side.
 - Mark out on the plain inside face. That face ends up inside the box, and every fold goes toward you.
-- The drawing ending `_on_wardrobe_box.svg` shows where the blank sits on a 20 x 20 x 34 in wardrobe box. Crease 3 uses one of that box's own corner creases.
 
 ## Mark out
 

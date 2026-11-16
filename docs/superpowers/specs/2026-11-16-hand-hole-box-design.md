@@ -50,4 +50,4 @@ The hole is sized for a tongue up to 60 mm wide and 6 mm thick. That leaves abou
 
 ## Files
 
-`backend/tools/box/box_pattern.py` draws the pattern, the cutting guide and the layout on a wardrobe box. Its constants are the numbers above.
+`backend/tools/box/box_pattern.py` draws the pattern and the cutting guide. The blank fits one flat 24 x 36 in sheet. Its constants are the numbers above.

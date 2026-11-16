@@ -8,7 +8,7 @@ the top edge of the two holes.
 
   python3 box_pattern.py [board_thickness_mm] [out.svg]
 
-Writes the pattern, a cutting guide (.md) and a layout on a wardrobe box (.svg).
+Writes the pattern and a cutting guide (.md).
 All sizes are mm and the pattern is 1:1. Creases are drawn at the board mid-plane, so a
 panel between two creases is its outside size minus one board thickness.
 """
@@ -35,10 +35,8 @@ DUST = 60.0          # dust flap depth
 TUCK = 25.0          # tuck flap depth
 LINER = 5.0          # foil bubble liner inside the box (0.19 in roll); 0 leaves it out
 
-# The board to cut from: a 20 x 20 x 34 in wardrobe box opened flat (nominal sizes, measure yours)
-BOX_PANEL_W, BOX_PANEL_H, BOX_FLAP = 508.0, 864.0, 254.0   # panel width and height, flap depth
-BOX_TRIM = 5.0       # stay this far inside the box's other creases
-BOX_FOOT = 40.0      # gap left below the blank, above the bottom crease
+# The board to cut from: one flat 24 x 36 in sheet, the common stock size
+SHEET_W, SHEET_L = 609.6, 914.4
 
 
 def layout(t: float) -> dict[str, float]:
@@ -94,6 +92,7 @@ def check(g: dict[str, float]) -> None:
     assert HOLE_W >= TONGUE_W + 20 and HOLE_H >= TONGUE_T + t + 12, "the tongue has room in the hole"
     assert TAG_AREA[0] <= L_OUT and TAG_AREA[1] <= g["lid"], "the lid tags fit the flat lid"
     assert min(g["il"], g["iw"], g["ih"]) - 2 * LINER > 50, "the liner leaves room for the food"
+    assert g["xe"] <= SHEET_L and g["yt"] + TUCK - (g["ys"] - g["fd"]) <= SHEET_W, "the blank fits one 24 x 36 in sheet"
 
 
 def holes(g: dict[str, float]) -> list[float]:
@@ -251,9 +250,9 @@ The box is one piece. The drone lifts it by a hand hole in each end wall.
 ## Check the board first
 
 - Thickness: this guide is for {t:g} mm board. If yours differs by more than 0.5 mm, run the script again with your thickness.
-- Flutes (the ribs inside the board) run up the walls, across the {f(length)} length of the blank.
+- Board: one flat sheet of single-wall C-flute board, at least {f(length)} x {f(height)}. A 24 x 36 in sheet ({SHEET_W:g} x {SHEET_L:g}) takes one blank with {SHEET_L - length:.0f} to spare in length, so start from a square end.
+- Flutes (the ribs inside the board) run up the walls, across the {f(length)} length of the blank. On a 24 x 36 in sheet that is along the 24 in side.
 - Mark out on the plain inside face. That face ends up inside the box, and every fold goes toward you.
-- The drawing ending `_on_wardrobe_box.svg` shows where the blank sits on a 20 x 20 x 34 in wardrobe box. Crease 3 uses one of that box's own corner creases.
 
 ## Mark out
 
@@ -342,68 +341,6 @@ def chain(dims: list[str], notes: list[str], points: list[float], at: float, nam
         else:
             where = f'x="{mid:.2f}" y="{at - 0.6 * size:.2f}" text-anchor="middle"'
         notes.append(f'<text {where} font-size="{size}">{label}</text>')
-
-
-def on_box(g: dict[str, float]) -> str:
-    """The blank laid over a wardrobe box opened flat, drawn at 1:4. Crease 3 sits on one of the box's own
-    corner creases, because the blank is longer than one panel."""
-    xc, xe = g["xc"], g["xe"]
-    low, high = g["ys"] - g["fd"], g["yt"] + TUCK
-    pw, ph, fl = BOX_PANEL_W, BOX_PANEL_H, BOX_FLAP
-    assert xc <= pw - BOX_TRIM and xe - xc <= pw - BOX_TRIM, "the blank fits the two panels either side of a corner crease"
-    assert high - low + BOX_FOOT <= ph, "the blank fits the panel height"
-
-    ox, oy = 150.0, 120.0
-    top, bottom = oy + fl, oy + fl + ph                       # the creases above and below the panels
-    corner = ox + 2 * pw                                      # the corner crease the blank folds on
-    x0, ground = corner - xc, bottom - BOX_FOOT + low         # blank's left end; SVG y of the box's ground line
-    canvas_w, canvas_h = ox + 4 * pw + 80, bottom + fl + 290
-    box, dims, notes = [], [], []
-    for i in range(4):
-        x = ox + i * pw
-        box.append(f'<rect x="{x:.1f}" y="{oy:.1f}" width="{pw:.1f}" height="{fl:.1f}" fill="#f1eee6" stroke-dasharray="14 10"/>'
-                   f'<rect x="{x:.1f}" y="{bottom:.1f}" width="{pw:.1f}" height="{fl:.1f}" fill="#f1eee6" stroke-dasharray="14 10"/>'
-                   f'<rect x="{x:.1f}" y="{top:.1f}" width="{pw:.1f}" height="{ph:.1f}" fill="white"/>')
-    label = lambda x, y, s, size=22, anchor="middle": notes.append(
-        f'<text x="{x:.1f}" y="{y:.1f}" font-size="{size}" text-anchor="{anchor}">{s}</text>')
-    for i, s in enumerate(["PANEL 1: spare", "PANEL 2", "PANEL 3", "PANEL 4: spare"]):
-        label(ox + (i + 0.5) * pw, top + 44, s)
-    label(ox + 1.5 * pw, oy + fl / 2 + 8, "top flaps: cut off along the crease")
-    label(ox + 0.5 * pw, bottom + fl - 30, "bottom flaps: cut off along the crease", 18)
-    label(ox + 3.5 * pw, top + ph / 2, "&#8593; flutes run this way &#8595;")
-    label(corner + 16, top + 110, "&#8592; put crease 3 on this corner crease", 22, "start")
-
-    cut, fold = body_elements(g, x0, ground)
-    fill = '<polygon points="' + " ".join(f"{x0 + x:.2f},{ground - y:.2f}" for x, y in body_outline(g)) + '"/>'
-    big = dict(size=16.0, reach=0.0)
-    chain(dims, notes, [ox + i * pw for i in range(5)], oy - 30, ["panel"] * 4, **big)
-    chain(dims, notes, [oy, top, bottom, bottom + fl], ox - 40, ["flap", "panel", "flap"], vertical=True, **big)
-    chain(dims, notes, [ox + pw, x0, corner, x0 + xe, ox + 3 * pw], bottom + 70,
-          ["", "left of the corner", "right of the corner", ""], **big)
-    chain(dims, notes, [top, ground - high, ground - low, bottom], ox + pw - 60, ["clear", "blank", "foot"],
-          vertical=True, **big)
-    for i, s in enumerate([
-        f"Medium wardrobe box, 20 x 20 x 34 in, opened flat. Drawn at 1:4, sizes in mm. Board {g['t']:g} mm.",
-        "Panel sizes are the nominal ones from the listing. Measure your box before you cut.",
-        f"The blank is {xe:.0f} mm long, longer than one panel, so it spans two. Put crease 3 on the corner crease "
-        "between them. That crease already folds the right way.",
-        "Do not use the corner where the wardrobe box is glued together. Keep hand holes, bar notches and other "
-        "creases out of the blank.",
-        f"Cut the wardrobe box open along a different corner and remove its flaps. The blank needs {x0 - ox - pw:.0f} mm "
-        f"and {ox + 3 * pw - x0 - xe:.0f} mm of spare panel at its two ends.",
-    ]):
-        label(ox, bottom + fl + 70 + 34 * i, s, 22, "start")
-    return f'''<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="{canvas_w / 4:.1f}mm" height="{canvas_h / 4:.1f}mm" viewBox="0 0 {canvas_w:.1f} {canvas_h:.1f}">
-<rect width="100%" height="100%" fill="white"/>
-<g id="box" stroke="#8d8878" stroke-width="2">{"".join(box)}</g>
-<g fill="#ecd9b4" stroke="none">{fill}</g>
-<g id="cut" fill="none" stroke="black" stroke-width="1.2">{"".join(cut)}</g>
-<g id="crease" fill="none" stroke="#1565c0" stroke-width="1.2" stroke-dasharray="10 6">{"".join(fold)}</g>
-<g id="dims" fill="none" stroke="#444" stroke-width="0.9">{"".join(dims)}</g>
-<g id="notes" font-family="Helvetica, Arial, sans-serif" fill="#333">{"".join(notes)}</g>
-</svg>
-'''
 
 
 def svg(g: dict[str, float]) -> str:
@@ -517,8 +454,6 @@ if __name__ == "__main__":
     stem = out.rsplit(".", 1)[0]
     with open(stem + "_guide.md", "w", encoding="utf-8") as fh:
         fh.write(guide(geometry))
-    with open(stem + "_on_wardrobe_box.svg", "w", encoding="utf-8") as fh:
-        fh.write(on_box(geometry))
     for key, value in geometry.items():
         print(f"{key:8s} {value:8.2f}")
     print("wrote", out)

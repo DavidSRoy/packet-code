@@ -143,10 +143,12 @@ The motor signal plugs are wired 180° from the ArduPilot Quad X order. The fix 
 
 ## Cardboard box pattern (`tools/box/`)
 
-A cardboard version of the delivery box, sized from the printed BX-005 body and BX-006 lid. The jaws hook under a ledge at each end, so each end wall rolls outward into a small tube: the ledge on top, a drop panel with a window for the hooks, and a return panel whose tabs go back through the wall. The lid sits on the walls between the two ledges. `tools/box/packet_box_cardboard_t4.svg` is the 1:1 cut pattern for 4 mm board (body blank 624 x 490 mm, lid 225 x 282 mm). The green pieces on the sheet are a cut list for a 5 mm foil bubble liner that keeps food hot; set `LINER = 0` in the script to leave it out. The script also writes `packet_box_cardboard_t4_guide.md`, a step-by-step cutting guide, and `packet_box_cardboard_t4_on_wardrobe_box.svg`, which shows the body and lid laid over a 20 x 20 x 34 in wardrobe box opened flat.
+A cardboard delivery box made from one piece, with a hand hole near the top of each end wall. The drone's two jaws each slide a tongue into a hole and lift the box by the top edge of the holes. The box keeps the lid top at the height of the printed BX-006 lid and fits between the landing legs, so the lid tags and the landing approach do not change. The jaws need new tips: see [the design note](../docs/superpowers/specs/2026-11-16-hand-hole-box-design.md).
+
+`tools/box/packet_box_cardboard_t4.svg` is the 1:1 cut pattern for 4 mm board (one blank, 904 x 467 mm). The green pieces are a cut list for a 5 mm foil bubble liner that keeps food hot; set `LINER = 0` in the script to leave it out. The script also writes `packet_box_cardboard_t4_guide.md`, a step-by-step cutting guide, and `packet_box_cardboard_t4_on_wardrobe_box.svg`, which shows the blank laid over a 20 x 20 x 34 in wardrobe box opened flat.
 
 ```bash
 python3 tools/box/box_pattern.py 3 out.svg   # other board thickness, mm
 ```
 
-The script checks that the ledge, the lid top and the outside sizes land where the printed box has them, and stops if they do not (5 mm board is too thick). Not yet cut or tested on the gripper.
+The script checks that the folded box fits the drone and closes on itself, and stops if it does not. Not yet cut or tested on the gripper.

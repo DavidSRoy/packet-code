@@ -307,6 +307,8 @@ Press a blunt edge along a ruler on this face. Do not cut through. Every fold go
 
 Leave the hand hole flaps flat. The drone's jaws push them in.
 
+The lid is {f(g['lid'])} deep between its creases. The tags ({TAG_AREA[0]:g} x {TAG_AREA[1]:g}) fit on it. A sticker deeper than the lid needs its white margin trimmed.
+
 ## What the gripper needs
 
 | | |

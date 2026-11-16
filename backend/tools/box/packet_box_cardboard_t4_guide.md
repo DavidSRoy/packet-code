@@ -108,6 +108,8 @@ Cut a notch 110 wide and 51 deep in the middle of the top edge of each end piece
 
 Leave the hand hole flaps flat. The drone's jaws push them in.
 
+The lid is 193.5 deep between its creases. The tags (218 x 190) fit on it. A sticker deeper than the lid needs its white margin trimmed.
+
 ## What the gripper needs
 
 | | |

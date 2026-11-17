@@ -9,7 +9,7 @@ long wall with a tuck flap, and four bottom flaps.
 
   python3 box_pattern.py [board_thickness_mm] [out.svg]
 
-Writes the pattern, a cutting guide (.md) and a layout on a wardrobe box (.svg).
+Writes the pattern, a cutting guide (.md), and a layout drawing (.svg) and layout guide (.md) for a wardrobe box.
 All sizes are mm and the pattern is 1:1. Creases are drawn at the board mid-plane, so a
 panel between two creases is its outside size minus one board thickness.
 """
@@ -243,19 +243,29 @@ def marks(g: dict[str, float]) -> tuple[list[tuple[float, str]], list[tuple[floa
     return along, up
 
 
-def guide(g: dict[str, float]) -> str:
-    """The cutting guide as Markdown, from the same numbers as the drawing."""
+def guide(g: dict[str, float], box: bool = False) -> str:
+    """The cutting guide as Markdown, from the same numbers as the drawing. With box=True every distance is
+    measured from a wardrobe box's corner crease and bottom edge instead of from the blank's own edges."""
     t = g["t"]
     along, up = marks(g)
-    A = {name: f"{d:.1f}" for d, name in along}
-    U = {name: f"{d:.1f}" for d, name in up}
-    f = lambda v: f"{v:.1f}"
     length, height = along[-1][0], up[-1][0]
-    table = lambda rows: "\n".join(f"| {d:.1f} | {name} |" for d, name in rows)
+    f = lambda v: f"{v:.1f}"
+    if box:
+        xc = g["xc"]
+        side = lambda d: "0" if abs(d - xc) < 1e-6 else f"{abs(d - xc):.1f} {'left' if d < xc else 'right'}"
+        rise = lambda d: f(d + BOX_FOOT)
+    else:
+        side = rise = f
+    A = {name: side(d) for d, name in along}
+    U = {name: rise(d) for d, name in up}
+    low_edge = U["bottom edge: side bottom flaps"] if box else "the bottom edge"
+    left_end = A["left end: edge of the tab"] if box else "the left end"
+    top_edge = U["top edge: tuck flap"] if box else "the top edge"
+    table = lambda rows, fmt: "\n".join(f"| {fmt(d)} | {name} |" for d, name in rows)
     size = lambda pts: f"{max(x for x, _ in pts):.1f} x {max(y for _, y in pts):.1f}"
     liner = ""
     if LINER:
-        floor, top, side, end = (pts for _, pts, _ in liner_pieces(g))
+        floor, top, side_piece, end = (pts for _, pts, _ in liner_pieces(g))
         liner = f"""
 ## Liner ({LINER:g} mm foil bubble)
 
@@ -264,13 +274,52 @@ Cut with scissors.
 | Piece | Size | Number | Goes |
 |---|---|---|---|
 | Floor | {size(floor)} | 1 | On the floor |
-| Side | {size(side)} | 2 | Along each long wall, standing on the floor piece |
+| Side | {size(side_piece)} | 2 | Along each long wall, standing on the floor piece |
 | End | {size(end)} | 2 | Between the side pieces at each end |
 | Top | {size(top)} | 1 | Laid on top of the wall pieces, centred, after the food is in |
 
 Cut a notch {end[3][0] - end[6][0]:.0f} wide and {end[3][1] - end[4][1]:.0f} deep in the middle of the top edge of each end piece. The notch and the short top piece keep the jaw slots clear.
 """
-    return f"""# Cutting guide: cardboard box for the current gripper, {t:g} mm board
+    if box:
+        pw, ph = BOX_PANEL_W, BOX_PANEL_H
+        head = f"""# Layout guide: the blank on a 20 x 20 x 34 in wardrobe box, {t:g} mm board
+
+Written by `box_pattern.py` from the same numbers as the drawings. All sizes are mm.
+
+Every distance here is measured from two lines the wardrobe box already has: the corner crease in the middle of the opened box, and its bottom edge. The drawing ending `_on_wardrobe_box.svg` shows where the blank sits.
+
+## Prepare the wardrobe box
+
+1. Measure the board thickness. This guide is for {t:g} mm board. If yours differs by more than 0.5 mm, run the script again with your thickness. The pattern does not work with board of 6 mm or more.
+2. Find the corner where the box is glued together. Cut the box open down that corner.
+3. Cut the top flaps and the bottom flaps off along their creases. That leaves a flat sheet of four panels with three creases, about {4 * pw:.0f} x {ph:.0f}.
+4. Lay the sheet with the plain inside face up. Hand holes and bar notches are near one end: put that end away from you. The edge toward you is the bottom edge.
+5. The middle crease is the corner crease. Crease 3 of the blank goes on it, and it already folds the right way.
+6. Check the size. Each panel beside the corner crease must be at least {xc + BOX_TRIM:.0f} wide (the listing says {pw:.0f}) and {height + BOX_FOOT:.0f} tall (the listing says {ph:.0f}).
+7. Check that no hand hole, notch or extra crease falls inside the blank, which reaches {f(height + BOX_FOOT)} up from the bottom edge. If one does, add the same amount to every "up" distance to move the blank clear. There is {ph - height - BOX_FOOT:.0f} to spare.
+
+The flutes (the ribs inside the board) run away from you, up the walls of the blank. Every fold goes toward you.
+
+## Mark out
+
+The blank is {f(length)} x {f(height)}. It starts {A['left end: edge of the tab']} of the corner crease and ends {A['right end: edge of end 2']} of it. Its bottom edge is {BOX_FOOT:g} above the bottom edge of the sheet.
+The four walls sit side by side in a row: the tab, side A (back) and end 1 are left of the corner crease, and side B (front) and end 2 are right of it.
+
+Along, from the corner crease:
+
+| mm | Line |
+|---|---|
+{table(along, side)}
+
+Up, from the bottom edge of the sheet:
+
+| mm | Line |
+|---|---|
+{table(up, rise)}
+"""
+        corner = "\n- Crease 3 is the corner crease the wardrobe box already has. Do not score it again."
+    else:
+        head = f"""# Cutting guide: cardboard box for the current gripper, {t:g} mm board
 
 Written by `box_pattern.py` from the same numbers as the drawing. All sizes are mm.
 
@@ -280,7 +329,7 @@ The box is one piece. The top of each end wall folds inward as a ledge flap, and
 
 - Thickness: this guide is for {t:g} mm board. If yours differs by more than 0.5 mm, run the script again with your thickness.
 - Board: single-wall C-flute. The blank is {f(length)} x {f(height)}.
-- From a 20 x 20 x 34 in wardrobe box: the blank spans two panels, and crease 3 goes on the box's own corner crease. See the drawing ending `_on_wardrobe_box.svg`.
+- From a 20 x 20 x 34 in wardrobe box: use the guide ending `_on_wardrobe_box_guide.md` instead of this one. It measures from the box's own creases.
 - From a flat 24 x 36 in sheet ({SHEET_W:g} x {SHEET_L:g}): one blank fits with {SHEET_L - length:.0f} to spare in length, so start from a square end.
 - Flutes (the ribs inside the board) run up the walls, across the {f(length)} length of the blank.
 - Mark out on the plain inside face. That face ends up inside the box, and every fold goes toward you.
@@ -294,31 +343,33 @@ Along the length, from the left end:
 
 | mm | Line |
 |---|---|
-{table(along)}
+{table(along, side)}
 
 Up, from the bottom edge:
 
 | mm | Line |
 |---|---|
-{table(up)}
-
+{table(up, rise)}
+"""
+        corner = ""
+    return head + f"""
 ## Cut
 
 1. Bottom flaps. Keep four flaps below the walls and cut away the rest:
-   side A from {A['side A bottom flap, left edge']} to {A['side A bottom flap, right edge']} and side B from {A['side B bottom flap, left edge']} to {A['side B bottom flap, right edge']}, both from the bottom edge up to {U['side walls, bottom crease']};
+   side A from {A['side A bottom flap, left edge']} to {A['side A bottom flap, right edge']} and side B from {A['side B bottom flap, left edge']} to {A['side B bottom flap, right edge']}, both from {low_edge} up to {U['side walls, bottom crease']};
    end 1 from {A['end 1 flaps, left edge']} to {A['end 1 flaps, right edge']} and end 2 from {A['end 2 flaps, left edge']} to {A['end 2 flaps, right edge']}, both from {U['end bottom flaps, bottom edge']} up to {U['end walls, bottom crease']}.
    That leaves a {f(2 * g['ov'])} wide slot at each of creases 2, 3 and 4.
-2. Tab. Keep the strip from the left end to {A['crease 1: tab to side A']}, between {U['tab, bottom edge']} and {U['tab, top edge']} up. Cut away the corners above and below it.
+2. Tab. Keep the strip from {left_end} to {A['crease 1: tab to side A']}, between {U['tab, bottom edge']} and {U['tab, top edge']} up. Cut away the corners above and below it.
 3. Wall tops. Side A ends at {U['side A, lid crease']} up and side B at {U['side B, top edge']} up. The end walls end at {U['end walls, ledge flap crease']} up, outside their flaps.
 4. Ledge flaps. Above each end wall keep a flap up to {U['ledge flaps, top edge']}: end 1 from {A['end 1 flaps, left edge']} to {A['end 1 flaps, right edge']}, end 2 from {A['end 2 flaps, left edge']} to {A['end 2 flaps, right edge']}.
-5. Lid. Above side A keep the lid from {A['lid, left edge']} to {A['lid, right edge']}, up to {U['tuck flap crease']}, and the tuck flap from {A['tuck flap, left edge']} to {A['tuck flap, right edge']}, up to the top edge. The lid is shorter than side A on purpose, and the tuck flap is narrow so that it drops between the two ledge flaps.
+5. Lid. Above side A keep the lid from {A['lid, left edge']} to {A['lid, right edge']}, up to {U['tuck flap crease']}, and the tuck flap from {A['tuck flap, left edge']} to {A['tuck flap, right edge']}, up to {top_edge}. The lid is shorter than side A on purpose, and the tuck flap is narrow so that it drops between the two ledge flaps.
 6. Jaw slots. Cut a slot right out of each end wall: end 1 from {A['end 1 jaw slot, left side']} to {A['end 1 jaw slot, right side']}, end 2 from {A['end 2 jaw slot, left side']} to {A['end 2 jaw slot, right side']}, between {U['jaw slots, bottom edge']} and {U['jaw slots, top edge']} up. The top of the slot stops {f(t / 2)} below the ledge flap crease. Do not cut into the crease. Round the two top corners a little.
 
 ## Crease
 
 Press a blunt edge along a ruler on this face. Do not cut through. Every fold goes toward you.
 
-- Creases 1 to 4: up the walls at {A['crease 1: tab to side A']}, {A['crease 2: side A to end 1']}, {A['crease 3: end 1 to side B']} and {A['crease 4: side B to end 2']}.
+- Creases 1 to 4: up the walls at {A['crease 1: tab to side A']}, {A['crease 2: side A to end 1']}, {A['crease 3: end 1 to side B']} and {A['crease 4: side B to end 2']}.{corner}
 - Bottom flaps: side A and side B at {U['side walls, bottom crease']} up, end 1 and end 2 at {U['end walls, bottom crease']} up.
 - Ledge flaps: across each end wall at {U['end walls, ledge flap crease']} up, right across the top of the jaw slot.
 - Lid: across side A at {U['side A, lid crease']} up.
@@ -348,6 +399,23 @@ The tags ({TAG_AREA[0]:g} x {TAG_AREA[1]:g}) fit on the lid, which is {f(g['lx1'
 | Lid top above the ground | {LID_TOP_CAD:g} | {g['lid_top']:.1f} |
 | Lid length | {LID_LEN:g} | {f(g['lx1'] - g['lx0'])} |
 """
+
+
+def ordinate(dims: list[str], notes: list[str], points: list[float], origin: float, at: float,
+             vertical: bool = False, size: float = 16.0) -> None:
+    """Distances from one datum line: a tick and a number at each point, along a line at `at`."""
+    a, b = min(points + [origin]), max(points + [origin])
+    ends = (at, a, at, b) if vertical else (a, at, b, at)
+    dims.append('<line x1="{:.2f}" y1="{:.2f}" x2="{:.2f}" y2="{:.2f}"/>'.format(*ends))
+    for p in points + [origin]:
+        tick = (at - size / 2, p, at + size / 2, p) if vertical else (p, at - size / 2, p, at + size / 2)
+        dims.append('<line x1="{:.2f}" y1="{:.2f}" x2="{:.2f}" y2="{:.2f}"/>'.format(*tick))
+        label = f"{abs(p - origin):.1f}" if p != origin else "0"
+        if vertical:
+            where = f'x="{at - 0.8 * size:.2f}" y="{p + 0.35 * size:.2f}" text-anchor="end"'
+        else:
+            where = f'transform="translate({p + 0.35 * size:.2f} {at + 0.8 * size:.2f}) rotate(-90)" text-anchor="end"'
+        notes.append(f'<text {where} font-size="{size}">{label}</text>')
 
 
 def chain(dims: list[str], notes: list[str], points: list[float], at: float, names: list[str],
@@ -410,15 +478,22 @@ def on_box(g: dict[str, float]) -> str:
           ["", "left of the corner", "right of the corner", ""], **big)
     chain(dims, notes, [top, ground - high, ground - low, bottom], ox + pw - 60, ["clear", "blank", "foot"],
           vertical=True, **big)
+    # the main mark-out distances, from the two lines the wardrobe box already has
+    ord_y, ord_x = bottom + 130, ox + pw - 150
+    ordinate(dims, notes, [x0 + v for v in (0, g["xa"], g["xb"], g["xd"], xe)], corner, ord_y)
+    label(x0 - 14, ord_y + 6, "from the corner crease:", 16, "end")
+    heights = [low, g["ys"], g["yd"], g["yd"] + LEDGE_FLAP, g["yt"], high]
+    ordinate(dims, notes, [ground - v for v in heights], bottom, ord_x, vertical=True)
+    label(ord_x + 10, ground - high - 26, "up from the bottom edge:", 16, "end")
     for i, s in enumerate([
-        f"Medium wardrobe box, 20 x 20 x 34 in, opened flat. Drawn at 1:4, sizes in mm. Board {g['t']:g} mm.",
+        f"Medium wardrobe box, 20 x 20 x 34 in, opened flat, inside face up. Drawn at 1:4, sizes in mm. Board {g['t']:g} mm.",
         "Panel sizes are the nominal ones from the listing. Measure your box before you cut.",
-        f"The blank is {xe:.0f} mm long, longer than one panel, so it spans two. Put crease 3 on the corner crease "
-        "between them. That crease already folds the right way.",
-        "Do not use the corner where the wardrobe box is glued together. Keep hand holes, bar notches and other "
-        "creases out of the blank.",
-        f"Cut the wardrobe box open along a different corner and remove its flaps. The blank needs {x0 - ox - pw:.0f} mm "
-        f"and {ox + 3 * pw - x0 - xe:.0f} mm of spare panel at its two ends.",
+        "Cut the box open down its glued corner and cut the flaps off. The middle crease is the corner crease: "
+        "crease 3 of the blank goes on it, and it already folds the right way.",
+        "Measure along from the corner crease and up from the bottom edge. The guide ending "
+        "_on_wardrobe_box_guide.md lists every line.",
+        "Keep hand holes, bar notches and other creases out of the blank. If one is in the way, move the whole blank "
+        f"up: there is {ph - (high - low) - BOX_FOOT:.0f} mm to spare.",
     ]):
         label(ox, bottom + fl + 70 + 34 * i, s, 22, "start")
     return f'''<?xml version="1.0" encoding="UTF-8"?>
@@ -555,6 +630,8 @@ if __name__ == "__main__":
         fh.write(guide(geometry))
     with open(stem + "_on_wardrobe_box.svg", "w", encoding="utf-8") as fh:
         fh.write(on_box(geometry))
+    with open(stem + "_on_wardrobe_box_guide.md", "w", encoding="utf-8") as fh:
+        fh.write(guide(geometry, box=True))
     for key, value in geometry.items():
         print(f"{key:8s} {value:8.2f}")
     print("wrote", out)

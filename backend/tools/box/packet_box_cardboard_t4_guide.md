@@ -8,7 +8,7 @@ The box is one piece. The top of each end wall folds inward as a ledge flap, and
 
 - Thickness: this guide is for 4 mm board. If yours differs by more than 0.5 mm, run the script again with your thickness.
 - Board: single-wall C-flute. The blank is 904.0 x 467.9.
-- From a 20 x 20 x 34 in wardrobe box: the blank spans two panels, and crease 3 goes on the box's own corner crease. See the drawing ending `_on_wardrobe_box.svg`.
+- From a 20 x 20 x 34 in wardrobe box: use the guide ending `_on_wardrobe_box_guide.md` instead of this one. It measures from the box's own creases.
 - From a flat 24 x 36 in sheet (609.6 x 914.4): one blank fits with 10 to spare in length, so start from a square end.
 - Flutes (the ribs inside the board) run up the walls, across the 904.0 length of the blank.
 - Mark out on the plain inside face. That face ends up inside the box, and every fold goes toward you.

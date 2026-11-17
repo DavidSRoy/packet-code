@@ -4,7 +4,7 @@ Date: 2026-11-17. Status: drawn and checked on paper, not yet cut or tested. Rep
 
 ## Why
 
-The gripper stays as it is. Its two jaws close inward and each hooks under a ledge at one end of the box. A cardboard box has to give those hooks the same ledge, in the same place.
+The gripper stays as it is. Its two jaws close inward. The end of each jaw is a U on its side: an upper prong, a gap, and a lower prong. On the printed box, a ledge that sticks out of each end slides into that gap. A cardboard box has to give the jaws something to hold in the same place.
 
 Two earlier boxes did not work out:
 
@@ -43,13 +43,13 @@ A was chosen because it is the only one that keeps both the gripper and a simple
 ## The grab
 
 1. The drone lands over the box with the jaws open, as now.
-2. The jaws close. Each hook passes through a slot: 4 mm of wall, then about 9 mm into the box.
-3. The hooks lift against the underside of the ledge flaps. The flaps push up on the lid, and the lid is held by its hinge on the back wall and the tape on the front wall.
-4. After landing, the jaws open and the hooks slide out.
+2. The jaws close. Each lower prong passes through a slot: 4 mm of wall, then about 9 mm into the box. The folded top of the wall slides into the jaw's gap, where the printed ledge went, and the upper prong ends up on top of the ledge flap, beside the end of the lid.
+3. The lower prongs lift against the underside of the ledge flaps. The flaps push up on the lid, and the lid is held by its hinge on the back wall and the tape on the front wall.
+4. After landing, the jaws open and the prongs slide out.
 
 ## Not known yet
 
-- The real shape of the hooks. Only the jaw bounding boxes are in the repo, so the slot is sized from those.
+- The real profile of the jaws. Only the jaw bounding boxes are in the repo, so the slot is sized from those and from the printed ledge. The jaw's gap took a 4.6 mm ledge and now has to take a 4 mm flap, and the upper prong has to fit in the 10.7 mm the lid leaves uncovered.
 - How much load the ledge flap and the taped lid take. Hang twice the payload from a test box before flying one.
 - Whether a closure with no tape (a locking tab or a peel strip) holds the lid well enough. The prototype uses tape.
 - How much heat the slots lose.

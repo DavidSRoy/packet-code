@@ -1,42 +1,54 @@
 #!/usr/bin/env python3
-"""Cut pattern for the Packet cardboard box: one piece, lifted by a hand hole in each end.
+"""Cut pattern for the Packet cardboard box: one piece, held by the gripper the drone has now.
 
-The box is a plain carton: four walls in a row, a lid hinged on one long wall with a
-tuck flap, a dust flap on each end wall and four bottom flaps. The drone's two jaws
-each slide a tongue into a hand hole near the top of an end wall and lift the box by
-the top edge of the two holes.
+The gripper's two jaws close inward and each hooks under a ledge at one end of the box.
+On the printed box that ledge sticks out from the end wall. Here it is inset: the top of
+each end wall folds inward as a flap, and a slot cut just under the fold lets the hook
+reach in under it. The rest is a plain carton: four walls in a row, a lid hinged on one
+long wall with a tuck flap, and four bottom flaps.
 
   python3 box_pattern.py [board_thickness_mm] [out.svg]
 
-Writes the pattern and a cutting guide (.md).
+Writes the pattern, a cutting guide (.md) and a layout on a wardrobe box (.svg).
 All sizes are mm and the pattern is 1:1. Creases are drawn at the board mid-plane, so a
 panel between two creases is its outside size minus one board thickness.
 """
 import sys
 
-# From the drone (backend/tools/sim/lid_camera_sim.py) and the printed BX-005 / BX-006
-LID_TOP = 154.4      # lid top above the ground at the grab
+# From the printed BX-005 / BX-006 and the drone (backend/tools/sim/lid_camera_sim.py)
+LEDGE_UNDER = 146.9  # underside of the ledge the jaw hooks sit under, above the ground
+LEDGE_TOP = 151.5    # top of the printed ledge
+LID_TOP_CAD = 154.4  # printed lid top above the ground
+LID_LEN = 225.6      # printed lid length: the ledge is left uncovered beyond it
+HOOK_REACH = 12.8    # the hooks reach this far in from the end face
+JAW_DROP = 12.8      # the jaws reach this far below the printed lid top
+JAW_HALF_W = 60.0    # the jaws sit within this of the centreline
 LEG_GAP = 209.8      # clear width between the landing legs at lid height
-L_OUT = 246.0        # outside length: the end walls sit where the printed ledge tips were
+L_OUT = 246.0        # outside length: the end faces sit where the tips of the printed ledges are
 TAG_AREA = (218.0, 190.0)    # the lid tags without the sticker's white margin (companion/stickers_218x200)
 
-# The box and the grab
+# The box
 W_OUT = 202.0        # outside width
-HOLE_W, HOLE_H = 90.0, 30.0  # hand hole
-HOLE_DROP = 25.0     # hole top edge below the lid top
-TONGUE_W, TONGUE_T, TONGUE_REACH = 60.0, 6.0, 13.0   # the jaw tongue the hole is sized for; reach is past the wall face
 
 # Bench knobs: change these after the first test fit
 SLACK = 0.5          # clearance per side where parts slide together
+FIT = 3.0            # how far the cardboard lid top may sit from the printed one
 LEG_MARGIN = 3.5     # least room to each landing leg
+SLOT_MARGIN = 8.0    # jaw slot width past the jaws, each side
+SLOT_H = 22.0        # jaw slot height below the ledge
+LEDGE_FLAP = 60.0    # depth of the flap the hooks sit under
 TAB = 25.0           # side seam tab
 TAB_INSET = 8.0      # the tab stops this far short of the wall top and bottom
-DUST = 60.0          # dust flap depth
 TUCK = 25.0          # tuck flap depth
+TUCK_GAP = 3.0       # room between the tuck flap and each ledge flap
 LINER = 5.0          # foil bubble liner inside the box (0.19 in roll); 0 leaves it out
 
-# The board to cut from: one flat 24 x 36 in sheet, the common stock size
+# The board to cut from. A flat 24 x 36 in sheet takes the blank in one piece.
 SHEET_W, SHEET_L = 609.6, 914.4
+# Or a 20 x 20 x 34 in wardrobe box opened flat (nominal sizes, measure yours)
+BOX_PANEL_W, BOX_PANEL_H, BOX_FLAP = 508.0, 864.0, 254.0   # panel width and height, flap depth
+BOX_TRIM = 5.0       # stay this far inside the box's other creases
+BOX_FOOT = 40.0      # gap left below the blank, above the bottom crease
 
 
 def layout(t: float) -> dict[str, float]:
@@ -45,8 +57,13 @@ def layout(t: float) -> dict[str, float]:
     xb = xa + L_OUT - t
     xc = xb + W_OUT - t
     xd = xc + L_OUT - t
-    ya = LID_TOP - t / 2
+    lid_top = LEDGE_UNDER + 2 * t        # ledge flap, then the lid on top of it
+    ya = lid_top - t / 2
     lid = W_OUT - 2 * t - SLACK
+    lid_len = LID_LEN - 2 * SLACK
+    lx0 = xa + (L_OUT - t - lid_len) / 2
+    tuck_half = (L_OUT - t) / 2 - LEDGE_FLAP - TUCK_GAP   # the tuck flap drops between the two ledge flaps
+    mid = xa + (L_OUT - t) / 2
     g = {
         "t": t,
         "xa": xa,                        # crease: tab to side A (back wall, carries the lid)
@@ -57,24 +74,28 @@ def layout(t: float) -> dict[str, float]:
         "ys": t / 2,                     # side walls, bottom crease: their flaps are the outer floor layer
         "ye": 1.5 * t,                   # end walls, bottom crease: their flaps are the inner floor layer
         "fd": (W_OUT - t) / 2 - SLACK,   # bottom flap depth
+        "lid_top": lid_top,
         "ya": ya,                        # side A, lid crease
-        "yb": LID_TOP,                   # side B, top edge (flush with the lid top)
-        "yd": LID_TOP - 1.5 * t,         # end walls, dust flap crease
+        "yb": lid_top,                   # side B, top edge (flush with the lid top)
+        "yd": LEDGE_UNDER + t / 2,       # end walls, ledge flap crease: the flap's underside is the ledge
         "lid": lid,                      # lid depth, hinge crease to tuck crease
         "yt": ya + lid,                  # tuck crease
-        "ov": t / 2 + SLACK,             # lid overhang past the wall creases; also the flap insets
-        "ti": t / 2 + 2.0,               # tuck flap inset
-        "hole_top": LID_TOP - HOLE_DROP,
+        "lx0": lx0,                      # lid, left and right edges: shorter than side A, like the printed lid
+        "lx1": lx0 + lid_len,
+        "ov": t / 2 + SLACK,             # flap insets from the wall creases
+        "tx0": mid - tuck_half,          # tuck flap, left and right edges
+        "tx1": mid + tuck_half,
+        "slot_w": 2 * (JAW_HALF_W + SLOT_MARGIN),
         "il": L_OUT - 2 * t,             # inside length
         "iw": W_OUT - 2 * t,             # inside width
-        "ih": LID_TOP - 3 * t,           # inside height, over the end bottom flaps
+        "ih": LEDGE_UNDER - 2 * t,       # inside height under the ledge flaps, over the end bottom flaps
     }
     check(g)
     return g
 
 
 def check(g: dict[str, float]) -> None:
-    """The folded box must fit the drone and close on itself."""
+    """The folded box must fit the drone, put the ledge where the hooks expect it, and close on itself."""
     t = g["t"]
     near = lambda a, b: abs(a - b) < 1e-6
     assert W_OUT + 2 * LEG_MARGIN <= LEG_GAP, "the box fits between the landing legs"
@@ -83,43 +104,49 @@ def check(g: dict[str, float]) -> None:
     assert near(g["ys"] - t / 2, 0), "the floor sits on the ground"
     assert near(g["ye"] - g["ys"], t), "the end bottom flaps lie flat on the side ones"
     assert 2 * g["fd"] < W_OUT - t, "the side bottom flaps do not overlap"
-    assert near(g["ya"] + t / 2, LID_TOP), "lid top height"
-    assert near(g["yd"] + t / 2, LID_TOP - t), "the dust flaps lie flat under the lid"
+    assert near(g["yd"] - t / 2, LEDGE_UNDER), "the ledge flap's underside is at the printed ledge height"
+    assert LEDGE_UNDER + t <= LEDGE_TOP + 1, "the ledge flap is no thicker than the printed ledge"
+    assert abs(g["lid_top"] - LID_TOP_CAD) <= FIT, (
+        f"{t} mm board puts the lid top at {g['lid_top']:.1f}, printed {LID_TOP_CAD}")
+    assert near(g["ya"] + t / 2, g["lid_top"]) and near(g["yd"] + t / 2, g["lid_top"] - t), "the lid lies flat on the ledge flaps"
     assert near(g["lid"] + t / 2 + SLACK, W_OUT - 1.5 * t), "the tuck flap slides inside the front wall"
-    assert g["yd"] - g["hole_top"] >= 15, "board above the hand hole"
-    assert g["hole_top"] - HOLE_H - g["ye"] >= 40, "board below the hand hole"
-    assert (W_OUT - t - HOLE_W) / 2 >= 40, "board beside the hand hole"
-    assert HOLE_W >= TONGUE_W + 20 and HOLE_H >= TONGUE_T + t + 12, "the tongue has room in the hole"
-    assert TAG_AREA[0] <= L_OUT and TAG_AREA[1] <= g["lid"], "the lid tags fit the flat lid"
+    assert g["tx1"] - g["tx0"] <= L_OUT - t - 2 * LEDGE_FLAP - 2 * SLACK, "the tuck flap drops between the ledge flaps"
+    assert g["tx1"] - g["tx0"] >= 80, "the tuck flap is wide enough to hold"
+    assert LEDGE_UNDER - SLOT_H <= LID_TOP_CAD - JAW_DROP - 5, "the jaw slot is open below the jaws"
+    assert (W_OUT - t - g["slot_w"]) / 2 >= 25, "wall beside the jaw slot"
+    assert LEDGE_FLAP >= HOOK_REACH - t + 30, "the ledge flap reaches well past the hooks"
+    assert (L_OUT - (g["lx1"] - g["lx0"])) / 2 >= HOOK_REACH - 3, "the lid leaves the ledge uncovered, as the printed lid does"
+    assert TAG_AREA[0] <= g["lx1"] - g["lx0"] and TAG_AREA[1] <= g["lid"], "the lid tags fit the flat lid"
     assert min(g["il"], g["iw"], g["ih"]) - 2 * LINER > 50, "the liner leaves room for the food"
     assert g["xe"] <= SHEET_L and g["yt"] + TUCK - (g["ys"] - g["fd"]) <= SHEET_W, "the blank fits one 24 x 36 in sheet"
 
 
-def holes(g: dict[str, float]) -> list[float]:
-    """Left side of the hand hole on end 1 and on end 2."""
-    return [x + (W_OUT - g["t"] - HOLE_W) / 2 for x in (g["xb"], g["xd"])]
+def slots(g: dict[str, float]) -> list[float]:
+    """Left side of the jaw slot on end 1 and on end 2."""
+    return [x + (W_OUT - g["t"] - g["slot_w"]) / 2 for x in (g["xb"], g["xd"])]
 
 
 def body_outline(g: dict[str, float]) -> list[tuple[float, float]]:
-    xa, xb, xc, xd, xe = (g[k] for k in ("xa", "xb", "xc", "xd", "xe"))
-    ys, ye, fd, ya, yb, yd, yt, ov, ti = (g[k] for k in ("ys", "ye", "fd", "ya", "yb", "yd", "yt", "ov", "ti"))
+    xa, xb, xc, xd, xe, lx0, lx1 = (g[k] for k in ("xa", "xb", "xc", "xd", "xe", "lx0", "lx1"))
+    ys, ye, fd, ya, yb, yd, yt, ov, tx0, tx1 = (g[k] for k in ("ys", "ye", "fd", "ya", "yb", "yd", "yt", "ov", "tx0", "tx1"))
+    top = yd + LEDGE_FLAP
     return [   # counter-clockwise from the bottom of the tab
         (0, ys + TAB_INSET), (xa, ys + TAB_INSET), (xa, ys),
         (xa + ov, ys), (xa + ov, ys - fd), (xb - ov, ys - fd), (xb - ov, ys), (xb, ys), (xb, ye),
         (xb + ov, ye), (xb + ov, ye - fd), (xc - ov, ye - fd), (xc - ov, ye), (xc, ye), (xc, ys),
         (xc + ov, ys), (xc + ov, ys - fd), (xd - ov, ys - fd), (xd - ov, ys), (xd, ys), (xd, ye),
         (xd + ov, ye), (xd + ov, ye - fd), (xe - ov, ye - fd), (xe - ov, ye), (xe, ye),
-        (xe, yd), (xe - ov, yd), (xe - ov, yd + DUST), (xd + ov, yd + DUST), (xd + ov, yd), (xd, yd),
-        (xd, yb), (xc, yb), (xc, yd), (xc - ov, yd), (xc - ov, yd + DUST), (xb + ov, yd + DUST),
-        (xb + ov, yt), (xb - ti, yt), (xb - ti, yt + TUCK), (xa + ti, yt + TUCK), (xa + ti, yt),
-        (xa - ov, yt), (xa - ov, ya), (xa, ya), (xa, ya - TAB_INSET), (0, ya - TAB_INSET),
+        (xe, yd), (xe - ov, yd), (xe - ov, top), (xd + ov, top), (xd + ov, yd), (xd, yd),
+        (xd, yb), (xc, yb), (xc, yd), (xc - ov, yd), (xc - ov, top), (xb + ov, top), (xb + ov, yd), (xb, yd),
+        (xb, ya), (lx1, ya), (lx1, yt), (tx1, yt), (tx1, yt + TUCK), (tx0, yt + TUCK), (tx0, yt),
+        (lx0, yt), (lx0, ya), (xa, ya), (xa, ya - TAB_INSET), (0, ya - TAB_INSET),
     ]
 
 
 def body_elements(g: dict[str, float], ox: float = 0.0, oy: float = 0.0) -> tuple[list[str], list[str]]:
     """The blank as SVG elements: cuts and creases. Its left end is at ox and the ground line (y = 0) at oy."""
-    xa, xb, xc, xd, xe = (g[k] for k in ("xa", "xb", "xc", "xd", "xe"))
-    ys, ye, ya, yd, yt, ov, ti = (g[k] for k in ("ys", "ye", "ya", "yd", "yt", "ov", "ti"))
+    xa, xb, xc, xd, xe, lx0, lx1 = (g[k] for k in ("xa", "xb", "xc", "xd", "xe", "lx0", "lx1"))
+    ys, ye, ya, yd, yt, ov = (g[k] for k in ("ys", "ye", "ya", "yd", "yt", "ov"))
     cut, fold = [], []
     P = lambda x, y: (ox + x, oy - y)
 
@@ -128,16 +155,9 @@ def body_elements(g: dict[str, float], ox: float = 0.0, oy: float = 0.0) -> tupl
         out.append(f'<line x1="{a:.2f}" y1="{b:.2f}" x2="{c:.2f}" y2="{d:.2f}"/>')
 
     cut.append('<polygon points="' + " ".join("{:.2f},{:.2f}".format(*P(x, y)) for x, y in body_outline(g)) + '"/>')
-    seg(cut, xb + ov, yd, xb + ov, yd + DUST)       # between the lid and the dust flap of end 1
-    seg(cut, xb, yd, xb + ov, yd)                   # the small corner notch beside it
-    seg(cut, xb, yd, xb, ya)
-    seg(cut, xb, ya, xb + ov, ya)
-    top, bottom = g["hole_top"], g["hole_top"] - HOLE_H
-    for x0 in holes(g):                             # hand holes: three cuts and a crease along the top
-        seg(cut, x0, top, x0, bottom)
-        seg(cut, x0, bottom, x0 + HOLE_W, bottom)
-        seg(cut, x0 + HOLE_W, bottom, x0 + HOLE_W, top)
-        seg(fold, x0, top, x0 + HOLE_W, top)
+    for x0 in slots(g):                             # jaw slots: cut out, just under the ledge flap crease
+        a, b = P(x0, LEDGE_UNDER)
+        cut.append(f'<rect x="{a:.2f}" y="{b:.2f}" width="{g["slot_w"]:.2f}" height="{SLOT_H:.2f}"/>')
     seg(fold, xa, ys + TAB_INSET, xa, ya - TAB_INSET)
     for x in (xb, xc, xd):
         seg(fold, x, ye, x, yd)
@@ -145,71 +165,73 @@ def body_elements(g: dict[str, float], ox: float = 0.0, oy: float = 0.0) -> tupl
     seg(fold, xb + ov, ye, xc - ov, ye)
     seg(fold, xc + ov, ys, xd - ov, ys)
     seg(fold, xd + ov, ye, xe - ov, ye)
-    seg(fold, xb + ov, yd, xc - ov, yd)             # dust flaps
+    seg(fold, xb + ov, yd, xc - ov, yd)             # ledge flaps
     seg(fold, xd + ov, yd, xe - ov, yd)
-    seg(fold, xa, ya, xb, ya)                       # lid hinge
-    seg(fold, xa + ti, yt, xb - ti, yt)             # tuck flap
+    seg(fold, lx0, ya, lx1, ya)                     # lid hinge
+    seg(fold, g["tx0"], yt, g["tx1"], yt)           # tuck flap
     return cut, fold
 
 
-def liner_pieces(g: dict[str, float]) -> list[tuple[str, list[tuple[float, float]]]]:
-    """Foil bubble pieces, two of each: name and outline from the piece's bottom-left corner."""
+def liner_pieces(g: dict[str, float]) -> list[tuple[str, list[tuple[float, float]], int]]:
+    """Foil bubble pieces: name, outline from the piece's bottom-left corner, and how many to cut."""
     w, d = g["il"] - 2 * SLACK, g["iw"] - 2 * SLACK
-    h = g["ih"] - 2 * LINER                         # walls stand on the floor piece, under the lid piece
+    h = g["ih"] - 2 * LINER                         # walls stand on the floor piece and carry the top piece
     ew = g["iw"] - 2 * LINER - 2 * SLACK
-    nw = HOLE_W + 20                                # notch that keeps the hand hole clear
-    nd = (LID_TOP - g["t"] - LINER) - (g["hole_top"] - HOLE_H) + 5
+    gap = HOOK_REACH - g["t"] + 3                   # the top piece stops short of each end, clear of the hooks
+    nw = g["slot_w"] + 10                           # notch that keeps the jaw slot clear
+    nd = SLOT_H - LINER + 5
     n0 = (ew - nw) / 2
     box = lambda a, b: [(0, 0), (a, 0), (a, b), (0, b)]
-    return [("FLOOR AND LID", box(w, d)), ("SIDE", box(w, h)),
-            ("END", [(0, 0), (ew, 0), (ew, h), (n0 + nw, h), (n0 + nw, h - nd), (n0, h - nd), (n0, h), (0, h)])]
+    return [("FLOOR", box(w, d), 1), ("TOP", box(w - 2 * gap, d), 1), ("SIDE", box(w, h), 2),
+            ("END", [(0, 0), (ew, 0), (ew, h), (n0 + nw, h), (n0 + nw, h - nd), (n0, h - nd), (n0, h), (0, h)], 2)]
 
 
 def marks(g: dict[str, float]) -> tuple[list[tuple[float, str]], list[tuple[float, str]]]:
     """Mark-out distances for the blank: along the length from the left end, and up from the bottom edge."""
-    xa, xb, xc, xd, xe = (g[k] for k in ("xa", "xb", "xc", "xd", "xe"))
-    ys, ye, fd, ya, yb, yd, yt, ov, ti = (g[k] for k in ("ys", "ye", "fd", "ya", "yb", "yd", "yt", "ov", "ti"))
-    h1, h2 = holes(g)
-    along = [
+    xa, xb, xc, xd, xe, lx0, lx1 = (g[k] for k in ("xa", "xb", "xc", "xd", "xe", "lx0", "lx1"))
+    ys, ye, fd, ya, yb, yd, yt, ov = (g[k] for k in ("ys", "ye", "fd", "ya", "yb", "yd", "yt", "ov"))
+    s1, s2 = slots(g)
+    along = sorted([
         (0, "left end: edge of the tab"),
-        (xa - ov, "lid, left edge"),
         (xa, "crease 1: tab to side A"),
         (xa + ov, "side A bottom flap, left edge"),
-        (xa + ti, "tuck flap, left edge"),
-        (xb - ti, "tuck flap, right edge"),
+        (lx0, "lid, left edge"),
+        (g["tx0"], "tuck flap, left edge"),
+        (g["tx1"], "tuck flap, right edge"),
+        (lx1, "lid, right edge"),
         (xb - ov, "side A bottom flap, right edge"),
         (xb, "crease 2: side A to end 1"),
-        (xb + ov, "lid, right edge; end 1 flaps, left edge"),
-        (h1, "end 1 hand hole, left side"),
-        (h1 + HOLE_W, "end 1 hand hole, right side"),
+        (xb + ov, "end 1 flaps, left edge"),
+        (s1, "end 1 jaw slot, left side"),
+        (s1 + g["slot_w"], "end 1 jaw slot, right side"),
         (xc - ov, "end 1 flaps, right edge"),
         (xc, "crease 3: end 1 to side B"),
         (xc + ov, "side B bottom flap, left edge"),
         (xd - ov, "side B bottom flap, right edge"),
         (xd, "crease 4: side B to end 2"),
         (xd + ov, "end 2 flaps, left edge"),
-        (h2, "end 2 hand hole, left side"),
-        (h2 + HOLE_W, "end 2 hand hole, right side"),
+        (s2, "end 2 jaw slot, left side"),
+        (s2 + g["slot_w"], "end 2 jaw slot, right side"),
         (xe - ov, "end 2 flaps, right edge"),
         (xe, "right end: edge of end 2"),
-    ]
+    ])
     b0 = ys - fd
-    up = [(y - b0, name) for y, name in [
+    up = sorted((y - b0, name) for y, name in [
         (b0, "bottom edge: side bottom flaps"),
         (ye - fd, "end bottom flaps, bottom edge"),
         (ys, "side walls, bottom crease"),
         (ye, "end walls, bottom crease"),
         (ys + TAB_INSET, "tab, bottom edge"),
-        (g["hole_top"] - HOLE_H, "hand holes, bottom edge"),
-        (g["hole_top"], "hand holes, top edge (a crease)"),
+        (LEDGE_UNDER - SLOT_H, "jaw slots, bottom edge"),
         (ya - TAB_INSET, "tab, top edge"),
-        (yd, "end walls, dust flap crease"),
+        (LEDGE_UNDER, "jaw slots, top edge"),
+        (yd, "end walls, ledge flap crease"),
         (ya, "side A, lid crease"),
         (yb, "side B, top edge"),
-        (yd + DUST, "dust flaps, top edge"),
+        (yd + LEDGE_FLAP, "ledge flaps, top edge"),
         (yt, "tuck flap crease"),
         (yt + TUCK, "top edge: tuck flap"),
-    ]]
+    ])
     return along, up
 
 
@@ -217,41 +239,42 @@ def guide(g: dict[str, float]) -> str:
     """The cutting guide as Markdown, from the same numbers as the drawing."""
     t = g["t"]
     along, up = marks(g)
-    A = {name: d for d, name in along}
-    U = {name: d for d, name in up}
+    A = {name: f"{d:.1f}" for d, name in along}
+    U = {name: f"{d:.1f}" for d, name in up}
     f = lambda v: f"{v:.1f}"
     length, height = along[-1][0], up[-1][0]
-    x_lid0, x1, x_fa0, x_tk0, x_tk1, x_fa1, x2, x_e10, h1a, h1b, x_e11, x3, x_fb0, x_fb1, x4, x_e20, h2a, h2b, x_e21, x_end = \
-        [d for d, _ in along[1:]]
-    y_ef, y_s, y_e, y_tab0, y_h0, y_h1, y_tab1, y_dust, y_lid, y_front, y_dtop, y_tuck, y_top = [d for d, _ in up[1:]]
     table = lambda rows: "\n".join(f"| {d:.1f} | {name} |" for d, name in rows)
-    pieces = liner_pieces(g)
     size = lambda pts: f"{max(x for x, _ in pts):.1f} x {max(y for _, y in pts):.1f}"
-    end = pieces[2][1]
-    liner = "" if not LINER else f"""
+    liner = ""
+    if LINER:
+        floor, top, side, end = (pts for _, pts, _ in liner_pieces(g))
+        liner = f"""
 ## Liner ({LINER:g} mm foil bubble)
 
-Cut with scissors. Two of each.
+Cut with scissors.
 
-| Piece | Size | Goes |
-|---|---|---|
-| Floor and lid | {size(pieces[0][1])} | One on the floor, one glued under the lid |
-| Side | {size(pieces[1][1])} | Along each long wall, standing on the floor piece |
-| End | {size(end)} | Between the side pieces at each end |
+| Piece | Size | Number | Goes |
+|---|---|---|---|
+| Floor | {size(floor)} | 1 | On the floor |
+| Side | {size(side)} | 2 | Along each long wall, standing on the floor piece |
+| End | {size(end)} | 2 | Between the side pieces at each end |
+| Top | {size(top)} | 1 | Laid on top of the wall pieces, centred, after the food is in |
 
-Cut a notch {end[3][0] - end[6][0]:.0f} wide and {end[3][1] - end[4][1]:.0f} deep in the middle of the top edge of each end piece. It keeps the hand hole clear for the jaw.
+Cut a notch {end[3][0] - end[6][0]:.0f} wide and {end[3][1] - end[4][1]:.0f} deep in the middle of the top edge of each end piece. The notch and the short top piece keep the jaw slots clear.
 """
-    return f"""# Cutting guide: cardboard box with hand holes, {t:g} mm board
+    return f"""# Cutting guide: cardboard box for the current gripper, {t:g} mm board
 
 Written by `box_pattern.py` from the same numbers as the drawing. All sizes are mm.
 
-The box is one piece. The drone lifts it by a hand hole in each end wall.
+The box is one piece. The top of each end wall folds inward as a ledge flap, and a slot just under the fold lets the gripper's hook reach in under it.
 
 ## Check the board first
 
 - Thickness: this guide is for {t:g} mm board. If yours differs by more than 0.5 mm, run the script again with your thickness.
-- Board: one flat sheet of single-wall C-flute board, at least {f(length)} x {f(height)}. A 24 x 36 in sheet ({SHEET_W:g} x {SHEET_L:g}) takes one blank with {SHEET_L - length:.0f} to spare in length, so start from a square end.
-- Flutes (the ribs inside the board) run up the walls, across the {f(length)} length of the blank. On a 24 x 36 in sheet that is along the 24 in side.
+- Board: single-wall C-flute. The blank is {f(length)} x {f(height)}.
+- From a 20 x 20 x 34 in wardrobe box: the blank spans two panels, and crease 3 goes on the box's own corner crease. See the drawing ending `_on_wardrobe_box.svg`.
+- From a flat 24 x 36 in sheet ({SHEET_W:g} x {SHEET_L:g}): one blank fits with {SHEET_L - length:.0f} to spare in length, so start from a square end.
+- Flutes (the ribs inside the board) run up the walls, across the {f(length)} length of the blank.
 - Mark out on the plain inside face. That face ends up inside the box, and every fold goes toward you.
 
 ## Mark out
@@ -274,50 +297,46 @@ Up, from the bottom edge:
 ## Cut
 
 1. Bottom flaps. Keep four flaps below the walls and cut away the rest:
-   side A from {f(x_fa0)} to {f(x_fa1)} and side B from {f(x_fb0)} to {f(x_fb1)}, both from the bottom edge up to {f(y_s)};
-   end 1 from {f(x_e10)} to {f(x_e11)} and end 2 from {f(x_e20)} to {f(x_e21)}, both from {f(y_ef)} up to {f(y_e)}.
+   side A from {A['side A bottom flap, left edge']} to {A['side A bottom flap, right edge']} and side B from {A['side B bottom flap, left edge']} to {A['side B bottom flap, right edge']}, both from the bottom edge up to {U['side walls, bottom crease']};
+   end 1 from {A['end 1 flaps, left edge']} to {A['end 1 flaps, right edge']} and end 2 from {A['end 2 flaps, left edge']} to {A['end 2 flaps, right edge']}, both from {U['end bottom flaps, bottom edge']} up to {U['end walls, bottom crease']}.
    That leaves a {f(2 * g['ov'])} wide slot at each of creases 2, 3 and 4.
-2. Tab. Keep the strip from the left end to {f(x1)}, between {f(y_tab0)} and {f(y_tab1)} up. Cut away the corners above and below it.
-3. Wall tops. Side B ends at {f(y_front)} up. Cut away everything above it between creases 3 and 4.
-4. Dust flaps. Above each end wall keep a flap up to {f(y_dtop)}: end 1 from {f(x_e10)} to {f(x_e11)}, end 2 from {f(x_e20)} to {f(x_e21)}.
-5. Lid. Above side A keep the lid from {f(x_lid0)} to {f(x_e10)}, up to {f(y_tuck)}, and the tuck flap from {f(x_tk0)} to {f(x_tk1)}, up to the top edge.
-6. Lid and dust flap. They share one cut at {f(x_e10)}, from {f(y_dust)} to {f(y_dtop)} up. Cut out the small notch beside it, between {f(x2)} and {f(x_e10)} and between {f(y_dust)} and {f(y_lid)} up, so the lid can close.
-7. Hand holes. On each end wall cut the two sides and the bottom of the hole: end 1 from {f(h1a)} to {f(h1b)}, end 2 from {f(h2a)} to {f(h2b)}, between {f(y_h0)} and {f(y_h1)} up. Do not cut the top edge.
+2. Tab. Keep the strip from the left end to {A['crease 1: tab to side A']}, between {U['tab, bottom edge']} and {U['tab, top edge']} up. Cut away the corners above and below it.
+3. Wall tops. Side A ends at {U['side A, lid crease']} up and side B at {U['side B, top edge']} up. The end walls end at {U['end walls, ledge flap crease']} up, outside their flaps.
+4. Ledge flaps. Above each end wall keep a flap up to {U['ledge flaps, top edge']}: end 1 from {A['end 1 flaps, left edge']} to {A['end 1 flaps, right edge']}, end 2 from {A['end 2 flaps, left edge']} to {A['end 2 flaps, right edge']}.
+5. Lid. Above side A keep the lid from {A['lid, left edge']} to {A['lid, right edge']}, up to {U['tuck flap crease']}, and the tuck flap from {A['tuck flap, left edge']} to {A['tuck flap, right edge']}, up to the top edge. The lid is shorter than side A on purpose, and the tuck flap is narrow so that it drops between the two ledge flaps.
+6. Jaw slots. Cut a slot right out of each end wall: end 1 from {A['end 1 jaw slot, left side']} to {A['end 1 jaw slot, right side']}, end 2 from {A['end 2 jaw slot, left side']} to {A['end 2 jaw slot, right side']}, between {U['jaw slots, bottom edge']} and {U['jaw slots, top edge']} up. The top of the slot stops {f(t / 2)} below the ledge flap crease. Do not cut into the crease. Round the two top corners a little.
 
 ## Crease
 
 Press a blunt edge along a ruler on this face. Do not cut through. Every fold goes toward you.
 
-- Creases 1 to 4: up the walls at {f(x1)}, {f(x2)}, {f(x3)} and {f(x4)}.
-- Bottom flaps: side A and side B at {f(y_s)} up, end 1 and end 2 at {f(y_e)} up.
-- Dust flaps: across each end wall at {f(y_dust)} up.
-- Lid: across side A at {f(y_lid)} up.
-- Tuck flap: at {f(y_tuck)} up.
-- Hand hole flaps: the top edge of each hole, at {f(y_h1)} up.
+- Creases 1 to 4: up the walls at {A['crease 1: tab to side A']}, {A['crease 2: side A to end 1']}, {A['crease 3: end 1 to side B']} and {A['crease 4: side B to end 2']}.
+- Bottom flaps: side A and side B at {U['side walls, bottom crease']} up, end 1 and end 2 at {U['end walls, bottom crease']} up.
+- Ledge flaps: across each end wall at {U['end walls, ledge flap crease']} up, right across the top of the jaw slot.
+- Lid: across side A at {U['side A, lid crease']} up.
+- Tuck flap: at {U['tuck flap crease']} up.
 {liner}
 ## Fold and fix
 
 1. Fold the four walls into a tube. Glue or tape the tab inside the free edge of end 2.
 2. Fold the two end bottom flaps in, then the two side bottom flaps over them. Tape along the seam.
-3. Put the liner in, if you use it.
-4. Pack the food. Keep the top of each end wall clear for about {TONGUE_REACH:g} mm inside.
-5. Fold the two dust flaps in.
-6. Close the lid, tuck its flap inside the front wall and tape the front edge.
+3. Put the floor, side and end liner pieces in, if you use them.
+4. Pack the food. Keep the top of each end wall clear for about {HOOK_REACH - t + 5:.0f} mm inside.
+5. Fold the two ledge flaps in.
+6. Close the lid onto the ledge flaps, tuck its flap inside the front wall and tape the whole front edge, corners included. The tape matters: the lid holds the ledge flaps down when the hooks lift.
 
-Leave the hand hole flaps flat. The drone's jaws push them in.
+The tags ({TAG_AREA[0]:g} x {TAG_AREA[1]:g}) fit on the lid, which is {f(g['lx1'] - g['lx0'])} x {f(g['lid'])}. A sticker bigger than the lid needs its white margin trimmed.
 
-The lid is {f(g['lid'])} deep between its creases. The tags ({TAG_AREA[0]:g} x {TAG_AREA[1]:g}) fit on it. A sticker deeper than the lid needs its white margin trimmed.
+## How the gripper holds it
 
-## What the gripper needs
-
-| | |
-|---|---|
-| Hand hole | {HOLE_W:g} x {HOLE_H:g}, centred on each end wall |
-| Hole top edge | {HOLE_DROP:g} below the lid top, {g['hole_top']:.1f} above the ground |
-| Tongue | up to {TONGUE_W:g} wide and {TONGUE_T:g} thick, reaching {TONGUE_REACH:g} past the wall face |
-| End wall faces | {L_OUT:g} apart |
-| Lid top | {LID_TOP:g} above the ground |
-| Width | {W_OUT:g}, in a {LEG_GAP:g} gap between the landing legs |
+| | Printed box | This box |
+|---|---|---|
+| Ledge underside above the ground | {LEDGE_UNDER:g} | {LEDGE_UNDER:g} (underside of the ledge flap) |
+| End face the jaws close on | {L_OUT:g} apart | {L_OUT:g} apart |
+| Room for the hook under the ledge | {HOOK_REACH:g} deep | {HOOK_REACH:g}: {t:g} of wall, then open box |
+| Opening for the jaws | 160 wide | {g['slot_w']:g} wide, {SLOT_H:g} tall |
+| Lid top above the ground | {LID_TOP_CAD:g} | {g['lid_top']:.1f} |
+| Lid length | {LID_LEN:g} | {f(g['lx1'] - g['lx0'])} |
 """
 
 
@@ -343,10 +362,73 @@ def chain(dims: list[str], notes: list[str], points: list[float], at: float, nam
         notes.append(f'<text {where} font-size="{size}">{label}</text>')
 
 
+def on_box(g: dict[str, float]) -> str:
+    """The blank laid over a wardrobe box opened flat, drawn at 1:4. Crease 3 sits on one of the box's own
+    corner creases, because the blank is longer than one panel."""
+    xc, xe = g["xc"], g["xe"]
+    low, high = g["ys"] - g["fd"], g["yt"] + TUCK
+    pw, ph, fl = BOX_PANEL_W, BOX_PANEL_H, BOX_FLAP
+    assert xc <= pw - BOX_TRIM and xe - xc <= pw - BOX_TRIM, "the blank fits the two panels either side of a corner crease"
+    assert high - low + BOX_FOOT <= ph, "the blank fits the panel height"
+
+    ox, oy = 150.0, 120.0
+    top, bottom = oy + fl, oy + fl + ph                       # the creases above and below the panels
+    corner = ox + 2 * pw                                      # the corner crease the blank folds on
+    x0, ground = corner - xc, bottom - BOX_FOOT + low         # blank's left end; SVG y of the box's ground line
+    canvas_w, canvas_h = ox + 4 * pw + 80, bottom + fl + 290
+    box, dims, notes = [], [], []
+    for i in range(4):
+        x = ox + i * pw
+        box.append(f'<rect x="{x:.1f}" y="{oy:.1f}" width="{pw:.1f}" height="{fl:.1f}" fill="#f1eee6" stroke-dasharray="14 10"/>'
+                   f'<rect x="{x:.1f}" y="{bottom:.1f}" width="{pw:.1f}" height="{fl:.1f}" fill="#f1eee6" stroke-dasharray="14 10"/>'
+                   f'<rect x="{x:.1f}" y="{top:.1f}" width="{pw:.1f}" height="{ph:.1f}" fill="white"/>')
+    label = lambda x, y, s, size=22, anchor="middle": notes.append(
+        f'<text x="{x:.1f}" y="{y:.1f}" font-size="{size}" text-anchor="{anchor}">{s}</text>')
+    for i, s in enumerate(["PANEL 1: spare", "PANEL 2", "PANEL 3", "PANEL 4: spare"]):
+        label(ox + (i + 0.5) * pw, top + 44, s)
+    label(ox + 1.5 * pw, oy + fl / 2 + 8, "top flaps: cut off along the crease")
+    label(ox + 0.5 * pw, bottom + fl - 30, "bottom flaps: cut off along the crease", 18)
+    label(ox + 3.5 * pw, top + ph / 2, "&#8593; flutes run this way &#8595;")
+    label(corner + 16, top + 110, "&#8592; put crease 3 on this corner crease", 22, "start")
+
+    cut, fold = body_elements(g, x0, ground)
+    fill = '<polygon points="' + " ".join(f"{x0 + x:.2f},{ground - y:.2f}" for x, y in body_outline(g)) + '"/>'
+    big = dict(size=16.0, reach=0.0)
+    chain(dims, notes, [ox + i * pw for i in range(5)], oy - 30, ["panel"] * 4, **big)
+    chain(dims, notes, [oy, top, bottom, bottom + fl], ox - 40, ["flap", "panel", "flap"], vertical=True, **big)
+    chain(dims, notes, [ox + pw, x0, corner, x0 + xe, ox + 3 * pw], bottom + 70,
+          ["", "left of the corner", "right of the corner", ""], **big)
+    chain(dims, notes, [top, ground - high, ground - low, bottom], ox + pw - 60, ["clear", "blank", "foot"],
+          vertical=True, **big)
+    for i, s in enumerate([
+        f"Medium wardrobe box, 20 x 20 x 34 in, opened flat. Drawn at 1:4, sizes in mm. Board {g['t']:g} mm.",
+        "Panel sizes are the nominal ones from the listing. Measure your box before you cut.",
+        f"The blank is {xe:.0f} mm long, longer than one panel, so it spans two. Put crease 3 on the corner crease "
+        "between them. That crease already folds the right way.",
+        "Do not use the corner where the wardrobe box is glued together. Keep hand holes, bar notches and other "
+        "creases out of the blank.",
+        f"Cut the wardrobe box open along a different corner and remove its flaps. The blank needs {x0 - ox - pw:.0f} mm "
+        f"and {ox + 3 * pw - x0 - xe:.0f} mm of spare panel at its two ends.",
+    ]):
+        label(ox, bottom + fl + 70 + 34 * i, s, 22, "start")
+    return f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{canvas_w / 4:.1f}mm" height="{canvas_h / 4:.1f}mm" viewBox="0 0 {canvas_w:.1f} {canvas_h:.1f}">
+<rect width="100%" height="100%" fill="white"/>
+<g id="box" stroke="#8d8878" stroke-width="2">{"".join(box)}</g>
+<g fill="#ecd9b4" stroke="none">{fill}</g>
+<g id="cut" fill="white" stroke="black" stroke-width="1.2">{"".join(cut[1:])}</g>
+<g fill="none" stroke="black" stroke-width="1.2">{cut[0]}</g>
+<g id="crease" fill="none" stroke="#1565c0" stroke-width="1.2" stroke-dasharray="10 6">{"".join(fold)}</g>
+<g id="dims" fill="none" stroke="#444" stroke-width="0.9">{"".join(dims)}</g>
+<g id="notes" font-family="Helvetica, Arial, sans-serif" fill="#333">{"".join(notes)}</g>
+</svg>
+'''
+
+
 def svg(g: dict[str, float]) -> str:
     t = g["t"]
-    xa, xb, xc, xd, xe = (g[k] for k in ("xa", "xb", "xc", "xd", "xe"))
-    ys, ye, fd, ya, yb, yd, yt, ov = (g[k] for k in ("ys", "ye", "fd", "ya", "yb", "yd", "yt", "ov"))
+    xa, xb, xc, xd, xe, lx0, lx1 = (g[k] for k in ("xa", "xb", "xc", "xd", "xe", "lx0", "lx1"))
+    ys, ye, fd, ya, yb, yd, yt = (g[k] for k in ("ys", "ye", "fd", "ya", "yb", "yd", "yt"))
     low, high = ys - fd, yt + TUCK
     outline = body_outline(g)
     assert min(y for _, y in outline) == low and max(y for _, y in outline) == high
@@ -356,8 +438,9 @@ def svg(g: dict[str, float]) -> str:
     oy = top + high                                 # SVG y of the box's ground line
     bottom = oy - low
     pieces = liner_pieces(g) if LINER else []
-    kx = ox + xe + 60                               # left edge of the liner column
-    width = (kx + max(x for _, pts in pieces for x, _ in pts) if pieces else ox + xe + 30) + 30
+    kx = ox + xe + 60                               # left edge of the liner columns
+    col = max((x for _, pts, _ in pieces for x, _ in pts), default=0)
+    width = (kx + 2 * col + 20 if pieces else ox + xe + 30) + 30
     height = bottom + 150
 
     cut, fold = body_elements(g, ox, oy)
@@ -375,18 +458,19 @@ def svg(g: dict[str, float]) -> str:
         text((x0 + x1) / 2, wall - 6, dim(x1 - x0, y1 - y0))
         text((x0 + x1) / 2, ys - fd / 2, f"FLAP {fd:.1f}", 5)
     text((xa + xb) / 2, wall - 22, "&#8593; flutes run up the walls &#8595;", 5)
-    for name, x0, x1, hx in [("END 1", xb, xc, holes(g)[0]), ("END 2", xd, xe, holes(g)[1])]:
+    for name, x0, x1, sx in [("END 1", xb, xc, slots(g)[0]), ("END 2", xd, xe, slots(g)[1])]:
         mid = x0 + (W_OUT - t) / 2
         text(mid, 62, name)
         text(mid, 52, dim(x1 - x0, yd - ye))
         text(mid, ye - fd / 2, f"FLAP {fd:.1f}", 5)
-        text(mid, yd + DUST / 2 - 2, f"DUST FLAP {DUST:g}", 5)
-        text(mid, g["hole_top"] + 5, "HAND HOLE: cut 3 sides, crease the top", 4.2)
-        chain(dims, notes, [X(x0), X(hx), X(hx + HOLE_W), X(x0 + W_OUT - t)], Y(g["hole_top"] - HOLE_H - 12),
-              ["", "hole", ""], reach=0, size=4.2)
-    lid_mid = (xa + xb) / 2
+        text(mid, yd + LEDGE_FLAP / 2 - 2, f"LEDGE FLAP {LEDGE_FLAP:g}", 5)
+        text(mid, yd + LEDGE_FLAP / 2 - 10, "the gripper hooks sit under this", 4.2)
+        text(mid, LEDGE_UNDER - SLOT_H / 2 - 1.5, "JAW SLOT: cut out", 4.2)
+        chain(dims, notes, [X(x0), X(sx), X(sx + g["slot_w"]), X(x0 + W_OUT - t)], Y(LEDGE_UNDER - SLOT_H - 12),
+              ["", "slot", ""], reach=0, size=4.2)
+    lid_mid = (lx0 + lx1) / 2
     text(lid_mid, ya + g["lid"] / 2 + 8, "LID")
-    text(lid_mid, ya + g["lid"] / 2 - 2, dim(xb - xa + 2 * ov, g["lid"]))
+    text(lid_mid, ya + g["lid"] / 2 - 2, dim(lx1 - lx0, g["lid"]))
     text(lid_mid, ya + g["lid"] / 2 - 14, "the tags go on the other face", 5)
     text(lid_mid, yt + TUCK / 2 - 2, f"TUCK FLAP {TUCK:g}", 5)
     notes.append(f'<text transform="translate({X(xa / 2) + 1.6:.2f} {Y((ys + ya) / 2):.2f}) rotate(-90)" '
@@ -396,40 +480,45 @@ def svg(g: dict[str, float]) -> str:
     chain(dims, notes, [X(v) for v in (0, xa, xb, xc, xd, xe)], bottom + 12,
           ["tab", "side A", "end 1", "side B", "end 2"])
     chain(dims, notes, [X(0), X(xe)], bottom + 30, ["overall"], reach=0)
-    chain(dims, notes, [X(xa - ov), X(xb + ov)], top - 12, ["lid"], reach=-8)
+    chain(dims, notes, [X(lx0), X(g["tx0"]), X(g["tx1"]), X(lx1)], top - 12, ["", "tuck", ""], reach=-8)
+    chain(dims, notes, [X(lx0), X(lx1)], top - 28, ["lid"], reach=0)
     chain(dims, notes, [Y(v) for v in (high, yt, ya, ys, low)], ox - 14, ["tuck", "lid", "side A", "flap"],
           vertical=True, reach=-8)
     chain(dims, notes, [top, bottom], ox - 34, ["overall"], vertical=True, reach=0)
-    chain(dims, notes, [Y(v) for v in (yd + DUST, yd, ye, ye - fd)], X(xe) + 12, ["dust flap", "end wall", "flap"],
+    chain(dims, notes, [Y(v) for v in (yd + LEDGE_FLAP, yd, ye, ye - fd)], X(xe) + 12, ["ledge flap", "end wall", "flap"],
           vertical=True)
 
-    foil, ky = [], top
-    for name, pts in pieces:
+    foil, ky = [], [top, top]
+    for i, (name, pts, count) in enumerate(pieces):
+        c = i // 2                                  # two pieces to a column
+        px, py = kx + c * (col + 20), ky[c]
         w, h = max(x for x, _ in pts), max(y for _, y in pts)
-        foil.append('<polygon points="' + " ".join(f"{kx + x:.2f},{ky + h - y:.2f}" for x, y in pts) + '"/>')
-        notes.append(f'<text x="{kx + w / 2:.2f}" y="{ky + h / 2 + 12:.2f}" font-size="6" text-anchor="middle">LINER {name}, cut 2</text>'
-                     f'<text x="{kx + w / 2:.2f}" y="{ky + h / 2 + 22:.2f}" font-size="6" text-anchor="middle">{dim(w, h)}</text>')
+        foil.append('<polygon points="' + " ".join(f"{px + x:.2f},{py + h - y:.2f}" for x, y in pts) + '"/>')
+        notes.append(f'<text x="{px + w / 2:.2f}" y="{py + h / 2 + 12:.2f}" font-size="6" text-anchor="middle">LINER {name}, cut {count}</text>'
+                     f'<text x="{px + w / 2:.2f}" y="{py + h / 2 + 22:.2f}" font-size="6" text-anchor="middle">{dim(w, h)}</text>')
         if len(pts) > 4:
-            notes.append(f'<text x="{kx + w / 2:.2f}" y="{ky + (pts[3][1] - pts[4][1]) / 2 + 2:.2f}" font-size="4.5" '
+            notes.append(f'<text x="{px + w / 2:.2f}" y="{py + (pts[3][1] - pts[4][1]) / 2 + 2:.2f}" font-size="4.5" '
                          f'text-anchor="middle">notch {pts[3][0] - pts[6][0]:.0f} x {pts[3][1] - pts[4][1]:.0f}</text>')
-        ky += h + 12
+        ky[c] += h + 12
 
     lines = [
-        f"Packet cardboard box with hand holes, prototype 2. Board {t:g} mm. All sizes mm, drawn 1:1, "
+        f"Packet cardboard box for the current gripper, prototype 3. Board {t:g} mm. All sizes mm, drawn 1:1, "
         "creases at the board mid-plane. This face is the inside of the box.",
         "Solid black: cut. Dashed blue: crease. Every fold goes toward you.",
-        "Hand holes: cut the two sides and the bottom, crease the top. Leave the flap flat. The drone's jaw pushes it in.",
+        f"Jaw slots: cut right out. The slot top stops {t / 2:g} mm below the ledge flap crease. Do not cut into the "
+        "crease. The gripper's hook goes through the slot and sits under the folded ledge flap.",
         "Fold the walls into a tube and fix the tab inside END 2. Fold the END bottom flaps in first, then the SIDE "
         "flaps, and tape the seam.",
-        "Fold the dust flaps in, close the lid, tuck its flap inside SIDE B and tape the front edge.",
-        f"Folded: {L_OUT:g} long, {W_OUT:g} wide, {LID_TOP:g} to the lid top. Inside {g['il']:.1f} x {g['iw']:.1f} x "
+        "Fold the ledge flaps in, close the lid onto them, tuck its flap inside SIDE B and tape the whole front edge. "
+        "The lid holds the ledge flaps down when the hooks lift.",
+        f"Folded: {L_OUT:g} long, {W_OUT:g} wide, {g['lid_top']:.1f} to the lid top. Inside {g['il']:.1f} x {g['iw']:.1f} x "
         f"{g['ih']:.1f}. Blank {xe:.1f} x {high - low:.1f}.",
     ]
     if pieces:
-        room = [v - 2 * LINER for v in (g["il"], g["iw"], g["ih"])]
+        room = [g["il"] - 2 * LINER, g["iw"] - 2 * LINER, g["ih"] - 2 * LINER]
         lines.append(
-            f"Green: foil bubble liner, {LINER:g} mm thick, a different material. Cut 2 of each. The notch in the END "
-            f"pieces keeps the hand hole clear. Room left for food: {room[0]:.0f} x {room[1]:.0f} x {room[2]:.0f}.")
+            f"Green: foil bubble liner, {LINER:g} mm thick, a different material. The notch in the END pieces and the "
+            f"short TOP piece keep the jaw slots clear. Room left for food: {room[0]:.0f} x {room[1]:.0f} x {room[2]:.0f}.")
     for i, s in enumerate(lines):
         notes.append(f'<text x="{ox}" y="{bottom + 54 + 12 * i:.2f}" font-size="6">{s}</text>')
 
@@ -454,6 +543,8 @@ if __name__ == "__main__":
     stem = out.rsplit(".", 1)[0]
     with open(stem + "_guide.md", "w", encoding="utf-8") as fh:
         fh.write(guide(geometry))
+    with open(stem + "_on_wardrobe_box.svg", "w", encoding="utf-8") as fh:
+        fh.write(on_box(geometry))
     for key, value in geometry.items():
         print(f"{key:8s} {value:8.2f}")
     print("wrote", out)

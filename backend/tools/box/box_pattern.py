@@ -7,10 +7,11 @@ wall goes into the gap. Here the ledge is inset: the top of each end wall folds 
 a flap, and a slot cut just under the fold lets the lower prong reach in under it. The rest is a plain carton: four walls in a row, a lid hinged on one
 long wall with a tuck flap, and four bottom flaps.
 
-  python3 box_pattern.py [board_thickness_mm] [out.svg]
+  python3 box_pattern.py [board_thickness_mm] [out.svg] [tabloid|a3]
 
 Writes the pattern, a cutting guide (.md), a layout drawing (.svg) and layout guide (.md) for a wardrobe box,
-and a 1:1 print template for Arch D paper (.svg).
+and a 1:1 print template for Arch D paper (.svg). With a paper name it also writes that template as
+sheets for an office printer.
 All sizes are mm and the pattern is 1:1. Creases are drawn at the board mid-plane, so a
 panel between two creases is its outside size minus one board thickness.
 """
@@ -56,6 +57,10 @@ BOX_TRIM = 5.0       # stay this far inside the box's other creases
 BOX_FOOT = 40.0      # gap left below the blank, above the bottom crease
 PRINT_TOP = 12.0     # margin above the blank on the Arch D print template
 PRINT_END = 5.0      # least margin kept at the end 2 side of that page
+# The same template as sheets for an office printer: paper width, height and name, landscape
+PAPERS = {"tabloid": (431.8, 279.4, "11 x 17 in (Tabloid)"), "a3": (420.0, 297.0, "A3")}
+TILE_W, TILE_H = 350.0, 256.0    # the part of the drawing each sheet carries
+TILE_X, TILE_Y = 330.0, 117.0    # where the first joins cross the blank: from its left end, and above the ground
 
 
 def layout(t: float) -> dict[str, float]:
@@ -513,9 +518,11 @@ def on_box(g: dict[str, float]) -> str:
 '''
 
 
-def template(g: dict[str, float]) -> str:
-    """The blank alone at 1:1 on an Arch D page (24 x 36 in), to print, lay on the board and cut through.
-    It carries the two lines to put on a wardrobe box: the corner crease and the bottom edge."""
+def _template(g: dict[str, float], tiled: bool = False) -> tuple[str, float, float]:
+    """The blank alone at 1:1, laid out for an Arch D page (24 x 36 in), to print, lay on the board and cut
+    through. It carries the two lines to put on a wardrobe box: the corner crease and the bottom edge.
+    Returns the drawing as SVG groups, the blank's left end and the SVG y of the box's ground line.
+    With tiled=True the notes fit one sheet of the tiled version and diamonds mark the joins."""
     t = g["t"]
     xa, xb, xc, xd, xe, lx0, lx1 = (g[k] for k in ("xa", "xb", "xc", "xd", "xe", "lx0", "lx1"))
     ys, ye, fd, ya, yb, yd, yt = (g[k] for k in ("ys", "ye", "fd", "ya", "yb", "yd", "yt"))
@@ -563,42 +570,128 @@ def template(g: dict[str, float]) -> str:
                   f'<line x1="0" y1="{edge:.2f}" x2="{pw:.2f}" y2="{edge:.2f}"/>')
     notes.append(f'<text transform="translate({cx + 7:.2f} {Y(yb) - 34:.2f}) rotate(-90)" font-size="5" fill="#ad1457">'
                  "CORNER CREASE of the wardrobe box: lay this line on it</text>")
-    notes.append(f'<text x="{ox + 8:.2f}" y="{edge + 8:.2f}" font-size="5" fill="#ad1457">BOTTOM EDGE of the opened wardrobe box: '
+    notes.append(f'<text x="{ox + 8:.2f}" y="{edge - 3 if tiled else edge + 8:.2f}" font-size="5" fill="#ad1457">BOTTOM EDGE of the opened wardrobe box: '
                  f"lay this line on it. The blank starts {BOX_FOOT:g} mm above it.</text>")
 
-    # scale bars, to check that the print is not scaled
-    bx, by = cx + 22, Y(yb) - 26
-    marks_.append(f'<line x1="{bx:.2f}" y1="{by:.2f}" x2="{bx + 200:.2f}" y2="{by:.2f}"/>')
-    marks_ += [f'<line x1="{bx + d:.2f}" y1="{by - 3:.2f}" x2="{bx + d:.2f}" y2="{by + 3:.2f}"/>' for d in range(0, 201, 50)]
-    vx, vy = bx + 212, by - 100
-    marks_.append(f'<line x1="{vx:.2f}" y1="{vy:.2f}" x2="{vx:.2f}" y2="{vy + 100:.2f}"/>')
-    marks_ += [f'<line x1="{vx - 3:.2f}" y1="{vy + d:.2f}" x2="{vx + 3:.2f}" y2="{vy + d:.2f}"/>' for d in range(0, 101, 50)]
-    notes.append(f'<text x="{bx + 100:.2f}" y="{by - 6:.2f}" font-size="5" text-anchor="middle">this bar is 200 mm long</text>')
-    notes.append(f'<text transform="translate({vx - 6:.2f} {vy + 50:.2f}) rotate(-90)" font-size="5" text-anchor="middle">'
-                 "this bar is 100 mm long</text>")
+    if tiled:
+        # diamonds across the joins between sheets: each sheet prints half of every one on its edges
+        join = oy - TILE_Y
+        spots = [(X(TILE_X + c * TILE_W), join + d, True) for c in range(tile_columns(g) - 1) for d in (-206, -66, 64, 184)]
+        spots += [(X(min(TILE_X + (c - 0.5) * TILE_W, xe - 40)), join, False) for c in range(tile_columns(g))]
+        for (x, y, upright), name in zip(spots, "ABCDEFGHJKLMNPQR"):
+            marks_.append(f'<polygon fill="#444" points="{x - 4:.2f},{y:.2f} {x:.2f},{y - 4:.2f} {x + 4:.2f},{y:.2f} {x:.2f},{y + 4:.2f}"/>')
+            for s in (-1, 1):
+                dx, dy = (s * 9, 1.5) if upright else (9, s * 4 + 1.5)
+                notes.append(f'<text x="{x + dx:.2f}" y="{y + dy:.2f}" font-size="4" text-anchor="middle">{name}</text>')
+        size, step, lines = 4.5, 7.5, [
+            f"Packet cardboard box: print template, 1:1, for {t:g} mm board.",
+            "This face is the inside of the box.",
+            "Join the sheets first. Where a sheet says CUT, cut along that frame line,",
+            "lay the cut edge on the frame line of its neighbour so that the",
+            "diamonds meet, and tape the two sheets together.",
+            f"Then check: crease 1 to crease 2 is {xb - xa:.1f} mm, and crease 2 to crease 4 is {xd - xb:.1f} mm.",
+            "Lay the board with its inside face up and the flutes running up the walls.",
+            "On a wardrobe box opened flat: put the CORNER CREASE line on the middle",
+            "crease and the BOTTOM EDGE line on the bottom edge. Tape the template down.",
+            "Solid black: cut. Dashed blue: crease. Press the creases through the paper",
+            "with a blunt point, then cut the solid lines through it.",
+            f"Cut the jaw slots right out. Their top edge stops {t / 2:g} mm below the ledge",
+            "flap crease: do not cut into the crease.",
+        ]
+    else:
+        # scale bars, to check that the print is not scaled
+        bx, by = cx + 22, Y(yb) - 26
+        marks_.append(f'<line x1="{bx:.2f}" y1="{by:.2f}" x2="{bx + 200:.2f}" y2="{by:.2f}"/>')
+        marks_ += [f'<line x1="{bx + d:.2f}" y1="{by - 3:.2f}" x2="{bx + d:.2f}" y2="{by + 3:.2f}"/>' for d in range(0, 201, 50)]
+        vx, vy = bx + 212, by - 100
+        marks_.append(f'<line x1="{vx:.2f}" y1="{vy:.2f}" x2="{vx:.2f}" y2="{vy + 100:.2f}"/>')
+        marks_ += [f'<line x1="{vx - 3:.2f}" y1="{vy + d:.2f}" x2="{vx + 3:.2f}" y2="{vy + d:.2f}"/>' for d in range(0, 101, 50)]
+        notes.append(f'<text x="{bx + 100:.2f}" y="{by - 6:.2f}" font-size="5" text-anchor="middle">this bar is 200 mm long</text>')
+        notes.append(f'<text transform="translate({vx - 6:.2f} {vy + 50:.2f}) rotate(-90)" font-size="5" text-anchor="middle">'
+                     "this bar is 100 mm long</text>")
+        size, step, lines = 5, 8.5, [
+            f"Packet cardboard box: print template, 1:1, for {t:g} mm board. This face is the inside of the box.",
+            "Print on Arch D (24 x 36 in) at 100 %, not fit to page. Then measure the two bars below with a ruler.",
+            "Lay the board with its inside face up and the flutes running up the walls. Tape this sheet down on it.",
+            "On a wardrobe box opened flat: put the CORNER CREASE line on the middle crease and the BOTTOM EDGE line on the bottom edge.",
+            "Solid black: cut. Dashed blue: crease. Press the creases through the paper with a blunt point, then cut the solid lines through it.",
+            f"Cut the jaw slots right out. Their top edge stops {t / 2:g} mm below the ledge flap crease: do not cut into the crease.",
+            f"The tab ends {ox:.1f} mm from the left end of the paper and END 2 ends {right:.1f} mm from the right end. If the plotter",
+            f"cannot print that close, feed the TAB end last: then only the tab's outer edge is lost, and you can rule it {TAB:g} mm from crease 1.",
+        ]
+    for i, s in enumerate(lines):
+        notes.append(f'<text x="{cx + 12:.2f}" y="{PRINT_TOP + 8 + step * i:.2f}" font-size="{size}">{s}</text>')
 
-    for i, s in enumerate([
-        f"Packet cardboard box: print template, 1:1, for {t:g} mm board. This face is the inside of the box.",
-        "Print on Arch D (24 x 36 in) at 100 %, not fit to page. Then measure the two bars below with a ruler.",
-        "Lay the board with its inside face up and the flutes running up the walls. Tape this sheet down on it.",
-        "On a wardrobe box opened flat: put the CORNER CREASE line on the middle crease and the BOTTOM EDGE line on the bottom edge.",
-        "Solid black: cut. Dashed blue: crease. Press the creases through the paper with a blunt point, then cut the solid lines through it.",
-        f"Cut the jaw slots right out. Their top edge stops {t / 2:g} mm below the ledge flap crease: do not cut into the crease.",
-        f"The tab ends {ox:.1f} mm from the left end of the paper and END 2 ends {right:.1f} mm from the right end. If the plotter",
-        f"cannot print that close, feed the TAB end last: then only the tab's outer edge is lost, and you can rule it {TAB:g} mm from crease 1.",
-    ]):
-        notes.append(f'<text x="{cx + 12:.2f}" y="{PRINT_TOP + 8 + 8.5 * i:.2f}" font-size="5">{s}</text>')
-
-    return f'''<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="{pw}mm" height="{ph}mm" viewBox="0 0 {pw} {ph}">
-<rect width="100%" height="100%" fill="white"/>
-<g id="lay-on" fill="none" stroke="#ad1457" stroke-width="0.35">{"".join(guide_)}</g>
+    return f'''<g id="lay-on" fill="none" stroke="#ad1457" stroke-width="0.35">{"".join(guide_)}</g>
 <g id="cut" fill="none" stroke="black" stroke-width="0.5">{"".join(cut)}</g>
 <g id="crease" fill="none" stroke="#1565c0" stroke-width="0.5" stroke-dasharray="5 3">{"".join(fold)}</g>
 <g id="scale" fill="none" stroke="black" stroke-width="0.35">{"".join(marks_)}</g>
-<g id="notes" font-family="Helvetica, Arial, sans-serif" fill="#333">{"".join(notes)}</g>
+<g id="notes" font-family="Helvetica, Arial, sans-serif" fill="#333">{"".join(notes)}</g>''', ox, oy
+
+
+def template(g: dict[str, float]) -> str:
+    """The print template as one Arch D page (24 x 36 in)."""
+    return f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{SHEET_L}mm" height="{SHEET_W}mm" viewBox="0 0 {SHEET_L} {SHEET_W}">
+<rect width="100%" height="100%" fill="white"/>
+{_template(g)[0]}
 </svg>
 '''
+
+
+def tile_columns(g: dict[str, float]) -> int:
+    """How many sheets wide the tiled template is. The first column starts TILE_W left of the first join."""
+    assert TILE_X <= TILE_W, "the first column of sheets covers the tab"
+    return int(-(-(g["xe"] - TILE_X) // TILE_W)) + 1
+
+
+def tiles(g: dict[str, float], paper: str = "tabloid") -> list[tuple[str, str]]:
+    """The print template cut into landscape sheets for an office printer. Each sheet carries one
+    TILE_W x TILE_H frame of the drawing, and the frames butt together. Returns (name, SVG) per sheet."""
+    pw, ph, label = PAPERS[paper]
+    mx, my = (pw - TILE_W) / 2, (ph - TILE_H) / 2
+    assert min(mx, my) >= 8, "the paper leaves a margin around the frame"
+    inner, ox, oy = _template(g, tiled=True)
+    low, high = g["ys"] - g["fd"], g["yt"] + TUCK
+    assert TILE_Y + TILE_H >= high + 1 and TILE_Y - TILE_H <= low - BOX_FOOT - 1, (
+        "two rows of sheets cover the blank and the bottom edge line")
+    cols, pages = tile_columns(g), []
+    for r in range(2):
+        for c in range(cols):
+            tx, ty = ox + TILE_X + (c - 1) * TILE_W, oy - TILE_Y - (TILE_H if r == 0 else 0)
+            bx, by = mx - 14, my + 30                       # a 100 mm bar in the left margin
+            extra = [
+                f'<rect x="{mx:.2f}" y="{my:.2f}" width="{TILE_W}" height="{TILE_H}" fill="none" stroke="#777" stroke-width="0.3"/>',
+                f'<path d="M{bx:.2f} {by:.2f}v100M{bx - 2.5:.2f} {by:.2f}h5M{bx - 2.5:.2f} {by + 100:.2f}h5" fill="none" '
+                'stroke="black" stroke-width="0.35"/>',
+                f'<text transform="translate({bx - 3:.2f} {by + 50:.2f}) rotate(-90)" font-size="3.8" text-anchor="middle">'
+                "this bar is 100 mm long</text>",
+                f'<text x="{mx:.2f}" y="{my + TILE_H + 6:.2f}" font-size="3.8">Packet box template for {g["t"]:g} mm board. '
+                f"Sheet {r * cols + c + 1} of {2 * cols}: row {r + 1}, column {c + 1}. Print at 100 % on {label}, landscape, "
+                "then measure the bar at the left.</text>",
+            ]
+            for rr in range(2):                             # a small map of where this sheet goes
+                for cc in range(cols):
+                    extra.append(f'<rect x="{mx - 30 + 8 * cc:.2f}" y="{my + 4 + 7 * rr:.2f}" width="7" height="6" stroke="#444" '
+                                 f'stroke-width="0.3" fill="{"#444" if (rr, cc) == (r, c) else "none"}"/>')
+            if c:
+                extra.append(f'<text transform="translate({mx - 2.5:.2f} {my + TILE_H / 2:.2f}) rotate(-90)" font-size="3.8" '
+                             'text-anchor="middle">CUT along this line, then lay the cut edge on the right frame line of the '
+                             "sheet to the left</text>")
+            if r:
+                extra.append(f'<text x="{mx + TILE_W / 2:.2f}" y="{my - 2.5:.2f}" font-size="3.8" text-anchor="middle">'
+                             "CUT along this line, then lay the cut edge on the bottom frame line of the sheet above</text>")
+            pages.append((f"r{r + 1}c{c + 1}", f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{pw}mm" height="{ph}mm" viewBox="0 0 {pw} {ph}">
+<rect width="100%" height="100%" fill="white"/>
+<clipPath id="frame"><rect x="{mx:.2f}" y="{my:.2f}" width="{TILE_W}" height="{TILE_H}"/></clipPath>
+<g clip-path="url(#frame)"><g transform="translate({mx - tx:.2f} {my - ty:.2f})">
+{inner}
+</g></g>
+<g font-family="Helvetica, Arial, sans-serif" fill="#333">{"".join(extra)}</g>
+</svg>
+'''))
+    return pages
 
 
 def svg(g: dict[str, float]) -> str:
@@ -725,6 +818,10 @@ if __name__ == "__main__":
         fh.write(guide(geometry, box=True))
     with open(stem + "_arch_d.svg", "w", encoding="utf-8") as fh:
         fh.write(template(geometry))
+    if len(sys.argv) > 3:                           # the template as sheets: tabloid or a3
+        for name, page in tiles(geometry, sys.argv[3]):
+            with open(f"{stem}_{sys.argv[3]}_{name}.svg", "w", encoding="utf-8") as fh:
+                fh.write(page)
     for key, value in geometry.items():
         print(f"{key:8s} {value:8.2f}")
     print("wrote", out)

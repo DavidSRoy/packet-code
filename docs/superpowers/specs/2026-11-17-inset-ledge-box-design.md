@@ -1,6 +1,6 @@
 # Inset-ledge cardboard box
 
-Date: 2026-11-17. Status: drawn and checked on paper, not yet cut or tested. Replaces the hand-hole note of 2026-11-16.
+Date: 2026-11-17. Status: drawn and checked against the Pickup v2 jaw model, not yet cut or tested. Replaces the hand-hole note of 2026-11-16.
 
 ## Why
 
@@ -10,6 +10,21 @@ Two earlier boxes did not work out:
 
 - The ledge copy (the first box) folded a ledge onto the outside of each end wall, like the printed BX-005. It took 22 folds, 8 pieces of tape and 2 glue lines. That is too much for the person who packs the food.
 - The hand-hole box (2026-11-16) was simple to fold, but the jaws had to lift by the top edge of a hole about 20 mm lower than the ledge. That needs new jaw tips, so it does not work with the gripper the drone has.
+
+## The jaw
+
+Measured from the Packet Pickup v2 + Box Assembly model, with the jaws closed on the printed box and the drone landed. Heights are above the ground. Distances along the box are from its centre.
+
+| | |
+|---|---|
+| Width | 120 mm, centred |
+| Back of the gap | 123.6 mm, 0.6 mm outside the tip of the printed ledge |
+| Lower prong | 115.0 to 123.6 mm along the box, 137.0 to 143.0 mm high |
+| Gap | 143.0 to 156.5 mm high |
+| Upper prong | reaches in to 100.3 mm, over the lid. Its underside is at 158.5 mm over the lid and 156.5 mm over the ledge |
+| Printed ledge, for comparison | 110.2 to 123.0 mm along the box, 147.0 to 151.5 mm high |
+
+The lower prong sits 4 mm below the printed ledge until the drone lifts. It bears on 8 mm of the ledge.
 
 ## Goals
 
@@ -35,7 +50,7 @@ A was chosen because it is the only one that keeps both the gripper and a simple
 - One piece: four walls in a row, a lid hinged on one long wall with a tuck flap, a ledge flap on top of each end wall, four bottom flaps. 12 folds, all the same way.
 - Outside 246 x 202 mm. The end faces sit where the tips of the printed ledges are. The width leaves 3.9 mm to each landing leg.
 - Ledge flap: the top 60 mm of each end wall folds inward and lies flat. Its underside is 146.9 mm above the ground, the height of the underside of the printed ledge.
-- Jaw slot: 136 x 22 mm, cut out of each end wall just under the fold. The jaws sit within a 120 mm width, so the slot leaves 8 mm each side, and 31 mm of wall stays on each side of the slot.
+- Jaw slot: 136 x 22 mm, cut out of each end wall just under the fold. The jaws are 120 mm wide, so the slot leaves 8 mm each side, and 31 mm of wall stays on each side of the slot.
 - Lid: 224.6 mm long, 1 mm shorter than the printed BX-006 lid, so it leaves the ends of the ledge flaps uncovered as the printed lid does. With 4 mm board its top is at 154.9 mm, 0.5 mm above the printed lid top.
 - The tuck flap is 116 mm wide so that it drops between the two ledge flaps.
 - Inside about 238 x 194 x 139 mm with 4 mm board.
@@ -43,13 +58,14 @@ A was chosen because it is the only one that keeps both the gripper and a simple
 ## The grab
 
 1. The drone lands over the box with the jaws open, as now.
-2. The jaws close. Each lower prong passes through a slot: 4 mm of wall, then about 9 mm into the box. The folded top of the wall slides into the jaw's gap, where the printed ledge went, and the upper prong ends up on top of the ledge flap, beside the end of the lid.
-3. The lower prongs lift against the underside of the ledge flaps. The flaps push up on the lid, and the lid is held by its hinge on the back wall and the tape on the front wall.
+2. The jaws close. Each lower prong passes through a slot: 4 mm of wall, then 4 mm into the box. The folded top of the wall slides into the jaw's gap, where the printed ledge went. The upper prong reaches over the end of the lid, 3.6 mm above it.
+3. The drone lifts. The lower prongs rise 3.9 mm, meet the underside of the ledge flaps and take the weight. The flaps push up on the lid, and the lid is held by its hinge on the back wall and the tape on the front wall.
 4. After landing, the jaws open and the prongs slide out.
 
 ## Not known yet
 
-- The real profile of the jaws. Only the jaw bounding boxes are in the repo, so the slot is sized from those and from the printed ledge. The jaw's gap took a 4.6 mm ledge and now has to take a 4 mm flap, and the upper prong has to fit in the 10.7 mm the lid leaves uncovered.
+- Whether 8 mm of bearing is enough in cardboard. Half of it is on the cut edge of the wall above the slot and half is under the flap.
+- How far off the drone can land. The slot leaves 8 mm each side of the jaws, where the printed box leaves 20 mm, and the upper prong clears the lid by 3.6 mm, where the printed lid has 4.1 mm.
 - How much load the ledge flap and the taped lid take. Hang twice the payload from a test box before flying one.
 - Whether a closure with no tape (a locking tab or a peel strip) holds the lid well enough. The prototype uses tape.
 - How much heat the slots lose.

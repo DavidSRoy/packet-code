@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Cut pattern for the Packet cardboard box: one piece, held by the gripper the drone has now.
 
-The gripper's two jaws close inward and each hooks under a ledge at one end of the box.
-On the printed box that ledge sticks out from the end wall. Here it is inset: the top of
-each end wall folds inward as a flap, and a slot cut just under the fold lets the hook
-reach in under it. The rest is a plain carton: four walls in a row, a lid hinged on one
+The gripper's two jaws close inward. The end of each jaw is a U on its side: an upper
+prong, a gap and a lower prong. On the printed box a ledge that sticks out from the end
+wall goes into the gap. Here the ledge is inset: the top of each end wall folds inward as
+a flap, and a slot cut just under the fold lets the lower prong reach in under it. The rest is a plain carton: four walls in a row, a lid hinged on one
 long wall with a tuck flap, and four bottom flaps.
 
   python3 box_pattern.py [board_thickness_mm] [out.svg]
@@ -16,13 +16,17 @@ panel between two creases is its outside size minus one board thickness.
 import sys
 
 # From the printed BX-005 / BX-006 and the drone (backend/tools/sim/lid_camera_sim.py)
-LEDGE_UNDER = 146.9  # underside of the ledge the jaw hooks sit under, above the ground
+LEDGE_UNDER = 146.9  # underside of the ledge the lower prongs lift against, above the ground
 LEDGE_TOP = 151.5    # top of the printed ledge
 LID_TOP_CAD = 154.4  # printed lid top above the ground
 LID_LEN = 225.6      # printed lid length: the ledge is left uncovered beyond it
-HOOK_REACH = 12.8    # the hooks reach this far in from the end face
-JAW_DROP = 12.8      # the jaws reach this far below the printed lid top
-JAW_HALF_W = 60.0    # the jaws sit within this of the centreline
+# The jaws (Packet Pickup v2), measured closed on the printed box with the drone landed, above the ground
+PRONG_REACH = 8.0    # the lower prong's tip, in from the end face of the box
+PRONG_TOP = 143.0    # top of the lower prong: it rises to the ledge before the box lifts
+PRONG_BOTTOM = 137.0 # underside of the lower prong, the lowest point of the jaw
+UPPER_OVER_LID = 158.5     # underside of the upper prong where it reaches over the lid
+UPPER_OVER_LEDGE = 156.5   # underside of the upper prong near its root, over the ledge
+JAW_HALF_W = 60.0    # the jaws are 120 wide, centred
 LEG_GAP = 209.8      # clear width between the landing legs at lid height
 L_OUT = 246.0        # outside length: the end faces sit where the tips of the printed ledges are
 TAG_AREA = (218.0, 190.0)    # the lid tags without the sticker's white margin (companion/stickers_218x200)
@@ -36,7 +40,7 @@ FIT = 3.0            # how far the cardboard lid top may sit from the printed on
 LEG_MARGIN = 3.5     # least room to each landing leg
 SLOT_MARGIN = 8.0    # jaw slot width past the jaws, each side
 SLOT_H = 22.0        # jaw slot height below the ledge
-LEDGE_FLAP = 60.0    # depth of the flap the hooks sit under
+LEDGE_FLAP = 60.0    # depth of the flap the lower prongs sit under
 TAB = 25.0           # side seam tab
 TAB_INSET = 8.0      # the tab stops this far short of the wall top and bottom
 TUCK = 25.0          # tuck flap depth
@@ -95,7 +99,7 @@ def layout(t: float) -> dict[str, float]:
 
 
 def check(g: dict[str, float]) -> None:
-    """The folded box must fit the drone, put the ledge where the hooks expect it, and close on itself."""
+    """The folded box must fit the drone, put the ledge where the jaws expect it, and close on itself."""
     t = g["t"]
     near = lambda a, b: abs(a - b) < 1e-6
     assert W_OUT + 2 * LEG_MARGIN <= LEG_GAP, "the box fits between the landing legs"
@@ -112,10 +116,14 @@ def check(g: dict[str, float]) -> None:
     assert near(g["lid"] + t / 2 + SLACK, W_OUT - 1.5 * t), "the tuck flap slides inside the front wall"
     assert g["tx1"] - g["tx0"] <= L_OUT - t - 2 * LEDGE_FLAP - 2 * SLACK, "the tuck flap drops between the ledge flaps"
     assert g["tx1"] - g["tx0"] >= 80, "the tuck flap is wide enough to hold"
-    assert LEDGE_UNDER - SLOT_H <= LID_TOP_CAD - JAW_DROP - 5, "the jaw slot is open below the jaws"
+    assert LEDGE_UNDER - PRONG_TOP >= 3, "the lower prong passes under the ledge flap as the jaws close"
+    assert LEDGE_UNDER - SLOT_H <= PRONG_BOTTOM - 5, "the jaw slot is open below the lower prong"
+    assert PRONG_REACH - t >= 3, "the lower prong reaches past the wall, under the ledge flap"
+    assert g["lid_top"] + 1 <= UPPER_OVER_LID, "the upper prong clears the lid"
+    assert LEDGE_UNDER + t + 2 <= UPPER_OVER_LEDGE, "the upper prong clears the ledge flap"
     assert (W_OUT - t - g["slot_w"]) / 2 >= 25, "wall beside the jaw slot"
-    assert LEDGE_FLAP >= HOOK_REACH - t + 30, "the ledge flap reaches well past the hooks"
-    assert (L_OUT - (g["lx1"] - g["lx0"])) / 2 >= HOOK_REACH - 3, "the lid leaves the ledge uncovered, as the printed lid does"
+    assert LEDGE_FLAP >= PRONG_REACH - t + 30, "the ledge flap reaches well past the lower prongs"
+    assert (L_OUT - (g["lx1"] - g["lx0"])) / 2 >= PRONG_REACH - 3, "the lid leaves the ledge uncovered, as the printed lid does"
     assert TAG_AREA[0] <= g["lx1"] - g["lx0"] and TAG_AREA[1] <= g["lid"], "the lid tags fit the flat lid"
     assert min(g["il"], g["iw"], g["ih"]) - 2 * LINER > 50, "the liner leaves room for the food"
     assert g["xe"] <= SHEET_L and g["yt"] + TUCK - (g["ys"] - g["fd"]) <= SHEET_W, "the blank fits one 24 x 36 in sheet"
@@ -177,7 +185,7 @@ def liner_pieces(g: dict[str, float]) -> list[tuple[str, list[tuple[float, float
     w, d = g["il"] - 2 * SLACK, g["iw"] - 2 * SLACK
     h = g["ih"] - 2 * LINER                         # walls stand on the floor piece and carry the top piece
     ew = g["iw"] - 2 * LINER - 2 * SLACK
-    gap = HOOK_REACH - g["t"] + 3                   # the top piece stops short of each end, clear of the hooks
+    gap = PRONG_REACH - g["t"] + 3                  # the top piece stops short of each end, clear of the lower prongs
     nw = g["slot_w"] + 10                           # notch that keeps the jaw slot clear
     nd = SLOT_H - LINER + 5
     n0 = (ew - nw) / 2
@@ -266,7 +274,7 @@ Cut a notch {end[3][0] - end[6][0]:.0f} wide and {end[3][1] - end[4][1]:.0f} dee
 
 Written by `box_pattern.py` from the same numbers as the drawing. All sizes are mm.
 
-The box is one piece. The top of each end wall folds inward as a ledge flap, and a slot just under the fold lets the gripper's hook reach in under it.
+The box is one piece. The top of each end wall folds inward as a ledge flap, and a slot just under the fold lets the lower prong of each gripper jaw reach in under it.
 
 ## Check the board first
 
@@ -321,9 +329,9 @@ Press a blunt edge along a ruler on this face. Do not cut through. Every fold go
 1. Fold the four walls into a tube. Glue or tape the tab inside the free edge of end 2.
 2. Fold the two end bottom flaps in, then the two side bottom flaps over them. Tape along the seam.
 3. Put the floor, side and end liner pieces in, if you use them.
-4. Pack the food. Keep the top of each end wall clear for about {HOOK_REACH - t + 5:.0f} mm inside.
+4. Pack the food. Keep the top of each end wall clear for about {PRONG_REACH - t + 5:.0f} mm inside.
 5. Fold the two ledge flaps in.
-6. Close the lid onto the ledge flaps, tuck its flap inside the front wall and tape the whole front edge, corners included. The tape matters: the lid holds the ledge flaps down when the hooks lift.
+6. Close the lid onto the ledge flaps, tuck its flap inside the front wall and tape the whole front edge, corners included. The tape matters: the lid holds the ledge flaps down when the jaws lift.
 
 The tags ({TAG_AREA[0]:g} x {TAG_AREA[1]:g}) fit on the lid, which is {f(g['lx1'] - g['lx0'])} x {f(g['lid'])}. A sticker bigger than the lid needs its white margin trimmed.
 
@@ -333,8 +341,10 @@ The tags ({TAG_AREA[0]:g} x {TAG_AREA[1]:g}) fit on the lid, which is {f(g['lx1'
 |---|---|---|
 | Ledge underside above the ground | {LEDGE_UNDER:g} | {LEDGE_UNDER:g} (underside of the ledge flap) |
 | End face the jaws close on | {L_OUT:g} apart | {L_OUT:g} apart |
-| Room for the hook under the ledge | {HOOK_REACH:g} deep | {HOOK_REACH:g}: {t:g} of wall, then open box |
-| Opening for the jaws | 160 wide | {g['slot_w']:g} wide, {SLOT_H:g} tall |
+| Lower prong rises before the box lifts | {LEDGE_UNDER - PRONG_TOP:.1f} | {LEDGE_UNDER - PRONG_TOP:.1f} |
+| Lower prong under the ledge | {PRONG_REACH:g} | {PRONG_REACH:g}: {t:g} of wall, then {PRONG_REACH - t:g} under the flap |
+| Upper prong above the lid top | {UPPER_OVER_LID - LID_TOP_CAD:.1f} | {UPPER_OVER_LID - g['lid_top']:.1f} |
+| Opening for the jaws, which are {2 * JAW_HALF_W:g} wide | 160 wide | {g['slot_w']:g} wide, {SLOT_H:g} tall |
 | Lid top above the ground | {LID_TOP_CAD:g} | {g['lid_top']:.1f} |
 | Lid length | {LID_LEN:g} | {f(g['lx1'] - g['lx0'])} |
 """
@@ -464,7 +474,7 @@ def svg(g: dict[str, float]) -> str:
         text(mid, 52, dim(x1 - x0, yd - ye))
         text(mid, ye - fd / 2, f"FLAP {fd:.1f}", 5)
         text(mid, yd + LEDGE_FLAP / 2 - 2, f"LEDGE FLAP {LEDGE_FLAP:g}", 5)
-        text(mid, yd + LEDGE_FLAP / 2 - 10, "the gripper hooks sit under this", 4.2)
+        text(mid, yd + LEDGE_FLAP / 2 - 10, "the jaw's lower prong sits under this", 4.2)
         text(mid, LEDGE_UNDER - SLOT_H / 2 - 1.5, "JAW SLOT: cut out", 4.2)
         chain(dims, notes, [X(x0), X(sx), X(sx + g["slot_w"]), X(x0 + W_OUT - t)], Y(LEDGE_UNDER - SLOT_H - 12),
               ["", "slot", ""], reach=0, size=4.2)
@@ -506,11 +516,11 @@ def svg(g: dict[str, float]) -> str:
         "creases at the board mid-plane. This face is the inside of the box.",
         "Solid black: cut. Dashed blue: crease. Every fold goes toward you.",
         f"Jaw slots: cut right out. The slot top stops {t / 2:g} mm below the ledge flap crease. Do not cut into the "
-        "crease. The gripper's hook goes through the slot and sits under the folded ledge flap.",
+        "crease. The lower prong of each gripper jaw goes through the slot and sits under the folded ledge flap.",
         "Fold the walls into a tube and fix the tab inside END 2. Fold the END bottom flaps in first, then the SIDE "
         "flaps, and tape the seam.",
         "Fold the ledge flaps in, close the lid onto them, tuck its flap inside SIDE B and tape the whole front edge. "
-        "The lid holds the ledge flaps down when the hooks lift.",
+        "The lid holds the ledge flaps down when the jaws lift.",
         f"Folded: {L_OUT:g} long, {W_OUT:g} wide, {g['lid_top']:.1f} to the lid top. Inside {g['il']:.1f} x {g['iw']:.1f} x "
         f"{g['ih']:.1f}. Blank {xe:.1f} x {high - low:.1f}.",
     ]

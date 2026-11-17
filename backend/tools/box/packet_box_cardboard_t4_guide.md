@@ -2,7 +2,7 @@
 
 Written by `box_pattern.py` from the same numbers as the drawing. All sizes are mm.
 
-The box is one piece. The top of each end wall folds inward as a ledge flap, and a slot just under the fold lets the gripper's hook reach in under it.
+The box is one piece. The top of each end wall folds inward as a ledge flap, and a slot just under the fold lets the lower prong of each gripper jaw reach in under it.
 
 ## Check the board first
 
@@ -95,7 +95,7 @@ Cut with scissors.
 | Floor | 237.0 x 193.0 | 1 | On the floor |
 | Side | 237.0 x 128.9 | 2 | Along each long wall, standing on the floor piece |
 | End | 183.0 x 128.9 | 2 | Between the side pieces at each end |
-| Top | 213.4 x 193.0 | 1 | Laid on top of the wall pieces, centred, after the food is in |
+| Top | 223.0 x 193.0 | 1 | Laid on top of the wall pieces, centred, after the food is in |
 
 Cut a notch 146 wide and 22 deep in the middle of the top edge of each end piece. The notch and the short top piece keep the jaw slots clear.
 
@@ -104,9 +104,9 @@ Cut a notch 146 wide and 22 deep in the middle of the top edge of each end piece
 1. Fold the four walls into a tube. Glue or tape the tab inside the free edge of end 2.
 2. Fold the two end bottom flaps in, then the two side bottom flaps over them. Tape along the seam.
 3. Put the floor, side and end liner pieces in, if you use them.
-4. Pack the food. Keep the top of each end wall clear for about 14 mm inside.
+4. Pack the food. Keep the top of each end wall clear for about 9 mm inside.
 5. Fold the two ledge flaps in.
-6. Close the lid onto the ledge flaps, tuck its flap inside the front wall and tape the whole front edge, corners included. The tape matters: the lid holds the ledge flaps down when the hooks lift.
+6. Close the lid onto the ledge flaps, tuck its flap inside the front wall and tape the whole front edge, corners included. The tape matters: the lid holds the ledge flaps down when the jaws lift.
 
 The tags (218 x 190) fit on the lid, which is 224.6 x 193.5. A sticker bigger than the lid needs its white margin trimmed.
 
@@ -116,7 +116,9 @@ The tags (218 x 190) fit on the lid, which is 224.6 x 193.5. A sticker bigger th
 |---|---|---|
 | Ledge underside above the ground | 146.9 | 146.9 (underside of the ledge flap) |
 | End face the jaws close on | 246 apart | 246 apart |
-| Room for the hook under the ledge | 12.8 deep | 12.8: 4 of wall, then open box |
-| Opening for the jaws | 160 wide | 136 wide, 22 tall |
+| Lower prong rises before the box lifts | 3.9 | 3.9 |
+| Lower prong under the ledge | 8 | 8: 4 of wall, then 4 under the flap |
+| Upper prong above the lid top | 4.1 | 3.6 |
+| Opening for the jaws, which are 120 wide | 160 wide | 136 wide, 22 tall |
 | Lid top above the ground | 154.4 | 154.9 |
 | Lid length | 225.6 | 224.6 |

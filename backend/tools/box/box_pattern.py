@@ -9,7 +9,8 @@ long wall with a tuck flap, and four bottom flaps.
 
   python3 box_pattern.py [board_thickness_mm] [out.svg]
 
-Writes the pattern, a cutting guide (.md), and a layout drawing (.svg) and layout guide (.md) for a wardrobe box.
+Writes the pattern, a cutting guide (.md), a layout drawing (.svg) and layout guide (.md) for a wardrobe box,
+and a 1:1 print template for Arch D paper (.svg).
 All sizes are mm and the pattern is 1:1. Creases are drawn at the board mid-plane, so a
 panel between two creases is its outside size minus one board thickness.
 """
@@ -53,6 +54,8 @@ SHEET_W, SHEET_L = 609.6, 914.4
 BOX_PANEL_W, BOX_PANEL_H, BOX_FLAP = 508.0, 864.0, 254.0   # panel width and height, flap depth
 BOX_TRIM = 5.0       # stay this far inside the box's other creases
 BOX_FOOT = 40.0      # gap left below the blank, above the bottom crease
+PRINT_TOP = 12.0     # margin above the blank on the Arch D print template
+PRINT_END = 5.0      # least margin kept at the end 2 side of that page
 
 
 def layout(t: float) -> dict[str, float]:
@@ -510,6 +513,94 @@ def on_box(g: dict[str, float]) -> str:
 '''
 
 
+def template(g: dict[str, float]) -> str:
+    """The blank alone at 1:1 on an Arch D page (24 x 36 in), to print, lay on the board and cut through.
+    It carries the two lines to put on a wardrobe box: the corner crease and the bottom edge."""
+    t = g["t"]
+    xa, xb, xc, xd, xe, lx0, lx1 = (g[k] for k in ("xa", "xb", "xc", "xd", "xe", "lx0", "lx1"))
+    ys, ye, fd, ya, yb, yd, yt = (g[k] for k in ("ys", "ye", "fd", "ya", "yb", "yd", "yt"))
+    low, high = ys - fd, yt + TUCK
+    pw, ph = SHEET_L, SHEET_W                       # Arch D paper is the size of the flat board sheet
+    right = max((pw - xe) / 2, PRINT_END)           # end 2 keeps a printable margin; the tab takes what is left
+    ox, oy = pw - xe - right, PRINT_TOP + high      # blank's left end; SVG y of the box's ground line
+    edge = oy - low + BOX_FOOT                      # SVG y of the wardrobe box's bottom edge
+    assert ox >= 0 and edge + 20 <= ph, "the blank and its two guide lines fit an Arch D page"
+
+    cut, fold = body_elements(g, ox, oy)
+    X, Y = (lambda x: ox + x), (lambda y: oy - y)
+    notes: list[str] = []
+    marks_: list[str] = []
+    guide_: list[str] = []
+
+    def text(x, y, s, size=7.0, anchor="middle"):
+        notes.append(f'<text x="{X(x):.2f}" y="{Y(y):.2f}" font-size="{size}" text-anchor="{anchor}">{s}</text>')
+
+    def turned(x, y, s, size=5.0, anchor="middle"):
+        notes.append(f'<text transform="translate({X(x):.2f} {Y(y):.2f}) rotate(-90)" font-size="{size}" '
+                     f'text-anchor="{anchor}">{s}</text>')
+
+    wall = (ye + yd) / 2
+    for name, x0, x1 in [("SIDE A (back)", xa, xb), ("SIDE B (front)", xc, xd)]:
+        text((x0 + x1) / 2, wall, name)
+        text((x0 + x1) / 2, ys - fd / 2, "BOTTOM FLAP", 5)
+    for name, x0 in [("END 1", xb), ("END 2", xd)]:
+        mid = x0 + (W_OUT - t) / 2
+        text(mid, wall - 10, name)
+        text(mid, ye - fd / 2, "BOTTOM FLAP", 5)
+        text(mid, yd + LEDGE_FLAP / 2 - 2, "LEDGE FLAP", 5)
+        text(mid, LEDGE_UNDER - SLOT_H / 2 - 1.5, "JAW SLOT: cut out", 4.5)
+    text((lx0 + lx1) / 2, ya + g["lid"] / 2, "LID")
+    text((lx0 + lx1) / 2, ya + g["lid"] / 2 - 10, "the tags go on the other face", 5)
+    text((g["tx0"] + g["tx1"]) / 2, yt + TUCK / 2 - 2, "TUCK FLAP", 5)
+    turned(xa / 2 + 1.6, (ys + ya) / 2, "TAB")
+    for n, x in enumerate((xa, xb, xc, xd), 1):
+        turned(x + 6, ye + 10, f"crease {n}" + (": the corner crease, already there" if n == 3 else ""), 4.5, "start")
+
+    # the two lines to lay on a wardrobe box: its corner crease (crease 3) and its bottom edge
+    cx = X(xc)
+    guide_.append(f'<line x1="{cx:.2f}" y1="0" x2="{cx:.2f}" y2="{Y(yb):.2f}"/>'
+                  f'<line x1="{cx:.2f}" y1="{Y(ys):.2f}" x2="{cx:.2f}" y2="{ph:.2f}"/>'
+                  f'<line x1="0" y1="{edge:.2f}" x2="{pw:.2f}" y2="{edge:.2f}"/>')
+    notes.append(f'<text transform="translate({cx + 7:.2f} {Y(yb) - 34:.2f}) rotate(-90)" font-size="5" fill="#ad1457">'
+                 "CORNER CREASE of the wardrobe box: lay this line on it</text>")
+    notes.append(f'<text x="{ox + 8:.2f}" y="{edge + 8:.2f}" font-size="5" fill="#ad1457">BOTTOM EDGE of the opened wardrobe box: '
+                 f"lay this line on it. The blank starts {BOX_FOOT:g} mm above it.</text>")
+
+    # scale bars, to check that the print is not scaled
+    bx, by = cx + 22, Y(yb) - 26
+    marks_.append(f'<line x1="{bx:.2f}" y1="{by:.2f}" x2="{bx + 200:.2f}" y2="{by:.2f}"/>')
+    marks_ += [f'<line x1="{bx + d:.2f}" y1="{by - 3:.2f}" x2="{bx + d:.2f}" y2="{by + 3:.2f}"/>' for d in range(0, 201, 50)]
+    vx, vy = bx + 212, by - 100
+    marks_.append(f'<line x1="{vx:.2f}" y1="{vy:.2f}" x2="{vx:.2f}" y2="{vy + 100:.2f}"/>')
+    marks_ += [f'<line x1="{vx - 3:.2f}" y1="{vy + d:.2f}" x2="{vx + 3:.2f}" y2="{vy + d:.2f}"/>' for d in range(0, 101, 50)]
+    notes.append(f'<text x="{bx + 100:.2f}" y="{by - 6:.2f}" font-size="5" text-anchor="middle">this bar is 200 mm long</text>')
+    notes.append(f'<text transform="translate({vx - 6:.2f} {vy + 50:.2f}) rotate(-90)" font-size="5" text-anchor="middle">'
+                 "this bar is 100 mm long</text>")
+
+    for i, s in enumerate([
+        f"Packet cardboard box: print template, 1:1, for {t:g} mm board. This face is the inside of the box.",
+        "Print on Arch D (24 x 36 in) at 100 %, not fit to page. Then measure the two bars below with a ruler.",
+        "Lay the board with its inside face up and the flutes running up the walls. Tape this sheet down on it.",
+        "On a wardrobe box opened flat: put the CORNER CREASE line on the middle crease and the BOTTOM EDGE line on the bottom edge.",
+        "Solid black: cut. Dashed blue: crease. Press the creases through the paper with a blunt point, then cut the solid lines through it.",
+        f"Cut the jaw slots right out. Their top edge stops {t / 2:g} mm below the ledge flap crease: do not cut into the crease.",
+        f"The tab ends {ox:.1f} mm from the left end of the paper and END 2 ends {right:.1f} mm from the right end. If the plotter",
+        f"cannot print that close, feed the TAB end last: then only the tab's outer edge is lost, and you can rule it {TAB:g} mm from crease 1.",
+    ]):
+        notes.append(f'<text x="{cx + 12:.2f}" y="{PRINT_TOP + 8 + 8.5 * i:.2f}" font-size="5">{s}</text>')
+
+    return f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{pw}mm" height="{ph}mm" viewBox="0 0 {pw} {ph}">
+<rect width="100%" height="100%" fill="white"/>
+<g id="lay-on" fill="none" stroke="#ad1457" stroke-width="0.35">{"".join(guide_)}</g>
+<g id="cut" fill="none" stroke="black" stroke-width="0.5">{"".join(cut)}</g>
+<g id="crease" fill="none" stroke="#1565c0" stroke-width="0.5" stroke-dasharray="5 3">{"".join(fold)}</g>
+<g id="scale" fill="none" stroke="black" stroke-width="0.35">{"".join(marks_)}</g>
+<g id="notes" font-family="Helvetica, Arial, sans-serif" fill="#333">{"".join(notes)}</g>
+</svg>
+'''
+
+
 def svg(g: dict[str, float]) -> str:
     t = g["t"]
     xa, xb, xc, xd, xe, lx0, lx1 = (g[k] for k in ("xa", "xb", "xc", "xd", "xe", "lx0", "lx1"))
@@ -632,6 +723,8 @@ if __name__ == "__main__":
         fh.write(on_box(geometry))
     with open(stem + "_on_wardrobe_box_guide.md", "w", encoding="utf-8") as fh:
         fh.write(guide(geometry, box=True))
+    with open(stem + "_arch_d.svg", "w", encoding="utf-8") as fh:
+        fh.write(template(geometry))
     for key, value in geometry.items():
         print(f"{key:8s} {value:8.2f}")
     print("wrote", out)

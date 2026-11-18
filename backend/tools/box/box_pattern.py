@@ -9,7 +9,8 @@ long wall with a tuck flap, and four bottom flaps.
 
   python3 box_pattern.py [board_thickness_mm] [out.svg] [tabloid|a3]
 
-Writes the pattern, a cutting guide (.md), a layout drawing (.svg) and layout guide (.md) for a wardrobe box,
+Writes the pattern, the folded box's outside faces (.svg), a cutting guide (.md), a layout drawing (.svg) and
+layout guide (.md) for a wardrobe box,
 and a 1:1 print template for Arch D paper (.svg). With a paper name it also writes that template as
 sheets for an office printer.
 All sizes are mm and the pattern is 1:1. Creases are drawn at the board mid-plane, so a
@@ -695,6 +696,7 @@ def tiles(g: dict[str, float], paper: str = "tabloid") -> list[tuple[str, str]]:
 
 
 def svg(g: dict[str, float]) -> str:
+    """The flat blank with its own dimensions, drawn 1:1. Nothing is measured from the sheet it is cut from."""
     t = g["t"]
     xa, xb, xc, xd, xe, lx0, lx1 = (g[k] for k in ("xa", "xb", "xc", "xd", "xe", "lx0", "lx1"))
     ys, ye, fd, ya, yb, yd, yt = (g[k] for k in ("ys", "ye", "fd", "ya", "yb", "yd", "yt"))
@@ -703,101 +705,190 @@ def svg(g: dict[str, float]) -> str:
     assert min(y for _, y in outline) == low and max(y for _, y in outline) == high
     assert min(x for x, _ in outline) == 0 and max(x for x, _ in outline) == xe
 
-    ox, top = 60.0, 40.0
+    ox, top = 70.0, 60.0
     oy = top + high                                 # SVG y of the box's ground line
     bottom = oy - low
-    pieces = liner_pieces(g) if LINER else []
-    kx = ox + xe + 60                               # left edge of the liner columns
-    col = max((x for _, pts, _ in pieces for x, _ in pts), default=0)
-    width = (kx + 2 * col + 20 if pieces else ox + xe + 30) + 30
-    height = bottom + 150
+    width, height = ox + xe + 60, bottom + 165
 
     cut, fold = body_elements(g, ox, oy)
     notes: list[str] = []
     dims: list[str] = []
     X, Y = (lambda x: ox + x), (lambda y: oy - y)
 
-    def text(x, y, s, size=6.0):
+    def text(x, y, s, size=11.0):
         notes.append(f'<text x="{X(x):.2f}" y="{Y(y):.2f}" font-size="{size}" text-anchor="middle">{s}</text>')
 
     dim = lambda a, b: f"{a:.1f} x {b:.1f}"
     wall = (ye + yd) / 2
     for name, x0, x1, y0, y1 in [("SIDE A (back)", xa, xb, ys, ya), ("SIDE B (front)", xc, xd, ys, yb)]:
-        text((x0 + x1) / 2, wall + 4, name)
-        text((x0 + x1) / 2, wall - 6, dim(x1 - x0, y1 - y0))
-        text((x0 + x1) / 2, ys - fd / 2, f"FLAP {fd:.1f}", 5)
-    text((xa + xb) / 2, wall - 22, "&#8593; flutes run up the walls &#8595;", 5)
+        text((x0 + x1) / 2, wall + 6, name)
+        text((x0 + x1) / 2, wall - 9, dim(x1 - x0, y1 - y0), 9)
+        text((x0 + x1) / 2, ys - fd / 2, f"FLAP {fd:.1f}", 9)
+    text((xa + xb) / 2, wall - 30, "&#8593; flutes run up the walls &#8595;", 8)
     for name, x0, x1, sx in [("END 1", xb, xc, slots(g)[0]), ("END 2", xd, xe, slots(g)[1])]:
         mid = x0 + (W_OUT - t) / 2
-        text(mid, 62, name)
-        text(mid, 52, dim(x1 - x0, yd - ye))
-        text(mid, ye - fd / 2, f"FLAP {fd:.1f}", 5)
-        text(mid, yd + LEDGE_FLAP / 2 - 2, f"LEDGE FLAP {LEDGE_FLAP:g}", 5)
-        text(mid, yd + LEDGE_FLAP / 2 - 10, "the jaw's lower prong sits under this", 4.2)
-        text(mid, LEDGE_UNDER - SLOT_H / 2 - 1.5, "JAW SLOT: cut out", 4.2)
-        chain(dims, notes, [X(x0), X(sx), X(sx + g["slot_w"]), X(x0 + W_OUT - t)], Y(LEDGE_UNDER - SLOT_H - 12),
-              ["", "slot", ""], reach=0, size=4.2)
-    lid_mid = (lx0 + lx1) / 2
-    text(lid_mid, ya + g["lid"] / 2 + 8, "LID")
-    text(lid_mid, ya + g["lid"] / 2 - 2, dim(lx1 - lx0, g["lid"]))
-    text(lid_mid, ya + g["lid"] / 2 - 14, "the tags go on the other face", 5)
-    text(lid_mid, yt + TUCK / 2 - 2, f"TUCK FLAP {TUCK:g}", 5)
-    notes.append(f'<text transform="translate({X(xa / 2) + 1.6:.2f} {Y((ys + ya) / 2):.2f}) rotate(-90)" '
-                 f'font-size="5" text-anchor="middle">TAB {TAB:g}</text>')
+        text(mid, 66, name)
+        text(mid, 51, dim(x1 - x0, yd - ye), 9)
+        text(mid, ye - fd / 2, f"FLAP {fd:.1f}", 9)
+        text(mid, yd + LEDGE_FLAP / 2 + 1, f"LEDGE FLAP {LEDGE_FLAP:g}", 9)
+        text(mid, yd + LEDGE_FLAP / 2 - 11, "the jaw's lower prong sits under this", 7.5)
+        text(mid, LEDGE_UNDER - SLOT_H / 2 - 2.7, "JAW SLOT: cut out", 7.5)
+        chain(dims, notes, [X(x0), X(sx), X(sx + g["slot_w"]), X(x1)], Y(LEDGE_UNDER - SLOT_H - 14),
+              ["", "slot", ""], reach=0, size=7.5)
+        chain(dims, notes, [Y(LEDGE_UNDER), Y(LEDGE_UNDER - SLOT_H)], X(sx + g["slot_w"]) + 9, [""],
+              vertical=True, reach=9, size=7.5)
+    lid_mid, lid_y = (lx0 + lx1) / 2, ya + g["lid"] / 2
+    text(lid_mid, lid_y + 14, "LID")
+    text(lid_mid, lid_y - 1, dim(lx1 - lx0, g["lid"]), 9)
+    text(lid_mid, lid_y - 15, f"centred on side A: {lx0 - xa:.1f} in from each end of it", 8)
+    text(lid_mid, lid_y - 28, "the tags go on the other face", 8)
+    text(lid_mid, yt + TUCK / 2 - 3, f"TUCK FLAP {TUCK:g}", 9)
+    notes.append(f'<text transform="translate({X(xa / 2) + 3:.2f} {Y((ys + ya) / 2):.2f}) rotate(-90)" '
+                 f'font-size="9" text-anchor="middle">TAB {TAB:g} x {ya - ys - 2 * TAB_INSET:.1f}</text>')
 
     # dimension chains outside the drawing: the length of every panel between creases and cut edges
-    chain(dims, notes, [X(v) for v in (0, xa, xb, xc, xd, xe)], bottom + 12,
-          ["tab", "side A", "end 1", "side B", "end 2"])
-    chain(dims, notes, [X(0), X(xe)], bottom + 30, ["overall"], reach=0)
-    chain(dims, notes, [X(lx0), X(g["tx0"]), X(g["tx1"]), X(lx1)], top - 12, ["", "tuck", ""], reach=-8)
-    chain(dims, notes, [X(lx0), X(lx1)], top - 28, ["lid"], reach=0)
-    chain(dims, notes, [Y(v) for v in (high, yt, ya, ys, low)], ox - 14, ["tuck", "lid", "side A", "flap"],
-          vertical=True, reach=-8)
-    chain(dims, notes, [top, bottom], ox - 34, ["overall"], vertical=True, reach=0)
-    chain(dims, notes, [Y(v) for v in (yd + LEDGE_FLAP, yd, ye, ye - fd)], X(xe) + 12, ["ledge flap", "end wall", "flap"],
-          vertical=True)
-
-    foil, ky = [], [top, top]
-    for i, (name, pts, count) in enumerate(pieces):
-        c = i // 2                                  # two pieces to a column
-        px, py = kx + c * (col + 20), ky[c]
-        w, h = max(x for x, _ in pts), max(y for _, y in pts)
-        foil.append('<polygon points="' + " ".join(f"{px + x:.2f},{py + h - y:.2f}" for x, y in pts) + '"/>')
-        notes.append(f'<text x="{px + w / 2:.2f}" y="{py + h / 2 + 12:.2f}" font-size="6" text-anchor="middle">LINER {name}, cut {count}</text>'
-                     f'<text x="{px + w / 2:.2f}" y="{py + h / 2 + 22:.2f}" font-size="6" text-anchor="middle">{dim(w, h)}</text>')
-        if len(pts) > 4:
-            notes.append(f'<text x="{px + w / 2:.2f}" y="{py + (pts[3][1] - pts[4][1]) / 2 + 2:.2f}" font-size="4.5" '
-                         f'text-anchor="middle">notch {pts[3][0] - pts[6][0]:.0f} x {pts[3][1] - pts[4][1]:.0f}</text>')
-        ky[c] += h + 12
+    big = dict(size=8.0)
+    chain(dims, notes, [X(v) for v in (0, xa, xb, xc, xd, xe)], bottom + 18,
+          ["", "side A", "end 1", "side B", "end 2"], reach=12, **big)
+    chain(dims, notes, [X(0), X(xe)], bottom + 42, ["overall"], reach=0, **big)
+    chain(dims, notes, [X(lx0), X(g["tx0"]), X(g["tx1"]), X(lx1)], top - 18, ["", "tuck", ""], reach=-12, **big)
+    chain(dims, notes, [X(lx0), X(lx1)], top - 40, ["lid"], reach=0, **big)
+    chain(dims, notes, [Y(v) for v in (high, yt, ya, ys, low)], ox - 20, ["", "lid", "side A", "flap"],
+          vertical=True, reach=-12, **big)
+    chain(dims, notes, [top, bottom], ox - 46, ["overall"], vertical=True, reach=0, **big)
+    chain(dims, notes, [Y(v) for v in (yd + LEDGE_FLAP, yd, ye, ye - fd)], X(xe) + 18, ["ledge flap", "end wall", "flap"],
+          vertical=True, reach=12, **big)
 
     lines = [
-        f"Packet cardboard box for the current gripper, prototype 3. Board {t:g} mm. All sizes mm, drawn 1:1, "
-        "creases at the board mid-plane. This face is the inside of the box.",
-        "Solid black: cut. Dashed blue: crease. Every fold goes toward you.",
-        f"Jaw slots: cut right out. The slot top stops {t / 2:g} mm below the ledge flap crease. Do not cut into the "
-        "crease. The lower prong of each gripper jaw goes through the slot and sits under the folded ledge flap.",
+        f"Packet cardboard box, prototype 3: the flat blank. Board {t:g} mm. All sizes mm, drawn 1:1, creases at the "
+        "board mid-plane. This face is the inside of the box.",
+        "Solid black: cut. Dashed blue: crease. Every fold goes toward you. The bottom flaps and the ledge flaps stop "
+        f"{g['ov']:g} short of the wall creases at each side.",
+        f"Jaw slots: {g['slot_w']:g} x {SLOT_H:g}, cut right out. The slot top stops {t / 2:g} below the ledge flap "
+        "crease. Do not cut into the crease.",
         "Fold the walls into a tube and fix the tab inside END 2. Fold the END bottom flaps in first, then the SIDE "
         "flaps, and tape the seam.",
         "Fold the ledge flaps in, close the lid onto them, tuck its flap inside SIDE B and tape the whole front edge. "
         "The lid holds the ledge flaps down when the jaws lift.",
         f"Folded: {L_OUT:g} long, {W_OUT:g} wide, {g['lid_top']:.1f} to the lid top. Inside {g['il']:.1f} x {g['iw']:.1f} x "
-        f"{g['ih']:.1f}. Blank {xe:.1f} x {high - low:.1f}.",
+        f"{g['ih']:.1f}. Blank {xe:.1f} x {high - low:.1f}. The outside faces are on the folded sheet.",
     ]
-    if pieces:
-        room = [g["il"] - 2 * LINER, g["iw"] - 2 * LINER, g["ih"] - 2 * LINER]
-        lines.append(
-            f"Green: foil bubble liner, {LINER:g} mm thick, a different material. The notch in the END pieces and the "
-            f"short TOP piece keep the jaw slots clear. Room left for food: {room[0]:.0f} x {room[1]:.0f} x {room[2]:.0f}.")
     for i, s in enumerate(lines):
-        notes.append(f'<text x="{ox}" y="{bottom + 54 + 12 * i:.2f}" font-size="6">{s}</text>')
+        notes.append(f'<text x="{ox}" y="{bottom + 74 + 14 * i:.2f}" font-size="9">{s}</text>')
 
     return f'''<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="{width:.0f}mm" height="{height:.0f}mm" viewBox="0 0 {width:.0f} {height:.0f}">
 <rect width="100%" height="100%" fill="white"/>
-<g id="cut" fill="none" stroke="black" stroke-width="0.4">{"".join(cut)}</g>
-<g id="crease" fill="none" stroke="#1565c0" stroke-width="0.4" stroke-dasharray="4 2">{"".join(fold)}</g>
-<g id="liner" fill="none" stroke="#2e7d32" stroke-width="0.4">{"".join(foil)}</g>
-<g id="dims" fill="none" stroke="#444" stroke-width="0.25">{"".join(dims)}</g>
+<g id="cut" fill="none" stroke="black" stroke-width="0.5">{"".join(cut)}</g>
+<g id="crease" fill="none" stroke="#1565c0" stroke-width="0.5" stroke-dasharray="4 2">{"".join(fold)}</g>
+<g id="dims" fill="none" stroke="#444" stroke-width="0.3">{"".join(dims)}</g>
+<g id="notes" font-family="Helvetica, Arial, sans-serif" fill="#333">{"".join(notes)}</g>
+</svg>
+'''
+
+
+def folded(g: dict[str, float]) -> str:
+    """The folded box from above, from the front and from one end, drawn 1:1 with the size of every outside
+    face: the sheet to design tags and labels against. The liner pieces are drawn beside it."""
+    t, L, W, H = g["t"], L_OUT, W_OUT, g["lid_top"]
+    lid_len, lid = g["lx1"] - g["lx0"], g["lid"]
+    inset = (L - lid_len) / 2
+    ox, top = 80.0, 90.0
+    y1, x2 = top + W + 50, ox + L + 70              # the front view's top edge; the end view's left edge
+    cut: list[str] = []
+    tags: list[str] = []
+    foil: list[str] = []
+    notes: list[str] = []
+    dims: list[str] = []
+    big = dict(size=8.0)
+
+    def box(out, x, y, w, h):
+        out.append(f'<rect x="{x:.2f}" y="{y:.2f}" width="{w:.2f}" height="{h:.2f}"/>')
+
+    def text(x, y, s, size=11.0, anchor="middle"):
+        notes.append(f'<text x="{x:.2f}" y="{y:.2f}" font-size="{size}" text-anchor="{anchor}">{s}</text>')
+
+    # from above: side A, which carries the hinge, is the top edge
+    lx, ly, mid = ox + inset, top + t / 2, ox + L / 2
+    box(cut, ox, top, L, W)
+    box(cut, lx, ly, lid_len, lid)
+    box(tags, mid - TAG_AREA[0] / 2, ly + (lid - TAG_AREA[1]) / 2, *TAG_AREA)
+    text(mid, top + 24, "BACK: the lid hinges here", 8)
+    text(mid, top + W / 2 - 12, "LID, from above")
+    text(mid, top + W / 2 + 2, f"flat face {lid_len:.1f} x {lid:.1f}", 9)
+    text(mid, top + W / 2 + 16, f"dashed: the tags in use today, {TAG_AREA[0]:g} x {TAG_AREA[1]:g}", 8)
+    text(mid, top + W - 20, "FRONT: taped to the front wall along this whole edge", 8)
+    for x in (ox + inset / 2, ox + L - inset / 2):
+        notes.append(f'<text transform="translate({x + 2.6:.2f} {top + W / 2:.2f}) rotate(-90)" font-size="7.5" '
+                     f'text-anchor="middle">ledge flap, {t:g} lower than the lid</text>')
+    chain(dims, notes, [ox, lx, lx + lid_len, ox + L], top - 36, ["", "lid", ""], reach=-28, **big)
+    chain(dims, notes, [ox, ox + L], top - 60, ["overall"], reach=0, **big)
+    chain(dims, notes, [ly, ly + lid], ox - 20, ["lid"], vertical=True, reach=-12, **big)
+    chain(dims, notes, [top, top + W], ox + L + 18, ["overall"], vertical=True, reach=12, **big)
+
+    # from the front
+    box(cut, ox, y1, L, H)
+    text(mid, y1 + H / 2 - 8, "FRONT (side B)")
+    text(mid, y1 + H / 2 + 6, f"{L:.1f} x {H:.1f}", 9)
+    text(mid, y1 + H / 2 + 20, "BACK (side A) is the same size", 8)
+    chain(dims, notes, [ox, ox + L], y1 + H + 18, [""], reach=12, **big)
+    chain(dims, notes, [y1, y1 + H], ox - 20, [""], vertical=True, reach=-12, **big)
+
+    # from one end
+    s0, sy, emid = (W - g["slot_w"]) / 2, y1 + H - LEDGE_UNDER, x2 + W / 2
+    box(cut, x2, y1, W, H)
+    box(cut, x2 + s0, sy, g["slot_w"], SLOT_H)
+    text(emid, sy + SLOT_H / 2 + 2.7, "JAW SLOT: open", 7.5)
+    text(emid, y1 + H / 2 + 12, "END 1 and END 2")
+    text(emid, y1 + H / 2 + 26, f"{W:.1f} x {H:.1f}", 9)
+    text(emid, y1 + H / 2 + 40, f"clear below the slot: {W:.1f} x {LEDGE_UNDER - SLOT_H:.1f}", 8)
+    text(emid, y1 + H / 2 + 53, f"slot top: {H - LEDGE_UNDER:.1f} below the lid top", 8)
+    chain(dims, notes, [x2, x2 + s0, x2 + W - s0, x2 + W], y1 + H + 18, ["", "slot", ""], reach=12, **big)
+    chain(dims, notes, [sy, sy + SLOT_H, y1 + H], x2 + W + 18, ["", ""], vertical=True, reach=12, **big)
+
+    lines = [
+        "Packet cardboard box, prototype 3: folded",
+        f"Board {t:g} mm. All sizes mm, drawn 1:1.",
+        f"Outside: {L:g} long, {W:g} wide, {H:.1f} high.",
+        f"Inside: {g['il']:.1f} x {g['iw']:.1f} x {g['ih']:.1f}.",
+        "Black: the outside faces, where tags and labels go.",
+        f"The lid stops {inset:.1f} short of each end. The ledge",
+        f"flaps show there, {t:g} lower than the lid.",
+        f"The lid's flat face starts {t / 2:g} in from the back face",
+        f"and stops {W - t / 2 - lid:g} short of the front face.",
+        "Tape holds the lid to the front wall along its whole",
+        "front edge and laps onto both faces.",
+    ]
+    pieces = liner_pieces(g) if LINER else []
+    kx = x2 + W + 70                                # left edge of the liner columns
+    col = max((x for _, pts, _ in pieces for x, _ in pts), default=0)
+    ky = [top, top]
+    for i, (name, pts, count) in enumerate(pieces):
+        c = i // 2                                  # two pieces to a column
+        px, py = kx + c * (col + 20), ky[c]
+        w, h = max(x for x, _ in pts), max(y for _, y in pts)
+        foil.append('<polygon points="' + " ".join(f"{px + x:.2f},{py + h - y:.2f}" for x, y in pts) + '"/>')
+        text(px + w / 2, py + h / 2 + 10, f"LINER {name}, cut {count}")
+        text(px + w / 2, py + h / 2 + 24, f"{w:.1f} x {h:.1f}", 9)
+        if len(pts) > 4:
+            text(px + w / 2, py + (pts[3][1] - pts[4][1]) / 2 + 2.7, f"notch {pts[3][0] - pts[6][0]:.0f} x "
+                 f"{pts[3][1] - pts[4][1]:.0f}", 8)
+        ky[c] += h + 16
+    if pieces:
+        room = [g[k] - 2 * LINER for k in ("il", "iw", "ih")]
+        lines += [f"Green: foil bubble liner, {LINER:g} mm, a different material.",
+                  "Room left for food: {:.0f} x {:.0f} x {:.0f}.".format(*room)]
+    for i, s in enumerate(lines):
+        text(x2, top + 10 + 14 * i, s, 9 if i else 11, "start")
+    width, height = (kx + 2 * col + 20 if pieces else kx - 40) + 30, y1 + H + 56
+
+    return f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{width:.0f}mm" height="{height:.0f}mm" viewBox="0 0 {width:.0f} {height:.0f}">
+<rect width="100%" height="100%" fill="white"/>
+<g id="faces" fill="none" stroke="black" stroke-width="0.5">{"".join(cut)}</g>
+<g id="tags" fill="none" stroke="#777" stroke-width="0.3" stroke-dasharray="3 2">{"".join(tags)}</g>
+<g id="liner" fill="none" stroke="#2e7d32" stroke-width="0.5">{"".join(foil)}</g>
+<g id="dims" fill="none" stroke="#444" stroke-width="0.3">{"".join(dims)}</g>
 <g id="notes" font-family="Helvetica, Arial, sans-serif" fill="#333">{"".join(notes)}</g>
 </svg>
 '''
@@ -810,6 +901,8 @@ if __name__ == "__main__":
     with open(out, "w", encoding="utf-8") as fh:
         fh.write(svg(geometry))
     stem = out.rsplit(".", 1)[0]
+    with open(stem + "_folded.svg", "w", encoding="utf-8") as fh:
+        fh.write(folded(geometry))
     with open(stem + "_guide.md", "w", encoding="utf-8") as fh:
         fh.write(guide(geometry))
     with open(stem + "_on_wardrobe_box.svg", "w", encoding="utf-8") as fh:

@@ -140,3 +140,15 @@ Install:
 ## Motor map
 
 The motor signal plugs are wired 180° from the ArduPilot Quad X order. The fix is in software: `SERVO1..4_FUNCTION = 34, 33, 36, 35`. If the parameters are reset, set these values again, or swap the plugs MAIN 1↔2 and MAIN 3↔4. The motor test and the props-off tilt test passed on 2026-10-22.
+
+## Cardboard box pattern (`tools/box/`)
+
+A cardboard delivery box made from one piece, for the gripper the drone has now. The top of each end wall folds inward as a ledge flap, and a slot cut just under the fold lets the lower prong of each jaw reach in under it. The underside of the flap is at the height of the ledge on the printed BX-005, the lid top is within 1 mm of the printed BX-006 lid, and the box fits between the landing legs, so the jaws, the lid tags and the landing approach do not change. See [the design note](../docs/superpowers/specs/2026-11-17-inset-ledge-box-design.md).
+
+`tools/box/packet_box_cardboard_t4.svg` is the flat blank for 4 mm board with its dimensions, drawn 1:1 (one blank, 904 x 468 mm). `packet_box_cardboard_t4_folded.svg` is the folded box from above, from the front and from one end, with the size of every outside face: design tags and labels against it. Its green pieces are a cut list for a 5 mm foil bubble liner that keeps food hot; set `LINER = 0` in the script to leave it out. `rsvg-convert -f pdf -o box.pdf packet_box_cardboard_t4.svg packet_box_cardboard_t4_folded.svg` puts the two in one PDF. The script also writes `packet_box_cardboard_t4_guide.md`, a step-by-step cutting guide, and, for a 20 x 20 x 34 in wardrobe box opened flat, `packet_box_cardboard_t4_on_wardrobe_box.svg` (where the blank sits) and `packet_box_cardboard_t4_on_wardrobe_box_guide.md` (the same cutting guide, measured from that box's corner crease and bottom edge). The blank also fits one flat 24 x 36 in sheet of single-wall C-flute board. `packet_box_cardboard_t4_arch_d.svg` is the blank alone at 1:1 on an Arch D page (24 x 36 in), to print, tape onto the board and cut through; it carries the two lines to lay on a wardrobe box's corner crease and bottom edge. Turn it into a PDF for the plotter with `rsvg-convert -f pdf -o box.pdf packet_box_cardboard_t4_arch_d.svg` and print at 100 %. With no wide plotter, add a paper name to get the same template as sheets for an office printer: `python3 tools/box/box_pattern.py 4 out.svg tabloid` writes six 11 x 17 in landscape sheets (`a3` also works), which `rsvg-convert -f pdf -o sheets.pdf out_tabloid_r*.svg` turns into one PDF. Each sheet carries a frame; cut where a sheet says so, lay the cut edge on its neighbour's frame line so the diamonds meet, and tape.
+
+```bash
+python3 tools/box/box_pattern.py 3 out.svg   # other board thickness, mm
+```
+
+The script checks that the folded box fits the drone and closes on itself, and stops if it does not. Not yet cut or tested on the gripper.
